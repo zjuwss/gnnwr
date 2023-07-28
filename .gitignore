@@ -1,3 +1,4 @@
+.idea
 *.pkl
 **/__pycache__
 *_logs/

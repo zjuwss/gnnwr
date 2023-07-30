@@ -1,5 +1,11 @@
 # gnnwr
 
+<p>
+    <img title="python version" src="https://img.shields.io/badge/python-3.9-blue" alt="">
+    <!--<img title="PyPI" src="https://img.shields.io/pypi/v/:packageName"  alt="PyPI">-->
+</p>
+
+
 A pytorch implementation of the Geographically Neural Network Weighted Regression (GNNWR) and its derived models
 
 This repository contains:
@@ -14,7 +20,6 @@ This repository contains:
 - [Install](#install)
 - [Usage](#usage)
 - [Reference](#reference)
-- [Maintainers](#maintainers)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -24,7 +29,11 @@ This repository contains:
 
 ## Install
 
+Using pip to install gnnwr:  
 
+```
+pip install gnnwr
+```   
 
 ## Usage
 
@@ -41,10 +50,6 @@ This repository contains:
 
 
 ### case study demo
-
-
-
-## Maintainers
 
 
 

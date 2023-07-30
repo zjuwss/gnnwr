@@ -2,7 +2,7 @@
 name = "gnnwr"
 version = "0.0.1"
 authors = [
-  { name="Example Author", email="author@example.com" },
+  { name="Sensen Wu", email="wusensengis@zju.edu.cn" },
 ]
 description = "A pytorch implementation of the Geographically Neural Network Weighted Regression (GNNWR)"
 readme = "README.md"
@@ -11,6 +11,15 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: GPLv3",
     "Operating System :: OS Independent",
+]
+
+dependencies = [
+  "numpy>=1.20.0",
+  "pandas>=1.5.0",
+  "scikit_learn>=1.2.0",
+  "statsmodels>=0.13.0",
+  "torch>=2.0.0",
+  "tensorboard>=2.0.0",
 ]
 
 [project.urls]

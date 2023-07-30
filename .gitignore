@@ -1,6 +1,8 @@
 .idea
 *.pkl
+*.egg-info
 **/__pycache__
 *_logs/
 *_runs/
 *_models/
+dist/

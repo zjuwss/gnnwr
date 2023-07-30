@@ -55,6 +55,6 @@ This repository contains:
 
 
 ## License
-
+[GPLv3 license](https://github.com/zjuwss/gnnwr/blob/main/LICENSE)
 
 

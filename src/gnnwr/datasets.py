@@ -88,7 +88,7 @@ class baseDataset(Dataset):
 
 #wss 这个类是什么用的？
 class predictDataset(Dataset):
-    def __init__(self, data, x_column, process_fn="minmax_scale",process_params=[],is_need_STNN=False):
+    def __init__(self, data, x_column, process_fn="minmax_scale",scale_info=[],is_need_STNN=False):
         """
         :param data: 数据集
         :param x_column: 输入属性列名
@@ -103,17 +103,29 @@ class predictDataset(Dataset):
         self.datasize = self.x_data.shape[0]  # datasize为数据集大小
         self.coefsize = len(x_column) + 1  # coefsize为输入属性个数
         self.is_need_STNN = is_need_STNN
+        self.process_fn = process_fn
+        if len(scale_info):
+            self.scale_info_x = scale_info[0]
+            self.scale_info_y = scale_info[1]
+            self.use_scale_info = True
+        else : self.use_scale_info = False
         # 数据预处理
         if process_fn == "minmax_scale":
             self.scale_fn = "minmax_scale"
             # stander = MinMaxScaler()
             # self.x_data = stander.fit_transform(self.x_data)
-            self.x_data = self.minmax_scaler(self.x_data,process_params[0],process_params[1])
+            if self.use_scale_info:
+                self.x_data = self.minmax_scaler(self.x_data,self.scale_info_x[0],self.scale_info_x[1])
+            else :
+                self.x_data = self.minmax_scaler(self.x_data)
         elif process_fn == "standard_scale":
             self.scale_fn = "standard_scale"
             # stander = StandardScaler()
             # self.x_data = stander.fit_transform(self.x_data)
-            self.x_data = self.minmax_scaler(self.x_data,process_params[0],process_params[1])
+            if self.use_scale_info:
+                self.x_data = self.standard_scaler(self.x_data,self.scale_info_x[0],self.scale_info_x[1])
+            else:
+                self.x_data = self.standard_scaler(self.x_data)
 
         else:
             raise ValueError("invalid process_fn")
@@ -145,9 +157,9 @@ class predictDataset(Dataset):
         :return: 预处理后的输入属性数据、输出属性数据
         """
         if self.scale_fn == "minmax_scale":
-            x = np.multiply(x, self.x_scale_info["max"] - self.x_scale_info["min"]) + self.x_scale_info["min"]
+            x = x*(self.scale_info_y[1] - self.scale_info_y[0]) + self.scale_info_y[0]
         elif self.scale_fn == "standard_scale":
-            x = np.multiply(x, np.sqrt(self.x_scale_info["var"])) + self.x_scale_info["mean"]
+            x = x*np.sqrt(self.scale_info_y[1]) + self.scale_info_y[0]
         else:
             raise ValueError("invalid process_fn")
 
@@ -269,15 +281,13 @@ def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_colu
     val_dataset.scale(process_fn, scaler_params)
     test_dataset.scale(process_fn, scaler_params)
 
+    #wss is_need_STNN参数是做什么用的？
+    #wss 计算距离的参照样本点可能要有两种选择：一种是以训练集的点为参考，一种是以训练集+验证集的点为参考
+    #wss 因为如果是十折交叉，要以训练集为准的话，得保证这10折的训练集个数是一致的；而如果以训练集+验证集的话，就不用考虑这个问题。从这个
+    # 角度来说训练集+验证集作为算距离的参考点更为合适。 添加参数判断？
+
     if Reference is None:
         reference_data = train_data
-    elif isinstance(Reference, str):
-        if Reference == "train":
-            reference_data = train_data
-        elif Reference == "train_val":
-            reference_data = pandas.concat([train_data, val_data])
-        else:
-            raise ValueError("Reference str must be 'train' or 'train_val'")
     else:
         reference_data = Reference
     if not isinstance(reference_data, pandas.DataFrame):
@@ -406,42 +416,42 @@ def init_dataset_cv(data, test_ratio, k_fold, x_column, y_column, spatial_column
         cv_data_set.append((train_dataset, val_dataset))
     return cv_data_set, test_dataset
 
-# #TODO 这里的归一化和上面的不一样，需要修改
-# def init_dataset_with_dist_frame(data, train_ratio, valid_ratio, x_column, y_column, id_column, dist_frame=None,
-#                                  process_fn="minmax_scale", batch_size=32, shuffle=True, use_class=baseDataset):
-#     train_data, val_data, test_data = np.split(data.sample(frac=1),
-#                                                [int(train_ratio * len(data)),
-#                                                 int((train_ratio + valid_ratio) * len(data))])  # 划分数据集
-#
-#     #wss 这三个数据集的归一化方式应该要保持一致的（最大值、最小值等，可以考虑整个数据集的特征），这里的结果会有问题
-#     # 初始化train_dataset,val_dataset,test_dataset
-#     train_dataset = use_class(train_data, x_column, y_column, process_fn)
-#     val_dataset = use_class(val_data, x_column, y_column, process_fn)
-#     test_dataset = use_class(test_data, x_column, y_column, process_fn)
-#
-#     dist_frame.columns = ['id1', 'id2', 'dis']
-#     dist_frame = dist_frame.set_index(['id1', 'id2'])[
-#         'dis'].unstack().reset_index().drop('id1', axis=1)
-#
-#     train_ids = train_data[id_column[0]].tolist()
-#     val_ids = val_data[id_column[0]].tolist()
-#     test_ids = test_data[id_column[0]].tolist()
-#
-#     train_dataset.distances = np.float32(
-#         dist_frame[dist_frame.index.isin(train_ids)][train_ids].values)
-#     val_dataset.distances = np.float32(
-#         dist_frame[dist_frame.index.isin(val_ids)][train_ids].values)
-#     test_dataset.distances = np.float32(
-#         dist_frame[dist_frame.index.isin(test_ids)][train_ids].values)
-#
-#     train_dataset.dataloader = DataLoader(
-#         train_dataset, batch_size=batch_size, shuffle=shuffle)
-#     val_dataset.dataloader = DataLoader(
-#         val_dataset, batch_size=batch_size, shuffle=shuffle)
-#     test_dataset.dataloader = DataLoader(
-#         test_dataset, batch_size=batch_size, shuffle=shuffle)
-#
-#     return train_dataset, val_dataset, test_dataset
+#TODO 这里的归一化和上面的不一样，需要修改
+def init_dataset_with_dist_frame(data, train_ratio, valid_ratio, x_column, y_column, id_column, dist_frame=None,
+                                 process_fn="minmax_scale", batch_size=32, shuffle=True, use_class=baseDataset):
+    train_data, val_data, test_data = np.split(data.sample(frac=1),
+                                               [int(train_ratio * len(data)),
+                                                int((train_ratio + valid_ratio) * len(data))])  # 划分数据集
+    
+    #wss 这三个数据集的归一化方式应该要保持一致的（最大值、最小值等，可以考虑整个数据集的特征），这里的结果会有问题
+    # 初始化train_dataset,val_dataset,test_dataset
+    train_dataset = use_class(train_data, x_column, y_column, process_fn)
+    val_dataset = use_class(val_data, x_column, y_column, process_fn)
+    test_dataset = use_class(test_data, x_column, y_column, process_fn)
+
+    dist_frame.columns = ['id1', 'id2', 'dis']
+    dist_frame = dist_frame.set_index(['id1', 'id2'])[
+        'dis'].unstack().reset_index().drop('id1', axis=1)
+
+    train_ids = train_data[id_column[0]].tolist()
+    val_ids = val_data[id_column[0]].tolist()
+    test_ids = test_data[id_column[0]].tolist()
+
+    train_dataset.distances = np.float32(
+        dist_frame[dist_frame.index.isin(train_ids)][train_ids].values)
+    val_dataset.distances = np.float32(
+        dist_frame[dist_frame.index.isin(val_ids)][train_ids].values)
+    test_dataset.distances = np.float32(
+        dist_frame[dist_frame.index.isin(test_ids)][train_ids].values)
+
+    train_dataset.dataloader = DataLoader(
+        train_dataset, batch_size=batch_size, shuffle=shuffle)
+    val_dataset.dataloader = DataLoader(
+        val_dataset, batch_size=batch_size, shuffle=shuffle)
+    test_dataset.dataloader = DataLoader(
+        test_dataset, batch_size=batch_size, shuffle=shuffle)
+
+    return train_dataset, val_dataset, test_dataset
 
 def init_predict_dataset(data,train_dataset,x_column, spatial_column=None, temp_column=None,
                  process_fn="minmax_scale",  use_class=predictDataset,
@@ -473,9 +483,9 @@ def init_predict_dataset(data,train_dataset,x_column, spatial_column=None, temp_
     #wss 这里也会涉及归一化一致的问题，应该用训练模型的归一化参数来归一化预测集
     # 初始化predict_dataset
     if train_dataset.scale_fn == "minmax_scale":
-        process_params = [train_dataset.x_scale_info['min'],train_dataset.x_scale_info['max']]
+        process_params = [[train_dataset.x_scale_info['min'],train_dataset.x_scale_info['max']],[train_dataset.y_scale_info['min'],train_dataset.y_scale_info['max']]]
     elif train_dataset.scale_fn == "standard_scale":
-        process_params = [train_dataset.x_scale_info['mean'],train_dataset.x_scale_info['std']]
+        process_params = [[train_dataset.x_scale_info['mean'],train_dataset.x_scale_info['std']],[train_dataset.y_scale_info['mean'],train_dataset.y_scale_info['std']]]
     else:
         raise ValueError("scale_fn must be minmax_scale or standard_scale")
     print("ProcessParams:",process_params)

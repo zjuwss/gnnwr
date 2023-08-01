@@ -389,7 +389,7 @@ class GTNNWR(GNNWR):
                  write_path="../gtnnwr_runs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),
                  use_gpu: bool = True,
                  log_path: str = "../gtnnwr_logs/",
-                 log_file_name: str = "gnnwr" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".log",
+                 log_file_name: str = "gtnnwr" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".log",
                  log_level: int = logging.INFO,
                  optimizer_params=None,
                  ):
@@ -401,7 +401,7 @@ class GTNNWR(GNNWR):
                                      drop_out, batch_norm, activate_func, model_name, model_save_path, write_path,
                                      use_gpu, log_path, log_file_name, log_level, optimizer_params)
         self._STPNN_out = 1
-
+        self._modelName = "GTNNWR_" + model_name  # model name
         self._model = nn.Sequential(STPNN(dense_layers[0], 2, self._STPNN_out, drop_out, activate_func, batch_norm),
                                     SWNN(dense_layers[1], self._STPNN_out * self._insize, self._outsize, drop_out,
                                          activate_func, batch_norm))

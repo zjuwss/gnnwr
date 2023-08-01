@@ -271,7 +271,7 @@ class GNNWR:
         # 23.6.8_TODO: 丰富输出信息  输出Log文件
         self.__istrained = True
         if self._use_gpu:
-            self._model = nn.DataParallel(module=self._model)  # 并行运算
+            self._model = nn.DataParallel(module=self._model)  # parallel computing
             self._model = self._model.cuda()
             self._out = self._out.cuda()
         # create file
@@ -325,7 +325,7 @@ class GNNWR:
                 self._trainLossList[-1]) + " R2: " + str(self._bestr2) + " Valid Loss: " + str(
                 self._validLossList[-1]) + " Learning Rate: " + str(current_lr)
             logging.info(log_str)
-            if 0 < early_stop < self._noUpdateEpoch:  # 如果达到早停标准则停止
+            if 0 < early_stop < self._noUpdateEpoch:  # stop when the model has not been updated for long time
                 break
         self.__test()
         print("Test Loss: ", self.__testLoss, " Test R2: ", self.__testr2)

@@ -28,7 +28,7 @@ class GNNWR:
             drop_out=0.2,
             batch_norm=True,
             activate_func=nn.PReLU(init=0.4),
-            model_name=datetime.date.today().strftime("%Y%m%d-%H%M%S"),
+            model_name="GNNWR_" + datetime.date.today().strftime("%Y%m%d-%H%M%S"),
             model_save_path="../gnnwr_models",
             write_path="../gnnwr_runs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),
             use_gpu: bool = True,
@@ -154,9 +154,10 @@ class GNNWR:
         self._epoch = 0  # current epoch
         self._bestr2 = float('-inf')  # best r2
         self._noUpdateEpoch = 0  # number of epochs without update
-        self._modelName = "GNNWR_" + model_name  # model name
+        self._modelName = model_name  # model name
         self._modelSavePath = model_save_path  # model save path
         self._train_diagnosis = None # diagnosis of training
+        self._test_diagnosis = None # diagnosis of test
         self._valid_r2 = None # r2 of validation
         self._use_gpu = use_gpu
         if self._use_gpu:
@@ -253,14 +254,21 @@ class GNNWR:
         label_list = np.array([])
         out_list = np.array([])
         data_loader = self._test_dataset.dataloader
-
+        x_data = torch.tensor([]).to(torch.float32)
+        y_data = torch.tensor([]).to(torch.float32)
+        y_pred = torch.tensor([]).to(torch.float32)
+        weight_all = torch.tensor([]).to(torch.float32)
         with torch.no_grad():
             for data, coef, label in data_loader:
                 if self._use_gpu:
                     data, coef, label = data.cuda(), coef.cuda(), label.cuda()
                 # data,label = data.view(data.shape[0],-1),label.view(data.shape[0],-1)
-
+                x_data = torch.cat((x_data, coef), 0)
+                y_data = torch.cat((y_data, label), 0)
+                weight = self._model(data)
+                weight_all = torch.cat((weight_all, weight.mul(torch.tensor(self._weight).to(torch.float32))), 0)
                 output = self._out(self._model(data).mul(coef.to(torch.float32)))
+                y_pred = torch.cat((y_pred, output), 0)
                 loss = self._criterion(output, label)
 
                 out_list = np.append(
@@ -274,6 +282,7 @@ class GNNWR:
             test_loss /= len(self._test_dataset)
             self.__testLoss = test_loss
             self.__testr2 = r2_score(label_list, out_list)
+            self._test_diagnosis = DIAGNOSIS(weight_all, x_data, y_data, y_pred)
 
     def run(self, max_epoch=1, early_stop=-1):
         """
@@ -358,9 +367,6 @@ class GNNWR:
             logging.info(log_str)
             if 0 < early_stop < self._noUpdateEpoch:  # stop when the model has not been updated for long time
                 break
-        self.__test()
-        print("Test Loss: ", self.__testLoss, " Test R2: ", self.__testr2)
-        logging.info("Test Loss: " + str(self.__testLoss) + "; Test R2: " + str(self.__testr2))
 
     def predict(self, dataset):
         data_loader = dataset.dataloader
@@ -402,6 +408,39 @@ class GNNWR:
             break
         print("Add Graph Successfully")
 
+    def result(self, path=None, use_dict=False):
+        """
+        get the result of the model
+        """
+        # load model
+        if path is None:
+            path = self._modelSavePath+"/"+self._modelName+".pkl"
+        if use_dict:
+            data = torch.load(path).state_dict()
+            self._model.load_state_dict(data)
+        else:
+            self._model = torch.load(path)
+        with torch.no_grad():
+            self.__test()
+        print("Test Loss: ", self.__testLoss, " Test R2: ", self.__testr2)
+        logging.info("Test Loss: " + str(self.__testLoss) + "; Test R2: " + str(self.__testr2))
+        # print result
+        # basic information
+        print("--------------------Result Table--------------------\n")
+        print("Model Name:           |", self._modelName)
+        print("Model Structure:      |\n", self._model)
+        print("Optimizer:            |\n", self._optimizer)
+        print("independent variable: |", self._train_dataset.x)
+        print("dependent variable:   |", self._train_dataset.y)
+        print("\n----------------------------------------------------\n")
+        # OLS
+        print("OLS:  |", self._weight)
+        # Diagnostics
+        print("R2:   |", self.__testr2)
+        print("RMSE: | {:5f}".format(self._test_diagnosis.RMSE().data))
+        print("AIC:  | {:5f}".format(self._test_diagnosis.AIC()))
+        print("AICc: | {:5f}".format(self._test_diagnosis.AICc()))
+        print("F1:   | {:5f}".format(self._test_diagnosis.F1_GNN().data))
 
 class GTNNWR(GNNWR):
     def __init__(self,
@@ -414,7 +453,7 @@ class GTNNWR(GNNWR):
                  drop_out=0.2,
                  batch_norm=True,
                  activate_func=nn.PReLU(init=0.4),
-                 model_name=datetime.date.today().strftime("%Y%m%d-%H%M%S"),
+                 model_name="GTNNWR_"+datetime.date.today().strftime("%Y%m%d-%H%M%S"),
                  model_save_path="../gtnnwr_models",
                  write_path="../gtnnwr_runs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),
                  use_gpu: bool = True,
@@ -431,7 +470,7 @@ class GTNNWR(GNNWR):
                                      drop_out, batch_norm, activate_func, model_name, model_save_path, write_path,
                                      use_gpu, log_path, log_file_name, log_level, optimizer_params)
         self._STPNN_out = 1
-        self._modelName = "GTNNWR_" + model_name  # model name
+        self._modelName = model_name  # model name
         self._model = nn.Sequential(STPNN(dense_layers[0], 2, self._STPNN_out, drop_out, activate_func, batch_norm),
                                     SWNN(dense_layers[1], self._STPNN_out * self._insize, self._outsize, drop_out,
                                          activate_func, batch_norm))

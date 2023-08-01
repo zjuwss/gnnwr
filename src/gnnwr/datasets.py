@@ -26,7 +26,7 @@ class baseDataset(Dataset):
         self.scale_fn = None # scale function
         self.x_scale_info = None # scale information of x_data
         self.y_scale_info = None # scale information of y_data
-
+        self.reference = None # reference points to calculate the distances
         self.distances = None  # distances is the distance matrix of spatial/spatio-temporal data
         self.temporal = None  # temporal is the temporal distance matrix of spatio-temporal data
 
@@ -305,6 +305,7 @@ def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_colu
         reference_data = Reference
     if not isinstance(reference_data, pandas.DataFrame):
         raise ValueError("reference_data must be a pandas.DataFrame")
+    train_dataset.reference,val_dataset.reference,test_dataset.reference = reference_data,reference_data,reference_data
     if not is_need_STNN:
         # if not use STNN, calculate spatial/temporal distance matrix and concatenate them
         train_dataset.distances = spatial_fun(
@@ -467,7 +468,7 @@ def init_dataset_with_dist_frame(data, train_ratio, valid_ratio, x_column, y_col
     return train_dataset, val_dataset, test_dataset
 
 def init_predict_dataset(data,train_dataset,x_column, spatial_column=None, temp_column=None,
-                 process_fn="minmax_scale",  use_class=predictDataset,
+                 process_fn="minmax_scale", scale_sync=True, use_class=predictDataset,
                  spatial_fun=BasicDistance, temporal_fun=Manhattan_distance, max_size=-1,  is_need_STNN=False):
     """
     :param data: 输入预测数据
@@ -476,6 +477,7 @@ def init_predict_dataset(data,train_dataset,x_column, spatial_column=None, temp_
     :param spatial_column: 距离属性列名
     :param temp_column: 时间距离属性列名
     :param process_fn: 数据预处理函数
+    :param scale_sync: 是否用训练集相同的缩放参数
     :param max_size: 一次注入最大预测数据大小
     :param use_class: 使用的数据集类
     :param spatial_fun: 距离计算函数
@@ -501,20 +503,24 @@ def init_predict_dataset(data,train_dataset,x_column, spatial_column=None, temp_
         process_params = [[train_dataset.x_scale_info['mean'],train_dataset.x_scale_info['std']],[train_dataset.y_scale_info['mean'],train_dataset.y_scale_info['std']]]
     else:
         raise ValueError("scale_fn must be minmax_scale or standard_scale")
-    print("ProcessParams:",process_params)
-    predict_dataset = use_class(data, x_column, process_fn,process_params,is_need_STNN)
+    #print("ProcessParams:",process_params)
+    if scale_sync:
+        predict_dataset = use_class(data = data, x_column = x_column, process_fn = process_fn,scale_info = process_params,is_need_STNN = is_need_STNN)
+    else:
+        predict_dataset = use_class(data = data, x_column = x_column, process_fn = process_fn,is_need_STNN = is_need_STNN)
 
-    train_data = train_dataset.dataframe
+    # train_data = train_dataset.dataframe
+    reference_data = train_dataset.reference
 
     if not is_need_STNN:
         predict_dataset.distances = spatial_fun(
-            data[spatial_column].values, train_data[spatial_column].values)  # 计算train距离矩阵
+            data[spatial_column].values, reference_data[spatial_column].values)  # 计算train距离矩阵
 
 
         if temp_column is not None:
             # 如果temp_column不为空，则计算时间距离矩阵
             predict_dataset.temporal = temporal_fun(
-                data[temp_column].values, train_data[temp_column].values)
+                data[temp_column].values, reference_data[temp_column].values)
 
 
             predict_dataset.distances = np.concatenate(
@@ -523,17 +529,21 @@ def init_predict_dataset(data,train_dataset,x_column, spatial_column=None, temp_
 
     else:
         # 空间距离矩阵
-        predict_dataset.distances = np.repeat(data[spatial_column].values[:, np.newaxis, :], predict_dataset.datasize,
+        predict_dataset.distances = np.repeat(data[spatial_column].values[:, np.newaxis, :], len(reference_data),
                                             axis=1)
+        predict_temp_distance = np.repeat(reference_data[spatial_column].values[:, np.newaxis, :], predict_dataset.datasize,
+                                        axis=1)
         predict_dataset.distances = np.concatenate(
-            (predict_dataset.distances, np.transpose(predict_dataset.distances, (1, 0, 2))), axis=2)
+            (predict_dataset.distances, np.transpose(predict_temp_distance, (1, 0, 2))), axis=2)
 
         # 时间距离矩阵
         if temp_column is not None:
-            predict_dataset.temporal = np.repeat(data[temp_column].values[:, np.newaxis, :], predict_dataset.datasize,
+            predict_dataset.temporal = np.repeat(data[temp_column].values[:, np.newaxis, :], len(reference_data),
                                                axis=1)
+            predict_temp_temporal = np.repeat(reference_data[temp_column].values[:, np.newaxis, :], predict_dataset.datasize,
+                                            axis=1)
             predict_dataset.temporal = np.concatenate(
-                (predict_dataset.temporal, np.transpose(predict_dataset.temporal, (1, 0, 2))), axis=2)
+                (predict_dataset.temporal, np.transpose(predict_temp_temporal, (1, 0, 2))), axis=2)
 
     # 初始化dataloader,并设置batch_size
     # val_dataset和test_dataset的batch_size为max_val_size和max_test_size

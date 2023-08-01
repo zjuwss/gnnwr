@@ -331,8 +331,9 @@ class GNNWR:
         print("Test Loss: ", self.__testLoss, " Test R2: ", self.__testr2)
         logging.info("Test Loss: " + str(self.__testLoss) + " Test R2: " + str(self.__testr2))
 
-    def predict(self, data_loader):
-        # 23.6.8_TODO:load_model
+    def predict(self, dataset):
+            # 23.6.8_TODO:load_model
+        data_loader = dataset.dataloader
         if not self.__istrained:
             print("WARNING! The model hasn't been trained or loaded!")
         self._model.eval()
@@ -344,6 +345,7 @@ class GNNWR:
                 output = self._out(self._model(data).mul(coef.to(torch.float32)))
                 output = output.view(-1).cpu().detach().numpy()
                 result = np.append(result, output)
+        result = dataset.rescale(result)
         return result
 
     def load_model(self, path, use_dict=False):

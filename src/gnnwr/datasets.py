@@ -294,6 +294,13 @@ def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_colu
 
     if Reference is None:
         reference_data = train_data
+    elif isinstance(Reference, str):
+        if Reference == "train":
+            reference_data = train_data
+        elif Reference == "train_val":
+            reference_data = pandas.concat([train_data, val_data])
+        else:
+            raise ValueError("Reference str must be 'train' or 'train_val'")
     else:
         reference_data = Reference
     if not isinstance(reference_data, pandas.DataFrame):

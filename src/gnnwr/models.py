@@ -40,13 +40,13 @@ class GNNWR:
         """
         Parameters
         ----------
-        train_dataset       : torch.utils.data.Dataset
+        train_dataset       : baseDataset
                               dataset for tarining the network
 
-        valid_dataset       : torch.utils.data.Dataset
+        valid_dataset       : baseDataset
                               dataset for validation
 
-        test_dataset        : torch.utils.data.Dataset
+        test_dataset        : baseDataset
                               dataset for test the trained network
 
         dense_layers        : list
@@ -58,8 +58,11 @@ class GNNWR:
         optimizer           : string
                               type of optimizer used to change the weights or learning rates of neural network;
                               avaliable options:
-                              'SGD'
-                              'Adam'
+                                'SGD'
+                                'Adam'
+                                'RMSprop'
+                                'Adagrad'
+                                'Adadelta'
 
         drop_out            : numbers
                               dropout rate at each training step
@@ -84,11 +87,11 @@ class GNNWR:
         use_gpu             : bool
                                 True for use gpu
         """
-        self._train_dataset = train_dataset  # 训练数据集
-        self._valid_dataset = valid_dataset  # 测试数据集
-        self._test_dataset = test_dataset  # 验证数据集
-        self._dense_layers = dense_layers  # 用户输入的层结构
-        self._start_lr = start_lr  # 初始学习率
+        self._train_dataset = train_dataset  # train dataset
+        self._valid_dataset = valid_dataset  # valid dataset
+        self._test_dataset = test_dataset  # test dataset
+        self._dense_layers = dense_layers  # structure of layers
+        self._start_lr = start_lr  # initial learning rate
         self._insize = train_dataset.datasize  # 输入层大小，需要在dataset类中提供获取datasize的方法
         self._outsize = train_dataset.coefsize  # 输出层大小，需要在dataset类中提供获取coefsize的方法
         self._writer = SummaryWriter(write_path)  # 用于保存训练过程
@@ -124,6 +127,7 @@ class GNNWR:
         if self._optimizer_name == "SGD":
             if optimizer_params is None:
                 optimizer_params = {}
+            print(optimizer_params)
             maxlr = optimizer_params.get("maxlr", 0.1)
             minlr = optimizer_params.get("minlr", 0.01)
             upepoch = optimizer_params.get("upepoch", 100)
@@ -131,7 +135,7 @@ class GNNWR:
             decayepoch = optimizer_params.get("decayepoch", 200)
             decayrate = optimizer_params.get("decayrate", 0.1)
             lamda_lr = lambda epoch: epoch * uprate + minlr if epoch < upepoch else (
-                maxlr if epoch < decayepoch else 0.1 * (decayrate ** (epoch - decayepoch)))
+                maxlr if epoch < decayepoch else maxlr * (decayrate ** (epoch - decayepoch)))
             self._scheduler = optim.lr_scheduler.LambdaLR(
                 self._optimizer, lr_lambda=lamda_lr)
         else:
@@ -214,9 +218,6 @@ class GNNWR:
                 weight = self._model(data)
                 output = self._out(self._model(
                     data).mul(coef.to(torch.float32)))
-                valid_diagnosis = DIAGNOSIS(weight, coef, label, output)
-                print("Valid AICc:{:4f}".format(valid_diagnosis.AICc()))
-                print("Valid R2:{:4f}".format(valid_diagnosis.R2()))
                 loss = self._criterion(output, label)  # 计算Loss
                 out_list = np.append(
                     out_list, output.view(-1).cpu().detach().numpy())  # 将预测值加入List中
@@ -290,7 +291,6 @@ class GNNWR:
             self.__valid()
             print("Valid Loss: ", self._validLossList[-1], "\n")
             # TODO tensorboard
-            self._writer.add_scalar('Training/Loss', self._trainLossList[-1], self._epoch)
             group = self._optimizer.param_groups[0]
             p = group['params'][0]
             if self._optimizer_name == 'Adam':
@@ -317,6 +317,8 @@ class GNNWR:
             else:
                 raise NotImplementedError
             self._scheduler.step()
+
+            self._writer.add_scalar('Training/Loss', self._trainLossList[-1], self._epoch)
             self._writer.add_scalar('Training/Learning Rate', current_lr, self._epoch)
             self._writer.add_scalar('Validation/Loss', self._validLossList[-1], self._epoch)
             self._writer.add_scalar('Validation/R2', self._bestr2, self._epoch)
@@ -324,7 +326,7 @@ class GNNWR:
             # log output
             log_str = "Epoch: " + str(epoch + 1) + " Train Loss: " + str(
                 self._trainLossList[-1]) + " R2: " + str(self._bestr2) + " Valid Loss: " + str(
-                self._validLossList[-1]) + " R2: " + str(self._bestr2) + " Learning Rate: " + str(current_lr)
+                self._validLossList[-1]) + " Learning Rate: " + str(current_lr)
             logging.info(log_str)
             if 0 < early_stop < self._noUpdateEpoch:  # 如果达到早停标准则停止
                 break
@@ -360,6 +362,16 @@ class GNNWR:
         get network's loss
         """
         return self._trainLossList, self._validLossList
+
+    def add_graph(self):
+        """
+
+        :return:
+        """
+        for data,coef,label in self._train_dataset.dataloader:
+            self._writer.add_graph(self._model,data)
+            break
+        print("Add Graph Successfully")
 
 
 class GTNNWR(GNNWR):

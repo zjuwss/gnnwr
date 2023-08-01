@@ -47,9 +47,9 @@ import pandas as pd
 data = pd.read_csv('your_data.csv')
 
 train_dataset, val_dataset, test_dataset = datasets.init_dataset(data=data,
-                                                        		 test_ratio=0.2, valid_ratio=0.1,
+                                                                 test_ratio=0.2, valid_ratio=0.1,
                                                                  x_column=['x1', 'x2'], y_column=['y'],
-                                                        		 spatial_column=['u', 'v'])
+                                                                 spatial_column=['u', 'v'])
 
 gnnwr = models.GNNWR(train_dataset, val_dataset, test_dataset)
 

@@ -51,10 +51,10 @@ class DIAGNOSIS:
 
     def F1_GNN(self):  # 因变量的空间非平稳性F1检验
         k1 = self.__n - 2 * torch.trace(self.__hat) + \
-             torch.trace(torch.dot(self.__hat.mT, self.__hat))
+             torch.trace(torch.mm(self.__hat.mT, self.__hat))
         k2 = self.__n - self.__k - 1
         rss_olr = torch.sum(
-            (torch.mean(self.__y_data) - torch.dot(self.__ols_hat, self.__y_data)) ** 2)
+            (torch.mean(self.__y_data) - torch.mm(self.__ols_hat, self.__y_data)) ** 2)
         return self.__ssr / k1 / (rss_olr / k2)
 
     def AIC(self):

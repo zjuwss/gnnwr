@@ -28,7 +28,7 @@ class GNNWR:
             drop_out=0.2,
             batch_norm=True,
             activate_func=nn.PReLU(init=0.4),
-            model_name=datetime.date.today().strftime("%y%m%d"),
+            model_name=datetime.date.today().strftime("%Y%m%d-%H%M%S"),
             model_save_path="../gnnwr_models",
             write_path="../gnnwr_runs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),
             use_gpu: bool = True,
@@ -92,19 +92,20 @@ class GNNWR:
         self._test_dataset = test_dataset  # test dataset
         self._dense_layers = dense_layers  # structure of layers
         self._start_lr = start_lr  # initial learning rate
-        self._insize = train_dataset.datasize  # 输入层大小，需要在dataset类中提供获取datasize的方法
-        self._outsize = train_dataset.coefsize  # 输出层大小，需要在dataset类中提供获取coefsize的方法
-        self._writer = SummaryWriter(write_path)  # 用于保存训练过程
-        self._drop_out = drop_out  # drop_out比例
-        self._batch_norm = batch_norm  # 是否进行批归一化
-        self._activate_func = activate_func  # 激活函数，由用户在外定义后传入，默认为PRelu(0.4)
+        self._insize = train_dataset.datasize  # size of input layer
+        self._outsize = train_dataset.coefsize  # size of output layer
+        self._writer = SummaryWriter(write_path)  # summary writer
+        self._drop_out = drop_out  # drop_out ratio
+        self._batch_norm = batch_norm  # batch normalization
+        self._activate_func = activate_func  # activate function , default: PRelu(0.4)
         self._model = SWNN(self._dense_layers, self._insize, self._outsize,
-                           self._drop_out, self._activate_func, self._batch_norm)  # 网络模型
-        self._log_path = log_path  # 日志文件路径
-        self._log_file_name = log_file_name  # 日志文件名称
-        self._log_level = log_level  # 日志等级
-        self.__istrained = False
+                           self._drop_out, self._activate_func, self._batch_norm)  # model
+        self._log_path = log_path  # log path
+        self._log_file_name = log_file_name  # log file name
+        self._log_level = log_level  # log level
+        self.__istrained = False # whether the model is trained
 
+        # initialize the optimizer
         if optimizer == "SGD":
             self._optimizer = optim.SGD(
                 self._model.parameters(), lr=self._start_lr)
@@ -122,12 +123,12 @@ class GNNWR:
                 self._model.parameters(), lr=self._start_lr)
         else:
             raise ValueError("Invalid Optimizer")
-        self._optimizer_name = optimizer  # 优化器名称
-        # 学习率调整策略
+        self._optimizer_name = optimizer  # optimizer name
+
+        # lr scheduler
         if self._optimizer_name == "SGD":
             if optimizer_params is None:
                 optimizer_params = {}
-            print(optimizer_params)
             maxlr = optimizer_params.get("maxlr", 0.1)
             minlr = optimizer_params.get("minlr", 0.01)
             upepoch = optimizer_params.get("upepoch", 100)
@@ -142,20 +143,19 @@ class GNNWR:
             self._scheduler = optim.lr_scheduler.MultiStepLR(
                 self._optimizer, milestones=[100, 200], gamma=0.1)
         self._weight = OLS(
-            train_dataset.dataframe, train_dataset.x, train_dataset.y).params  # 最小二乘法获得线性回归系数
-        print(self._weight)
+            train_dataset.dataframe, train_dataset.x, train_dataset.y).params  # OLS for weight
         self._out = nn.Linear(
-            self._outsize, 1, bias=False)  # 用于将权重、系数、参数相乘的线性层
+            self._outsize, 1, bias=False)  # layer to multiply weight,coefficients, and model output
         self._out.weight = nn.Parameter(torch.tensor([self._weight]).to(
-            torch.float32), requires_grad=False)  # 定义out层权重
-        self._criterion = nn.MSELoss()  # 损失函数
-        self._trainLossList = []  # 记录训练过程中的Loss
-        self._validLossList = []  # 记录验证过程中的Loss
-        self._epoch = 0  # 当前的epoch数
-        self._bestr2 = float('-inf')  # 目前最好情况的r2
-        self._noUpdateEpoch = 0  # r2没有提高的连续epoch数
-        self._modelName = "GNNWR_" + model_name  # 模型名称，用于保存模型
-        self._modelSavePath = model_save_path  # 模型保存路径
+            torch.float32), requires_grad=False)  # define the weight
+        self._criterion = nn.MSELoss()  # loss function
+        self._trainLossList = []  # record the loss in training process
+        self._validLossList = []  # record the loss in validation process
+        self._epoch = 0  # current epoch
+        self._bestr2 = float('-inf')  # best r2
+        self._noUpdateEpoch = 0  # number of epochs without update
+        self._modelName = "GNNWR_" + model_name  # model name
+        self._modelSavePath = model_save_path  # model save path
         self._use_gpu = use_gpu
         if self._use_gpu:
             if torch.cuda.is_available():
@@ -168,69 +168,66 @@ class GNNWR:
         """
         train the network
         """
-        self._model.train()  # 设置为train模式
-        train_loss = 0  # 记录当前epoch的Loss
-        data_loader = self._train_dataset.dataloader  # 数据加载器
-        maxindex = len(data_loader)  # 数据加载器的长度
+        self._model.train()  # set the model to train mode
+        train_loss = 0  # initialize the loss
+        data_loader = self._train_dataset.dataloader  # get the data loader
+        maxindex = len(data_loader)  # get the number of batches
         for index, (data, coef, label) in enumerate(data_loader):
             if self._use_gpu:
                 data, coef, label = data.cuda(), coef.cuda(), label.cuda()
             # data, label = data.view(
-            #     data.shape[0], -1), label.view(data.shape[0], -1)  # 设置数据形状
-            self._optimizer.zero_grad()  # 梯度清零
+            #     data.shape[0], -1), label.view(data.shape[0], -1)  # reshape the data
+            self._optimizer.zero_grad()  # zero the gradient
 
-            # 先通过网络输出预测权重，再将权重、参数、系数相乘
             output = self._out(self._model(data).mul(coef.to(torch.float32)))
-            loss = self._criterion(output, label)  # 计算Loss
-            loss.backward()  # 反向传播
-            self._optimizer.step()  # 模型参数优化
+            loss = self._criterion(output, label)  # calculate the loss
+            loss.backward()  # back propagation
+            self._optimizer.step()  # update the parameters
             if isinstance(data, list):
                 train_loss += loss.item() * data[0].size(0)
             else:
-                train_loss += loss.item() * data.size(0)  # Loss求和
+                train_loss += loss.item() * data.size(0)  # accumulate the loss
 
-            # 打印进度条
+            # print the progress bar
             i = index + 1
             sys.stdout.write('\r')
             sys.stdout.write(
                 "[%-50s] %d%%" % ('#' * int(i * 50.0 / maxindex), int(100.0 * i / maxindex)))
             sys.stdout.flush()
 
-        train_loss /= self._train_dataset.datasize  # Loss取平均
-        self._trainLossList.append(train_loss)  # 记录在List中
+        train_loss /= self._train_dataset.datasize  # calculate the average loss
+        self._trainLossList.append(train_loss)  # record the loss
 
     def __valid(self):
         """
         validate the network
         """
-        self._model.eval()  # 设置为验证模式
-        val_loss = 0  # 记录当前epoch的Loss
-        label_list = np.array([])  # 标准值
-        out_list = np.array([])  # 预测值
-        data_loader = self._valid_dataset.dataloader  # 数据加载器
+        self._model.eval()  # set the model to validation mode
+        val_loss = 0  # initialize the loss
+        label_list = np.array([])  # label list
+        out_list = np.array([])  # output list
+        data_loader = self._valid_dataset.dataloader  # get the data loader
 
-        with torch.no_grad():  # 验证模式中不需要进行梯度更新
+        with torch.no_grad():  # disable gradient calculation
             for data, coef, label in data_loader:
                 if self._use_gpu:
                     data, coef, label = data.cuda(), coef.cuda(), label.cuda()
-
-                # 先通过网络输出预测权重，再将权重、参数、系数相乘
-                weight = self._model(data)
+                # weight = self._model(data)
                 output = self._out(self._model(
                     data).mul(coef.to(torch.float32)))
-                loss = self._criterion(output, label)  # 计算Loss
+                loss = self._criterion(output, label)  # calculate the loss
                 out_list = np.append(
-                    out_list, output.view(-1).cpu().detach().numpy())  # 将预测值加入List中
+                    out_list, output.view(-1).cpu().detach().numpy())  # add the output to the list
                 label_list = np.append(
-                    label_list, label.view(-1).cpu().numpy())  # 将标准值加入List中
+                    label_list, label.view(-1).cpu().numpy())  # add the label to the list
                 if isinstance(data, list):
                     val_loss += loss.item() * data[0].size(0)
                 else:
-                    val_loss += loss.item() * data.size(0)  # Loss求和
-            val_loss /= len(self._valid_dataset)  # Loss取平均
-            self._validLossList.append(val_loss)  # 记录在List中
-            r2 = r2_score(label_list, out_list)  # 根据预测值和标准值计算R方
-            if r2 > self._bestr2:  # 如果R方比目前最高R方要高，则保存当前模型
+                    val_loss += loss.item() * data.size(0)  # accumulate the loss
+            val_loss /= len(self._valid_dataset)  # calculate the average loss
+            self._validLossList.append(val_loss)  # record the loss
+            r2 = r2_score(label_list, out_list)  # calculate the R square
+            if r2 > self._bestr2:  # if the R square is better than the best R square,record the R square and save the model
                 self._bestr2 = r2
                 self._noUpdateEpoch = 0
                 if not os.path.exists(self._modelSavePath):
@@ -256,13 +253,13 @@ class GNNWR:
                 loss = self._criterion(output, label)
 
                 out_list = np.append(
-                    out_list, output.view(-1).cpu().detach().numpy())  # 将预测值加入List中
+                    out_list, output.view(-1).cpu().detach().numpy())  # add the output to the list
                 label_list = np.append(
-                    label_list, label.view(-1).cpu().numpy())  # 将标准值加入List中
+                    label_list, label.view(-1).cpu().numpy())  # add the label to the list
                 if isinstance(data, list):
                     test_loss += loss.item() * data[0].size(0)
                 else:
-                    test_loss += loss.item() * data.size(0)  # Loss求和
+                    test_loss += loss.item() * data.size(0)  # accumulate the loss
             test_loss /= len(self._test_dataset)
             self.__testLoss = test_loss
             self.__testr2 = r2_score(label_list, out_list)

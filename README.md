@@ -12,7 +12,7 @@ This repository contains:
 
 1. Source code of GNNWR, GTNNWR model and other derived models
 2. Tutorial notebooks of how to use these model
-3. ...
+3. Released Python wheels
 
 ## Table of Contents
 

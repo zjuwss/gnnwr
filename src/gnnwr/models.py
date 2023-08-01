@@ -2,7 +2,7 @@ import datetime
 import math
 import os
 import sys
-
+import pandas as pd
 import numpy as np
 import torch
 import torch.nn as nn
@@ -103,7 +103,7 @@ class GNNWR:
         self._log_path = log_path  # log path
         self._log_file_name = log_file_name  # log file name
         self._log_level = log_level  # log level
-        self.__istrained = False # whether the model is trained
+        self.__istrained = False  # whether the model is trained
 
         # initialize the optimizer
         if optimizer == "SGD":
@@ -156,9 +156,9 @@ class GNNWR:
         self._noUpdateEpoch = 0  # number of epochs without update
         self._modelName = model_name  # model name
         self._modelSavePath = model_save_path  # model save path
-        self._train_diagnosis = None # diagnosis of training
-        self._test_diagnosis = None # diagnosis of test
-        self._valid_r2 = None # r2 of validation
+        self._train_diagnosis = None  # diagnosis of training
+        self._test_diagnosis = None  # diagnosis of test
+        self._valid_r2 = None  # r2 of validation
         self._use_gpu = use_gpu
         if self._use_gpu:
             if torch.cuda.is_available():
@@ -205,7 +205,7 @@ class GNNWR:
             sys.stdout.write(
                 "[%-50s] %d%%" % ('#' * int(i * 50.0 / maxindex), int(100.0 * i / maxindex)))
             sys.stdout.flush()
-        self._train_diagnosis = DIAGNOSIS(weight_all,x_true,y_true,y_pred)
+        self._train_diagnosis = DIAGNOSIS(weight_all, x_true, y_true, y_pred)
         train_loss /= self._train_dataset.datasize  # calculate the average loss
         self._trainLossList.append(train_loss)  # record the loss
 
@@ -342,7 +342,7 @@ class GNNWR:
                 current_lr = group['lr'] / (sum_sq.sqrt() + group['eps'])
             else:
                 raise NotImplementedError
-            self._scheduler.step() # update the learning rate
+            self._scheduler.step()  # update the learning rate
             # tensorboard
             self._writer.add_scalar('Training/Learning Rate', current_lr, self._epoch)
             self._writer.add_scalar('Training/Loss', self._trainLossList[-1], self._epoch)
@@ -356,7 +356,7 @@ class GNNWR:
 
             # log output
             log_str = "Epoch: " + str(epoch + 1) + \
-                      "; Train Loss: " + str(self._trainLossList[-1]) +\
+                      "; Train Loss: " + str(self._trainLossList[-1]) + \
                       "; Train R2: {:5f}".format(self._train_diagnosis.R2().data) + \
                       "; Train RMSE: {:5f}".format(self._train_diagnosis.RMSE().data) + \
                       "; Train AIC: {:5f}".format(self._train_diagnosis.AIC()) + \
@@ -403,8 +403,8 @@ class GNNWR:
         """
         add graph to tensorboard
         """
-        for data,coef,label in self._train_dataset.dataloader:
-            self._writer.add_graph(self._model,data)
+        for data, coef, label in self._train_dataset.dataloader:
+            self._writer.add_graph(self._model, data)
             break
         print("Add Graph Successfully")
 
@@ -414,7 +414,7 @@ class GNNWR:
         """
         # load model
         if path is None:
-            path = self._modelSavePath+"/"+self._modelName+".pkl"
+            path = self._modelSavePath + "/" + self._modelName + ".pkl"
         if use_dict:
             data = torch.load(path).state_dict()
             self._model.load_state_dict(data)
@@ -442,6 +442,40 @@ class GNNWR:
         print("AICc: | {:5f}".format(self._test_diagnosis.AICc()))
         print("F1:   | {:5f}".format(self._test_diagnosis.F1_GNN().data))
 
+    def reg_result(self, filename, model_path=None, use_dict=False):
+
+        if model_path is None:
+            model_path = self._modelSavePath + "/" + self._modelName + ".pkl"
+        if use_dict:
+            data = torch.load(model_path).state_dict()
+            self._model.load_state_dict(data)
+        else:
+            self._model = torch.load(model_path)
+        result = torch.tensor([]).to(torch.float32)
+        with torch.no_grad():
+            for data, coef, label in self._train_dataset.dataloader:
+                output = self._out(self._model(data).mul(coef.to(torch.float32)))
+                weight = self._model(data).mul(torch.tensor(self._weight).to(torch.float32))
+                output = torch.cat((weight, output), dim=1)
+                result = torch.cat((result, output), 0)
+            for data, coef, label in self._valid_dataset.dataloader:
+                output = self._out(self._model(data).mul(coef.to(torch.float32)))
+                weight = self._model(data).mul(torch.tensor(self._weight).to(torch.float32))
+                output = torch.cat((weight, output), dim=1)
+                result = torch.cat((result, output), 0)
+            for data, coef, label in self._test_dataset.dataloader:
+                output = self._out(self._model(data).mul(coef.to(torch.float32)))
+                weight = self._model(data).mul(torch.tensor(self._weight).to(torch.float32))
+                output = torch.cat((weight, output), dim=1)
+                result = torch.cat((result, output), 0)
+        result = result.cpu().detach().numpy()
+        columns = self._train_dataset.x
+        columns.append("bias")
+        columns = columns + self._train_dataset.y
+        result = pd.DataFrame(result, columns=columns)
+        result.to_csv(filename, index=False)
+
+
 class GTNNWR(GNNWR):
     def __init__(self,
                  train_dataset,
@@ -453,7 +487,7 @@ class GTNNWR(GNNWR):
                  drop_out=0.2,
                  batch_norm=True,
                  activate_func=nn.PReLU(init=0.4),
-                 model_name="GTNNWR_"+datetime.date.today().strftime("%Y%m%d-%H%M%S"),
+                 model_name="GTNNWR_" + datetime.date.today().strftime("%Y%m%d-%H%M%S"),
                  model_save_path="../gtnnwr_models",
                  write_path="../gtnnwr_runs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),
                  use_gpu: bool = True,

@@ -14,6 +14,9 @@ This repository contains:
 2. Tutorial notebooks of how to use these model
 3. ...
 
+![GNNWR](assets/The_proposed_GNNWR_model.jpeg)
+
+
 ## Table of Contents
 
 - [Background](#background)

@@ -10,7 +10,7 @@ from torch.utils.data import Dataset, DataLoader
 
 
 class baseDataset(Dataset):
-    def __init__(self, data=None, x_column=None, y_column=None, is_need_STNN=False):
+    def __init__(self, data=None, x_column=None, y_column=None, proj_column=None, is_need_STNN=False):
         """
         :param data: DataSets with x_column and y_column
         :param x_column: independent variables column name
@@ -22,16 +22,19 @@ class baseDataset(Dataset):
         self.dataframe = data
         self.x = x_column
         self.y = y_column
+        self.proj = proj_column
         if data is None:
             self.x_data = None
             self.datasize = -1
             self.coefsize = -1
             self.y_data = None
+            self.proj_data = None
         else:
             self.x_data = data[x_column].values  # x_data is independent variables data
             self.datasize = self.x_data.shape[0]  # datasize is the number of samples
             self.coefsize = len(x_column) + 1  # coefsize is the number of coefficients
             self.y_data = data[y_column].values  # y_data is dependent variables data
+            self.proj_data = data[proj_column].values  # proj_data is spatial data
         self.is_need_STNN = is_need_STNN
         self.scale_fn = None  # scale function
         self.x_scale_info = None  # scale information of x_data
@@ -54,10 +57,10 @@ class baseDataset(Dataset):
             return [torch.tensor(self.distances[index], dtype=torch.float),
                     torch.tensor(self.temporal[index], dtype=torch.float)], torch.tensor(self.x_data[index],
                                                                                          dtype=torch.float), torch.tensor(
-                self.y_data[index], dtype=torch.float)
+                self.y_data[index], dtype=torch.float), torch.tensor(self.proj_data[index], dtype=torch.float)
         return torch.tensor(self.distances[index], dtype=torch.float), torch.tensor(self.x_data[index],
                                                                                     dtype=torch.float), torch.tensor(
-            self.y_data[index], dtype=torch.float)
+            self.y_data[index], dtype=torch.float), torch.tensor(self.proj_data[index], dtype=torch.float)
 
     def scale(self, scale_fn=None, scale_params=None):
         """
@@ -83,7 +86,8 @@ class baseDataset(Dataset):
             self.y_data = y_scale_params.transform(pd.DataFrame(self.y_data, columns=self.y))
         self.x_data = np.concatenate((self.x_data, np.ones(
             (self.datasize, 1))), axis=1)
-    def scale2(self,scale_fn,scale_params):
+
+    def scale2(self, scale_fn, scale_params):
         if scale_fn == "minmax_scale":
             self.scale_fn = "minmax_scale"
             x_scale_params = scale_params[0]
@@ -98,6 +102,7 @@ class baseDataset(Dataset):
             self.y_data = self.y_data * np.sqrt(y_scale_params["var"]) + y_scale_params["mean"]
         self.x_data = np.concatenate((self.x_data, np.ones(
             (self.datasize, 1))), axis=1)
+
     def rescale(self, x, y):
         """
         :param x: 输入属性数据
@@ -126,7 +131,8 @@ class baseDataset(Dataset):
             y_scale_info[key] = value.tolist()
         # save the information of dataset
         with open(os.path.join(dirname, "dataset_info.json"), "w") as f:
-            json.dump({"x": self.x, "y": self.y, "is_need_STNN": self.is_need_STNN, "scale_fn": self.scale_fn,
+            json.dump({"x": self.x, "y": self.y, "proj": self.proj,
+                       "is_need_STNN": self.is_need_STNN, "scale_fn": self.scale_fn,
                        "x_scale_info": json.dumps(x_scale_info), "y_scale_info": json.dumps(y_scale_info),
                        }, f)
         # save the distance matrix
@@ -142,6 +148,7 @@ class baseDataset(Dataset):
             dataset_info = json.load(f)
         self.x = dataset_info["x"]
         self.y = dataset_info["y"]
+        self.proj = dataset_info["proj"]
         self.is_need_STNN = dataset_info["is_need_STNN"]
         self.scale_fn = dataset_info["scale_fn"]
         self.x_scale_info = json.loads(dataset_info["x_scale_info"])
@@ -159,6 +166,7 @@ class baseDataset(Dataset):
         self.x_data = self.dataframe[self.x].values
         self.datasize = self.x_data.shape[0]
         self.y_data = self.dataframe[self.y].values
+        self.proj_data = self.dataframe[self.proj].values
         self.coefsize = len(self.x) + 1
         self.scale2(self.scale_fn, [self.x_scale_info, self.y_scale_info])
 
@@ -363,9 +371,13 @@ def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_colu
                                 train_data[int((1 + from_for_cv) * valid_ratio * len(train_data)):]])
 
     # Use the parameters of the dataset to normalize the train_dataset, val_dataset, and test_dataset
-    train_dataset = use_class(train_data, x_column, y_column, is_need_STNN)
-    val_dataset = use_class(val_data, x_column, y_column, is_need_STNN)
-    test_dataset = use_class(test_data, x_column, y_column, is_need_STNN)
+    if temp_column is None:
+        proj_column = spatial_column
+    else:
+        proj_column = spatial_column + temp_column
+    train_dataset = use_class(train_data, x_column, y_column, proj_column, is_need_STNN)
+    val_dataset = use_class(val_data, x_column, y_column, proj_column, is_need_STNN)
+    test_dataset = use_class(test_data, x_column, y_column, proj_column, is_need_STNN)
     train_dataset.scale(process_fn, scaler_params)
     val_dataset.scale(process_fn, scaler_params)
     test_dataset.scale(process_fn, scaler_params)

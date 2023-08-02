@@ -179,7 +179,7 @@ class GNNWR:
         x_true = torch.tensor([]).to(torch.float32)
         y_true = torch.tensor([]).to(torch.float32)
         y_pred = torch.tensor([]).to(torch.float32)
-        for index, (data, coef, label) in enumerate(data_loader):
+        for index, (data, coef, label, proj) in enumerate(data_loader):
             if self._use_gpu:
                 data, coef, label = data.cuda(), coef.cuda(), label.cuda()
             # data, label = data.view(
@@ -220,7 +220,7 @@ class GNNWR:
         data_loader = self._valid_dataset.dataloader  # get the data loader
 
         with torch.no_grad():  # disable gradient calculation
-            for data, coef, label in data_loader:
+            for data, coef, label, proj in data_loader:
                 if self._use_gpu:
                     data, coef, label = data.cuda(), coef.cuda(), label.cuda()
                 # weight = self._model(data)
@@ -259,7 +259,7 @@ class GNNWR:
         y_pred = torch.tensor([]).to(torch.float32)
         weight_all = torch.tensor([]).to(torch.float32)
         with torch.no_grad():
-            for data, coef, label in data_loader:
+            for data, coef, label, proj in data_loader:
                 if self._use_gpu:
                     data, coef, label = data.cuda(), coef.cuda(), label.cuda()
                 # data,label = data.view(data.shape[0],-1),label.view(data.shape[0],-1)
@@ -403,7 +403,7 @@ class GNNWR:
         """
         add graph to tensorboard
         """
-        for data, coef, label in self._train_dataset.dataloader:
+        for data, coef, label, proj in self._train_dataset.dataloader:
             self._writer.add_graph(self._model, data)
             break
         print("Add Graph Successfully")
@@ -453,25 +453,27 @@ class GNNWR:
             self._model = torch.load(model_path)
         result = torch.tensor([]).to(torch.float32)
         with torch.no_grad():
-            for data, coef, label in self._train_dataset.dataloader:
+            for data, coef, label, proj in self._train_dataset.dataloader:
                 output = self._out(self._model(data).mul(coef.to(torch.float32)))
                 weight = self._model(data).mul(torch.tensor(self._weight).to(torch.float32))
-                output = torch.cat((weight, output), dim=1)
+                output = torch.cat((weight, output, proj), dim=1)
                 result = torch.cat((result, output), 0)
-            for data, coef, label in self._valid_dataset.dataloader:
+            for data, coef, label, proj in self._valid_dataset.dataloader:
                 output = self._out(self._model(data).mul(coef.to(torch.float32)))
                 weight = self._model(data).mul(torch.tensor(self._weight).to(torch.float32))
-                output = torch.cat((weight, output), dim=1)
+                output = torch.cat((weight, output, proj), dim=1)
                 result = torch.cat((result, output), 0)
-            for data, coef, label in self._test_dataset.dataloader:
+            for data, coef, label, proj in self._test_dataset.dataloader:
                 output = self._out(self._model(data).mul(coef.to(torch.float32)))
                 weight = self._model(data).mul(torch.tensor(self._weight).to(torch.float32))
-                output = torch.cat((weight, output), dim=1)
+                output = torch.cat((weight, output, proj), dim=1)
                 result = torch.cat((result, output), 0)
         result = result.cpu().detach().numpy()
         columns = self._train_dataset.x
+        for i in range(len(columns)):
+            columns[i] = "weight_" + columns[i]
         columns.append("bias")
-        columns = columns + self._train_dataset.y
+        columns = columns + self._train_dataset.y+self._train_dataset.proj
         result = pd.DataFrame(result, columns=columns)
         result.to_csv(filename, index=False)
 

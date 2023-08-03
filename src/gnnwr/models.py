@@ -179,7 +179,7 @@ class GNNWR:
         x_true = torch.tensor([]).to(torch.float32)
         y_true = torch.tensor([]).to(torch.float32)
         y_pred = torch.tensor([]).to(torch.float32)
-        for index, (data, coef, label, proj) in enumerate(data_loader):
+        for index, (data, coef, label, id) in enumerate(data_loader):
             # move the data to gpu
             device = torch.device('cuda') if self._use_gpu else torch.device('cpu')
             data, coef, label = data.to(device), coef.to(device), label.to(device)
@@ -222,7 +222,7 @@ class GNNWR:
         data_loader = self._valid_dataset.dataloader  # get the data loader
 
         with torch.no_grad():  # disable gradient calculation
-            for data, coef, label, proj in data_loader:
+            for data, coef, label, id in data_loader:
                 device = torch.device('cuda') if self._use_gpu else torch.device('cpu')
                 data, coef, label = data.to(device), coef.to(device), label.to(device)
                 # weight = self._model(data)
@@ -261,7 +261,7 @@ class GNNWR:
         y_pred = torch.tensor([]).to(torch.float32)
         weight_all = torch.tensor([]).to(torch.float32)
         with torch.no_grad():
-            for data, coef, label, proj in data_loader:
+            for data, coef, label, id in data_loader:
                 device = torch.device('cuda') if self._use_gpu else torch.device('cpu')
                 data, coef, label = data.to(device), coef.to(device), label.to(device)
                 x_data, y_data, y_pred, weight_all = x_data.to(device), y_data.to(device), y_pred.to(device), weight_all.to(device)
@@ -416,7 +416,7 @@ class GNNWR:
         """
         add graph to tensorboard
         """
-        for data, coef, label, proj in self._train_dataset.dataloader:
+        for data, coef, label, id in self._train_dataset.dataloader:
             self._writer.add_graph(self._model, data)
             break
         print("Add Graph Successfully")
@@ -467,30 +467,30 @@ class GNNWR:
         device = torch.device('cuda') if self._use_gpu else torch.device('cpu')
         result = torch.tensor([]).to(torch.float32).to(device)
         with torch.no_grad():
-            for data, coef, label, proj in self._train_dataset.dataloader:
-                data, coef, label, proj= data.to(device), coef.to(device), label.to(device), proj.to(device)
+            for data, coef, label, id in self._train_dataset.dataloader:
+                data, coef, label, id= data.to(device), coef.to(device), label.to(device), id.to(device)
                 output = self._out(self._model(data).mul(coef.to(torch.float32)))
                 weight = self._model(data).mul(torch.tensor(self._weight).to(torch.float32).to(device))
-                output = torch.cat((weight, output, proj), dim=1)
+                output = torch.cat((weight, output, id), dim=1)
                 result = torch.cat((result, output), 0)
-            for data, coef, label, proj in self._valid_dataset.dataloader:
-                data, coef, label, proj = data.to(device), coef.to(device), label.to(device), proj.to(device)
+            for data, coef, label, id in self._valid_dataset.dataloader:
+                data, coef, label, id = data.to(device), coef.to(device), label.to(device), id.to(device)
                 output = self._out(self._model(data).mul(coef.to(torch.float32)))
                 weight = self._model(data).mul(torch.tensor(self._weight).to(torch.float32).to(device))
-                output = torch.cat((weight, output, proj), dim=1)
+                output = torch.cat((weight, output, id), dim=1)
                 result = torch.cat((result, output), 0)
-            for data, coef, label, proj in self._test_dataset.dataloader:
-                data, coef, label, proj = data.to(device), coef.to(device), label.to(device), proj.to(device)
+            for data, coef, label, id in self._test_dataset.dataloader:
+                data, coef, label, id = data.to(device), coef.to(device), label.to(device), id.to(device)
                 output = self._out(self._model(data).mul(coef.to(torch.float32)))
                 weight = self._model(data).mul(torch.tensor(self._weight).to(torch.float32).to(device))
-                output = torch.cat((weight, output, proj), dim=1)
+                output = torch.cat((weight, output, id), dim=1)
                 result = torch.cat((result, output), 0)
         result = result.cpu().detach().numpy()
         columns = self._train_dataset.x
         for i in range(len(columns)):
             columns[i] = "weight_" + columns[i]
         columns.append("bias")
-        columns = columns + self._train_dataset.y+self._train_dataset.proj
+        columns = columns + self._train_dataset.y+self._train_dataset.id
         result = pd.DataFrame(result, columns=columns)
         result.to_csv(filename, index=False)
 

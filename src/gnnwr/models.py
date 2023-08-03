@@ -11,8 +11,8 @@ from sklearn.metrics import r2_score
 from torch.utils.tensorboard import SummaryWriter  # 用于保存训练过程
 
 import logging
-from src.gnnwr.networks import SWNN, STPNN
-from src.gnnwr.utils import OLS, DIAGNOSIS
+from .networks import SWNN, STPNN
+from .utils import OLS, DIAGNOSIS
 
 
 # 23.6.8_TODO: 寻找合适的优化器  考虑SGD+学习率调整  输出权重
@@ -180,15 +180,23 @@ class GNNWR:
         y_true = torch.tensor([]).to(torch.float32)
         y_pred = torch.tensor([]).to(torch.float32)
         for index, (data, coef, label, proj) in enumerate(data_loader):
-            if self._use_gpu:
-                data, coef, label = data.cuda(), coef.cuda(), label.cuda()
-            # data, label = data.view(
-            #     data.shape[0], -1), label.view(data.shape[0], -1)  # reshape the data
+            # move the data to gpu
+            device = torch.device('cuda') if self._use_gpu else torch.device('cpu')
+            data, coef, label = data.to(device), coef.to(device), label.to(device)
+            weight_all, x_true, y_true, y_pred = weight_all.to(device), x_true.to(device), y_true.to(device), y_pred.to(device)
+
             self._optimizer.zero_grad()  # zero the gradient
+            if self._optimizer_name == "Adagrad":
+            # move optimizer state to gpu
+                for state in self._optimizer.state.values():
+                    for k, v in state.items():
+                        if isinstance(v, torch.Tensor):
+                            state[k] = v.to(device)
+
             x_true = torch.cat((x_true, coef), 0)
             y_true = torch.cat((y_true, label), 0)
             weight = self._model(data)
-            weight_all = torch.cat((weight_all, weight.mul(torch.tensor(self._weight).to(torch.float32))), 0)
+            weight_all = torch.cat((weight_all, weight.mul(torch.tensor(self._weight).to(torch.float32).to(device))), 0)
             output = self._out(weight.mul(coef.to(torch.float32)))
             y_pred = torch.cat((y_pred, output), 0)
             loss = self._criterion(output, label)  # calculate the loss
@@ -221,8 +229,8 @@ class GNNWR:
 
         with torch.no_grad():  # disable gradient calculation
             for data, coef, label, proj in data_loader:
-                if self._use_gpu:
-                    data, coef, label = data.cuda(), coef.cuda(), label.cuda()
+                device = torch.device('cuda') if self._use_gpu else torch.device('cpu')
+                data, coef, label = data.to(device), coef.to(device), label.to(device)
                 # weight = self._model(data)
                 output = self._out(self._model(
                     data).mul(coef.to(torch.float32)))
@@ -260,8 +268,8 @@ class GNNWR:
         weight_all = torch.tensor([]).to(torch.float32)
         with torch.no_grad():
             for data, coef, label, proj in data_loader:
-                if self._use_gpu:
-                    data, coef, label = data.cuda(), coef.cuda(), label.cuda()
+                device = torch.device('cuda') if self._use_gpu else torch.device('cpu')
+                data, coef, label = data.to(device), coef.to(device), label.to(device)
                 # data,label = data.view(data.shape[0],-1),label.view(data.shape[0],-1)
                 x_data = torch.cat((x_data, coef), 0)
                 y_data = torch.cat((y_data, label), 0)

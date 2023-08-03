@@ -207,12 +207,6 @@ class GNNWR:
             else:
                 train_loss += loss.item() * data.size(0)  # accumulate the loss
 
-            # print the progress bar
-            i = index + 1
-            sys.stdout.write('\r')
-            sys.stdout.write(
-                "[%-50s] %d%%" % ('#' * int(i * 50.0 / maxindex), int(100.0 * i / maxindex)))
-            sys.stdout.flush()
         self._train_diagnosis = DIAGNOSIS(weight_all, x_true, y_true, y_pred)
         train_loss /= self._train_dataset.datasize  # calculate the average loss
         self._trainLossList.append(train_loss)  # record the loss
@@ -310,20 +304,30 @@ class GNNWR:
                             filename=file_str, level=logging.INFO)
         for epoch in range(0, max_epoch):
             self._epoch = epoch
-            print("Epoch: ", epoch + 1)
+
+                #print("Epoch: ", epoch + 1)
             # train the network
             # record the information of the training process
             self.__train()
-            print("\nTrain Loss: ", self._trainLossList[-1])
-            print("Train R2: {:.5f}".format(self._train_diagnosis.R2().data))
-            print("Train RMSE: {:.5f}".format(self._train_diagnosis.RMSE().data))
-            print("Train AIC: {:.5f}".format(self._train_diagnosis.AIC()))
-            print("Train AICc: {:.5f}".format(self._train_diagnosis.AICc()))
             # validate the network
             # record the information of the validation process
             self.__valid()
-            print("Valid Loss: ", self._validLossList[-1])
-            print("Valid R2: {:.5f}".format(self._valid_r2), "\n")
+            # out put log every 50 epoch:
+            i = (epoch + 1) % 50
+            if i != 0:
+                sys.stdout.write('\r')
+                sys.stdout.write(
+                    "[%-50s] %d%%" % ('#' * int(i * 50.0 / 50 + 1), int(100.0 * i / 50 + 2)))
+                sys.stdout.flush()
+            else:
+                print("\nEpoch: ", epoch + 1)
+                print("Train Loss: ", self._trainLossList[-1])
+                print("Train R2: {:.5f}".format(self._train_diagnosis.R2().data))
+                print("Train RMSE: {:.5f}".format(self._train_diagnosis.RMSE().data))
+                print("Train AIC: {:.5f}".format(self._train_diagnosis.AIC()))
+                print("Train AICc: {:.5f}".format(self._train_diagnosis.AICc()))
+                print("Valid Loss: ", self._validLossList[-1])
+                print("Valid R2: {:.5f}".format(self._valid_r2), "\n")
             # calculate the learning rate
             group = self._optimizer.param_groups[0]
             p = group['params'][0]

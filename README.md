@@ -30,6 +30,21 @@ This repository contains:
 
 ## Install
 
+**⚠ If you want to run gnnwr with your GPU, make sure you have installed *pytorch with CUDA support* beforehead:**
+
+For example, a torch 2.0.0 with cuda 11.8:
+
+``` bash
+> pip list | grep torch
+torch                   2.0.0+cu118
+torchaudio              2.0.1+cu118
+torchvision             0.15.1+cu118
+```
+
+You can find install support on [Pytorch's official website](https://pytorch.org/)  for installing the right version that suits your environment.
+
+**⚠ If you only want to run gnnwr with your CPU, or you have already installed the correct version of pytorch:**
+
 Using pip to install gnnwr:  
 
 ```

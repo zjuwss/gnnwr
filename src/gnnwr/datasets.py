@@ -42,6 +42,7 @@ class baseDataset(Dataset):
         self.y_scale_info = None  # scale information of y_data
         self.distances = None  # distances is the distance matrix of spatial/spatio-temporal data
         self.temporal = None  # temporal is the temporal distance matrix of spatio-temporal data
+        self.distances_scale_params = None  # scale parameters of distances
 
     def __len__(self):
         """
@@ -137,6 +138,7 @@ class baseDataset(Dataset):
             json.dump({"x": self.x, "y": self.y, "id": self.id,
                        "is_need_STNN": self.is_need_STNN, "scale_fn": self.scale_fn,
                        "x_scale_info": json.dumps(x_scale_info), "y_scale_info": json.dumps(y_scale_info),
+                       "distance_scale_info": json.dumps(self.distances_scale_param)
                        }, f)
         # save the distance matrix
         np.save(os.path.join(dirname, "distances.npy"), self.distances)
@@ -156,6 +158,7 @@ class baseDataset(Dataset):
         self.scale_fn = dataset_info["scale_fn"]
         self.x_scale_info = json.loads(dataset_info["x_scale_info"])
         self.y_scale_info = json.loads(dataset_info["y_scale_info"])
+        self.distances_scale_param = json.loads(dataset_info["distance_scale_info"])
         x_scale_info = self.x_scale_info
         y_scale_info = self.y_scale_info
         for key, value in x_scale_info.items():
@@ -477,6 +480,24 @@ def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_colu
     # set batch_size for test_dataset as max_test_size
     if max_val_size < 0: max_val_size = len(val_dataset)
     if max_test_size < 0: max_test_size = len(test_dataset)
+    if process_fn == "minmax_scale":
+        distance_scale = MinMaxScaler()
+    else:
+        distance_scale = StandardScaler()
+    # scale distance matrix
+    train_distance_len = len(train_dataset.distances)
+    val_distance_len = len(val_dataset.distances)
+    distances = np.concatenate((train_dataset.distances, val_dataset.distances, test_dataset.distances), axis=0)
+    distances = distance_scale.fit_transform(distances.reshape(-1, distances.shape[-1])).reshape(distances.shape)
+    if process_fn == "minmax_scale":
+        distance_scale_param = {"min": distance_scale.data_min_, "max": distance_scale.data_max_}
+    else:
+        distance_scale_param = {"mean": distance_scale.mean_, "var": distance_scale.var_}
+    train_dataset.distances = distances[:train_distance_len]
+    val_dataset.distances = distances[train_distance_len:train_distance_len + val_distance_len]
+    test_dataset.distances = distances[train_distance_len + val_distance_len:]
+    train_dataset.distances_scale_param = val_dataset.distances_scale_param = test_dataset.distances_scale_param = distance_scale_param
+
     train_dataset.dataloader = DataLoader(
         train_dataset, batch_size=batch_size, shuffle=shuffle)
     val_dataset.dataloader = DataLoader(

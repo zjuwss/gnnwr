@@ -32,9 +32,10 @@ class SWNN(nn.Module):
         count = 0  # 用于层命名
         lastsize = self.insize  # 用于记录上一层的size
         self.fc = nn.Sequential()
+
         for size in self.dense_layer:
             self.fc.add_module("swnn_full" + str(count),
-                               nn.Linear(lastsize, size))  # 添加全连接层
+                               nn.Linear(lastsize, size, bias=True))  # 添加全连接层
             if batch_norm:
                 # 如果需要批归一化则添加批归一化层
                 self.fc.add_module("swnn_batc" + str(count), nn.BatchNorm1d(size))
@@ -45,6 +46,11 @@ class SWNN(nn.Module):
             count += 1
         self.fc.add_module("full" + str(count),
                            nn.Linear(lastsize, self.outsize))  # 连接最后一个隐藏层与输出层
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                torch.nn.init.kaiming_uniform_(m.weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
+                if m.bias is not None:
+                    m.bias.data.fill_(0.01)
 
     def forward(self, x):
         x.to(torch.float32)

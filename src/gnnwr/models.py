@@ -182,7 +182,11 @@ class GNNWR:
         for index, (data, coef, label, id) in enumerate(data_loader):
             # move the data to gpu
             device = torch.device('cuda') if self._use_gpu else torch.device('cpu')
-            data, coef, label = data.to(device), coef.to(device), label.to(device)
+            if self._train_dataset.is_need_STNN:
+                data = [d.to(device) for d in data]
+                coef, label = coef.to(device), label.to(device)
+            else:
+                data, coef, label = data.to(device), coef.to(device), label.to(device)
             weight_all, x_true, y_true, y_pred = weight_all.to(device), x_true.to(device), y_true.to(device), y_pred.to(device)
 
             self._optimizer.zero_grad()  # zero the gradient
@@ -224,7 +228,11 @@ class GNNWR:
         with torch.no_grad():  # disable gradient calculation
             for data, coef, label, id in data_loader:
                 device = torch.device('cuda') if self._use_gpu else torch.device('cpu')
-                data, coef, label = data.to(device), coef.to(device), label.to(device)
+                if self._train_dataset.is_need_STNN:
+                    data = [d.to(device) for d in data]
+                    coef, label = coef.to(device), label.to(device)
+                else:
+                    data, coef, label = data.to(device), coef.to(device), label.to(device)
                 # weight = self._model(data)
                 output = self._out(self._model(
                     data).mul(coef.to(torch.float32)))
@@ -263,7 +271,11 @@ class GNNWR:
         with torch.no_grad():
             for data, coef, label, id in data_loader:
                 device = torch.device('cuda') if self._use_gpu else torch.device('cpu')
-                data, coef, label = data.to(device), coef.to(device), label.to(device)
+                if self._train_dataset.is_need_STNN:
+                    data = [d.to(device) for d in data]
+                    coef, label = coef.to(device), label.to(device)
+                else:
+                    data, coef, label = data.to(device), coef.to(device), label.to(device)
                 x_data, y_data, y_pred, weight_all = x_data.to(device), y_data.to(device), y_pred.to(device), weight_all.to(device)
                 # data,label = data.view(data.shape[0],-1),label.view(data.shape[0],-1)
                 x_data = torch.cat((x_data, coef), 0)
@@ -470,19 +482,31 @@ class GNNWR:
         result = torch.tensor([]).to(torch.float32).to(device)
         with torch.no_grad():
             for data, coef, label, id in self._train_dataset.dataloader:
-                data, coef, label, id= data.to(device), coef.to(device), label.to(device), id.to(device)
+                if self._train_dataset.is_need_STNN:
+                    data = [d.to(device) for d in data]
+                    coef, label, id = coef.to(device), label.to(device), id.to(device)
+                else:
+                    data, coef, label, id= data.to(device), coef.to(device), label.to(device), id.to(device)
                 output = self._out(self._model(data).mul(coef.to(torch.float32)))
                 weight = self._model(data).mul(torch.tensor(self._weight).to(torch.float32).to(device))
                 output = torch.cat((weight, output, id), dim=1)
                 result = torch.cat((result, output), 0)
             for data, coef, label, id in self._valid_dataset.dataloader:
-                data, coef, label, id = data.to(device), coef.to(device), label.to(device), id.to(device)
+                if self._train_dataset.is_need_STNN:
+                    data = [d.to(device) for d in data]
+                    coef, label, id = coef.to(device), label.to(device), id.to(device)
+                else:
+                    data, coef, label, id = data.to(device), coef.to(device), label.to(device), id.to(device)
                 output = self._out(self._model(data).mul(coef.to(torch.float32)))
                 weight = self._model(data).mul(torch.tensor(self._weight).to(torch.float32).to(device))
                 output = torch.cat((weight, output, id), dim=1)
                 result = torch.cat((result, output), 0)
             for data, coef, label, id in self._test_dataset.dataloader:
-                data, coef, label, id = data.to(device), coef.to(device), label.to(device), id.to(device)
+                if self._train_dataset.is_need_STNN:
+                    data = [d.to(device) for d in data]
+                    coef, label, id = coef.to(device), label.to(device), id.to(device)
+                else:
+                    data, coef, label, id = data.to(device), coef.to(device), label.to(device), id.to(device)
                 output = self._out(self._model(data).mul(coef.to(torch.float32)))
                 weight = self._model(data).mul(torch.tensor(self._weight).to(torch.float32).to(device))
                 output = torch.cat((weight, output, id), dim=1)

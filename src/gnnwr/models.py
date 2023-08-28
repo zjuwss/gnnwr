@@ -143,7 +143,7 @@ class GNNWR:
             self._scheduler = optim.lr_scheduler.MultiStepLR(
                 self._optimizer, milestones=[100, 200], gamma=0.1)
         self._weight = OLS(
-            train_dataset.dataframe, train_dataset.x, train_dataset.y).params  # OLS for weight
+            train_dataset.scaledDataframe, train_dataset.x, train_dataset.y).params  # OLS for weight
         self._out = nn.Linear(
             self._outsize, 1, bias=False)  # layer to multiply weight,coefficients, and model output
         self._out.weight = nn.Parameter(torch.tensor([self._weight]).to(

@@ -5,7 +5,7 @@ import torch
 
 
 class OLS():
-    def __init__(self, dataset, xName: list, yName: str):  # xName为自变量字段名，yName为因变量字段名（需为列表）
+    def __init__(self, dataset, xName: list, yName: list):  # xName为自变量字段名，yName为因变量字段名（需为列表）
         self.__dataset = dataset
         self.__xName = xName
         self.__yName = yName

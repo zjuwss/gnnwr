@@ -86,6 +86,9 @@ class baseDataset(Dataset):
             self.x_data = x_scale_params.transform(pd.DataFrame(self.x_data, columns=self.x))
             self.y_scale_info = {"mean": y_scale_params.mean_, "var": y_scale_params.var_}
             self.y_data = y_scale_params.transform(pd.DataFrame(self.y_data, columns=self.y))
+        
+        self.getScaledDataframe();
+
         self.x_data = np.concatenate((self.x_data, np.ones(
             (self.datasize, 1))), axis=1)
 
@@ -102,8 +105,17 @@ class baseDataset(Dataset):
             y_scale_params = scale_params[1]
             self.x_data = self.x_data * np.sqrt(x_scale_params["var"]) + x_scale_params["mean"]
             self.y_data = self.y_data * np.sqrt(y_scale_params["var"]) + y_scale_params["mean"]
+        
+        self.getScaledDataframe();
+
         self.x_data = np.concatenate((self.x_data, np.ones(
             (self.datasize, 1))), axis=1)
+
+    #TODO:储存归一化后的Dataframe
+    def getScaledDataframe(self):
+        columns = np.concatenate((self.x,self.y),axis=0)
+        scaledData = np.concatenate((self.x_data,self.y_data),axis=1)
+        self.scaledDataframe = pd.DataFrame(scaledData,columns=columns)
 
     def rescale(self, x, y):
         """

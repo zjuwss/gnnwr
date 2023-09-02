@@ -1,10 +1,8 @@
 # gnnwr
 
-<p>
-    <img title="python version" src="https://img.shields.io/badge/python-3.9-blue" alt="">
-    <!--<img title="PyPI" src="https://img.shields.io/pypi/v/:packageName"  alt="PyPI">-->
-</p>
-
+![PyPI - License](https://img.shields.io/pypi/l/gnnwr)
+[![PyPI version](https://badge.fury.io/py/gnnwr.svg)](https://badge.fury.io/py/gnnwr)
+![GitHub all releases](https://img.shields.io/github/downloads/zjuwss/gnnwr/total)
 
 A pytorch implementation of the Geographically Neural Network Weighted Regression (GNNWR) and its derived models
 
@@ -26,7 +24,14 @@ This repository contains:
 ## Models
 
 - [GNNWR](https://doi.org/10.1080/13658816.2019.1707834): Geographically neural network weighted regression, a model address spatial non-stationarity in various domains with complex geographical processes. A spatially weighted neural network (SWNN) is proposed to represent the nonstationary weight matrix.
+<p align="center">
+<img title="GNNWR" src="assets/The_estimation_process_of_GNNWR_model.jpeg" alt="GNNWR" width=75%>
+</p>
+
 - [GTNNWR](https://doi.org/10.1080/13658816.2020.1775836): Geographically and temporally neural network weighted regression, a model for estimating spatiotemporal non-stationary relationships. A spatiotemporal proximity neural network (STPNN) is proposed in this paper to accurately generate space-time distance.
+<p align="center">
+<img title="GTNNWR" src="assets/The_estimation_process_of_GTNNWR_model.jpeg" alt="GTNNWR" width=75%>
+</p>
 
 ## Install
 
@@ -82,13 +87,12 @@ For other uses of customization, the [demos](https://github.com/zjuwss/gnnwr/tre
 
 
 ### case study demo
-
-
+1. Jin Qi, Zhenhong Du, Sensen Wu, Yijun Chen, Yuanyuan Wang, 2023. A spatiotemporally weighted intelligent method for exploring fine-scale distributions of surface dissolved silicate in coastal seas. Science of The Total Environment, 886 , 163981.
 
 ## Contributing
 
 ### Contributors
-
+<a href="https://github.com/zjuwss/gnnwr/graphs/contributors"><img src="https://contrib.rocks/image?repo=zjuwss/gnnwr" alt="contributors"></a>
 
 
 ## License

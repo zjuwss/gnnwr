@@ -1,22 +1,34 @@
 import os
 import sys
+
+import numpy as np
 import pandas as pd
 
 sys.path.append(os.getcwd())
-from src.datasets import init_dataset, init_dataset_cv
-from src.models import GTNNWR
+from src.gnnwr.datasets import init_dataset, init_dataset_cv
+from src.gnnwr.models import GTNNWR
 
-data = pd.read_csv(r'../data/demo_data_gtnnwr.csv')
-
+data = pd.read_csv(r'../data/simulated_data_GTNNWR.csv')
+data["id"] = np.arange(len(data))
 train_dataset, val_dataset, test_dataset = init_dataset(data=data,
-                                                        test_ratio=0.2,
+                                                        test_ratio=0.15,
                                                         valid_ratio=0.1,
-                                                        x_column=['refl_b01','refl_b02','refl_b03','refl_b04','refl_b05'],
-                                                        y_column=['SiO3'],
-                                                        spatial_column=['proj_x', 'proj_y'],
-                                                        temp_column=['day'],
-                                                        sample_seed=42,)
-
-gtnnwr = GTNNWR(train_dataset, val_dataset, test_dataset)
-
-gtnnwr.run(100)
+                                                        x_column=['x1', 'x2'],
+                                                        y_column=['Z'],
+                                                        spatial_column=['u', 'v'],
+                                                        temp_column=['t'],
+                                                        id_column=['id'],
+                                                        sample_seed=10,
+                                                        batch_size=256)
+SGD_PARAMS = {
+    "maxlr": 1.,
+    "minlr": 0.002,
+    "upepoch": 5000,
+    "decayepoch": 15000,
+    "decayrate": 0.999,
+}
+gtnnwr = GTNNWR(train_dataset, val_dataset, test_dataset, [[3], [1024, 512, 256]], optimizer='SGD',
+                optimizer_params=SGD_PARAMS)
+# gtnnwr.add_graph()
+gtnnwr.run(10000)
+# gtnnwr.reg_result('../result/gtnnwr_result.csv')

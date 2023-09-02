@@ -48,9 +48,9 @@ class SWNN(nn.Module):
                            nn.Linear(lastsize, self.outsize))  # 连接最后一个隐藏层与输出层
         for m in self.modules():
             if isinstance(m, nn.Linear):
-                torch.nn.init.kaiming_uniform_(m.weight, a=0, mode='fan_in', nonlinearity='leaky_relu')
+                torch.nn.init.kaiming_uniform_(m.weight, a=0, mode='fan_in')
                 if m.bias is not None:
-                    m.bias.data.fill_(0.01)
+                    m.bias.data.fill_(0)
 
     def forward(self, x):
         x.to(torch.float32)
@@ -59,7 +59,7 @@ class SWNN(nn.Module):
 
 
 class STPNN(nn.Module):
-    def __init__(self, dense_layer, insize, outsize, drop_out=0.2, activate_func=nn.PReLU(init=0.4), batch_norm=False):
+    def __init__(self, dense_layer, insize, outsize, drop_out=0.2, activate_func=nn.ReLU(), batch_norm=False):
         super(STPNN, self).__init__()
         # dense_layer的默认值
         self.dense_layer = dense_layer
@@ -83,6 +83,13 @@ class STPNN(nn.Module):
             lastsize = size  # 更新上一层size
             count += 1
         self.fc.add_module("full" + str(count), nn.Linear(lastsize, self.outsize))  # 连接最后一个隐藏层与输出层
+        self.fc.add_module("acti" + str(count), nn.ReLU())
+
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                torch.nn.init.kaiming_uniform_(m.weight)
+                if m.bias is not None:
+                    m.bias.data.fill_(0)
 
     def forward(self, x):
         if isinstance(x, list):
@@ -90,16 +97,35 @@ class STPNN(nn.Module):
             spatial_x = spatial_x.squeeze()
             temporal_x = temporal_x.squeeze()
             # TPNN
-            temporal_model = nn.Sequential(torch.nn.Linear(temporal_x.shape[-1], self.outsize),nn.PReLU(init=0.4))
-            temporal_output = weight_share(temporal_model, temporal_x,self.outsize)
+            temporal_model = nn.Sequential(torch.nn.Linear(temporal_x.shape[-1], self.outsize), nn.PReLU(init=0.4))
+            temporal_output = weight_share(temporal_model, temporal_x, self.outsize)
 
             # SPNN
-            spatial_model = nn.Sequential(torch.nn.Linear(spatial_x.shape[-1], self.outsize),nn.PReLU(init=0.4))
+            spatial_model = nn.Sequential(torch.nn.Linear(spatial_x.shape[-1], self.outsize), nn.PReLU(init=0.4))
             spatial_output = weight_share(spatial_model, spatial_x, self.outsize)
             x = torch.cat((spatial_output, temporal_output), dim=2)
         # STPNN
-        output = weight_share(self.fc, x, self.outsize)
-        output = torch.reshape(output, shape=(output.shape[0], output.shape[1] * output.shape[2]))
+        x.to(torch.float32)
+        batch = x.shape[0]
+        height = x.shape[1]
+        x = torch.reshape(x, shape=(batch * height, x.shape[2]))
+        output = self.fc(x)
+        # print(self.fc[0].weight)
+        output = torch.reshape(output, shape=(batch, height * self.outsize))
+        # batch = x.shape[0]
+        # height = x.shape[1]
+        # x = torch.reshape(x, shape=(batch * height, x.shape[2]))
+        # hidden_w = torch.autograd.Variable(torch.randn(x.shape[1], 3), requires_grad=True)
+        # hidden_bias = torch.autograd.Variable(torch.randn(batch * height, 1), requires_grad=True)
+        # output_w = torch.autograd.Variable(torch.randn(3, 1), requires_grad=True)
+        # output_bias = torch.autograd.Variable(torch.randn(batch * height, 1), requires_grad=True)
+        # # print(x.shape,hidden_w.shape,hidden_bias.shape,output_w.shape,output_bias.shape)
+        # output = torch.mm(x, hidden_w) + hidden_bias
+        # output = torch.nn.LeakyReLU(0.4)(output)
+        # output = torch.mm(output, output_w) + output_bias
+        # output = torch.nn.ReLU()(output)
+        # output = torch.reshape(output, shape=(batch, height*1))
+        # print(output.shape)
         return output
 
 

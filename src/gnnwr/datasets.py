@@ -711,17 +711,39 @@ def init_predict_dataset(data, train_dataset, x_column, spatial_column=None, tem
 
     if not is_need_STNN:
         # if not use STNN, calculate spatial/temporal distance matrix and concatenate them
-        predict_dataset.distances = spatial_fun(
+        if train_dataset.simple_distance:
+            predict_dataset.distances = spatial_fun(
             data[spatial_column].values, reference_data[spatial_column].values)
 
-        if temp_column is not None:
-            # if temp_column is not None, calculate temporal distance matrix
-            predict_dataset.temporal = temporal_fun(
-                data[temp_column].values, reference_data[temp_column].values)
+            if temp_column is not None:
+                # if temp_column is not None, calculate temporal distance matrix
+                predict_dataset.temporal = temporal_fun(
+                    data[temp_column].values, reference_data[temp_column].values)
 
+                predict_dataset.distances = np.concatenate(
+                    (predict_dataset.distances[:, :, np.newaxis], predict_dataset.temporal[:, :, np.newaxis]),
+                    axis=2)  # concatenate spatial and temporal distance matrix
+        else:
+            predict_dataset.distances = np.repeat(data[spatial_column].values[:, np.newaxis, :],
+                                                len(reference_data),
+                                                axis=1)
+            predict_temp_distance = np.repeat(reference_data[spatial_column].values[:, np.newaxis, :],
+                                            predict_dataset.datasize,
+                                            axis=1)
             predict_dataset.distances = np.concatenate(
-                (predict_dataset.distances[:, :, np.newaxis], predict_dataset.temporal[:, :, np.newaxis]),
-                axis=2)  # concatenate spatial and temporal distance matrix
+                (predict_dataset.distances, np.transpose(predict_temp_distance, (1, 0, 2))), axis=2)
+            
+            if temp_column is not None:
+                predict_dataset.temporal = np.repeat(data[temp_column].values[:, np.newaxis, :],
+                                                   len(reference_data),
+                                                   axis=1)
+                predict_temp_temporal = np.repeat(reference_data[temp_column].values[:, np.newaxis, :],
+                                                predict_dataset.datasize,
+                                                axis=1)
+                predict_dataset.temporal = np.concatenate(
+                    (predict_dataset.temporal, np.transpose(predict_temp_temporal, (1, 0, 2))), axis=2)
+            predict_dataset.distances = np.concatenate(
+                (predict_dataset.distances, predict_dataset.temporal), axis=2)
 
     else:
         # if use STNN, calculate spatial/temporal point matrix

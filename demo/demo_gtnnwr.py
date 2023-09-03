@@ -12,16 +12,16 @@ data = pd.read_csv(r'../data/simulated_data_GTNNWR.csv')
 data["id"] = np.arange(len(data))
 train_dataset, val_dataset, test_dataset = init_dataset(data=data,
                                                         test_ratio=0.15,
-                                                        valid_ratio=0.1,
+                                                        valid_ratio=0.15,
                                                         x_column=['x1', 'x2'],
                                                         y_column=['Z'],
                                                         spatial_column=['u', 'v'],
                                                         temp_column=['t'],
                                                         id_column=['id'],
                                                         sample_seed=10,
-                                                        batch_size=256)
+                                                        batch_size=128)
 SGD_PARAMS = {
-    "maxlr": 1.,
+    "maxlr": .1,
     "minlr": 0.002,
     "upepoch": 5000,
     "decayepoch": 15000,

@@ -102,7 +102,7 @@ class GNNWR:
         self._model = SWNN(self._dense_layers, self._insize, self._outsize,
                            self._drop_out, self._activate_func, self._batch_norm)  # model
         self._log_path = log_path  # log path
-        self._log_file_name = log_file_name  # log file name
+        self._log_file_name = log_file_name  # log file
         self._log_level = log_level  # log level
         self.__istrained = False  # whether the model is trained
 
@@ -259,7 +259,11 @@ class GNNWR:
                     val_loss += loss.item() * data.size(0)  # accumulate the loss
             val_loss /= len(self._valid_dataset)  # calculate the average loss
             self._validLossList.append(val_loss)  # record the loss
-            r2 = r2_score(label_list, out_list)  # calculate the R square
+            try:
+                r2 = r2_score(label_list, out_list)  # calculate the R square
+            except:
+                print(label_list)
+                print(out_list)
             self._valid_r2 = r2
             if r2 > self._bestr2:  # if the R square is better than the best R square,record the R square and save the model
                 self._bestr2 = r2
@@ -525,6 +529,7 @@ class GTNNWR(GNNWR):
                  model_save_path="../gtnnwr_models",
                  write_path="../gtnnwr_runs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),
                  use_gpu: bool = True,
+                 use_ols: bool = True,
                  log_path: str = "../gtnnwr_logs/",
                  log_file_name: str = "gtnnwr" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".log",
                  log_level: int = logging.INFO,
@@ -536,7 +541,7 @@ class GTNNWR(GNNWR):
             dense_layers = [[], []]
         super(GTNNWR, self).__init__(train_dataset, valid_dataset, test_dataset, dense_layers[1], start_lr, optimizer,
                                      drop_out, batch_norm, activate_func, model_name, model_save_path, write_path,
-                                     use_gpu, log_path, log_file_name, log_level, optimizer_params)
+                                     use_gpu,use_ols, log_path, log_file_name, log_level, optimizer_params)
         self._STPNN_out = 1
         self._modelName = model_name  # model name
         if train_dataset.simple_distance:

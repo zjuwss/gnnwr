@@ -32,6 +32,7 @@ class GNNWR:
             model_save_path="../gnnwr_models",
             write_path="../gnnwr_runs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),
             use_gpu: bool = True,
+            use_ols: bool = True,
             log_path="../gnnwr_logs/",
             log_file_name="gnnwr" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".log",
             log_level=logging.INFO,
@@ -110,7 +111,11 @@ class GNNWR:
             train_dataset.scaledDataframe, train_dataset.x, train_dataset.y).params  # OLS for weight
         self._out = nn.Linear(
             self._outsize, 1, bias=False)  # layer to multiply weight,coefficients, and model output
-        self._out.weight = nn.Parameter(torch.tensor([self._weight]).to(
+        if use_ols:
+            self._out.weight = nn.Parameter(torch.tensor([self._weight]).to(
+            torch.float32), requires_grad=False)  # define the weight
+        else :
+            self._out.weight = nn.Parameter(torch.tensor(np.ones((1,self._outsize))).to(
             torch.float32), requires_grad=False)  # define the weight
         self._criterion = nn.MSELoss()  # loss function
         self._trainLossList = []  # record the loss in training process
@@ -206,9 +211,9 @@ class GNNWR:
             y_true = torch.cat((y_true, label), 0)
             weight = self._model(data)
             weight_all = torch.cat((weight_all, weight.mul(torch.tensor(self._weight).to(torch.float32).to(device))), 0)
-            # output = self._out(weight.mul(coef.to(torch.float32)))
-            output = torch.diag(torch.matmul(weight, torch.transpose(coef.to(torch.float32), 0, 1)))
-            output = torch.unsqueeze(output, 1)
+            output = self._out(weight.mul(coef.to(torch.float32)))
+            # output = torch.diag(torch.matmul(weight, torch.transpose(coef.to(torch.float32), 0, 1)))
+            # output = torch.unsqueeze(output, 1)
             y_pred = torch.cat((y_pred, output), 0)
             loss = self._criterion(output, label)  # calculate the loss
             loss.backward()  # back propagation

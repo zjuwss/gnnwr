@@ -21,14 +21,13 @@ train_dataset, val_dataset, test_dataset = init_dataset(data=data,
                                                         sample_seed=10,
                                                         batch_size=128)
 SGD_PARAMS = {
-    "maxlr": .1,
+    "maxlr": .01,
     "minlr": 0.002,
     "upepoch": 5000,
     "decayepoch": 15000,
     "decayrate": 0.999,
 }
-gtnnwr = GTNNWR(train_dataset, val_dataset, test_dataset, [[3], [1024, 512, 256]], optimizer='SGD',
-                optimizer_params=SGD_PARAMS)
+gtnnwr = GTNNWR(train_dataset, val_dataset, test_dataset, [[3], [1024, 512, 256]], optimizer='Adam')
 # gtnnwr.add_graph()
 gtnnwr.run(10000)
 # gtnnwr.reg_result('../result/gtnnwr_result.csv')

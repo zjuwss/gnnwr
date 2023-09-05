@@ -32,7 +32,7 @@ class DIAGNOSIS:
         self.__ssr = torch.sum((y_pred - torch.mean(y_data)) ** 2)
 
         self.__hat_com = torch.mm(torch.linalg.inv(
-            torch.mm(self.__x_data.mT, self.__x_data)), self.__x_data.mT)
+            torch.mm(self.__x_data.transpose(-2,-1), self.__x_data)), self.__x_data.transpose(-2,-1))
         self.__ols_hat = torch.mm(self.__x_data, self.__hat_com)
         x_data_tile = x_data.repeat(self.__n, 1)
         x_data_tile = x_data_tile.view(self.__n, self.__n, -1)
@@ -51,7 +51,7 @@ class DIAGNOSIS:
 
     def F1_GNN(self):  # 因变量的空间非平稳性F1检验
         k1 = self.__n - 2 * torch.trace(self.__hat) + \
-             torch.trace(torch.mm(self.__hat.mT, self.__hat))
+             torch.trace(torch.mm(self.__hat.transpose(-2,-1), self.__hat))
         k2 = self.__n - self.__k - 1
         rss_olr = torch.sum(
             (torch.mean(self.__y_data) - torch.mm(self.__ols_hat, self.__y_data)) ** 2)

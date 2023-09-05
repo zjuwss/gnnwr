@@ -9,6 +9,7 @@ import torch.nn as nn
 import torch.optim as optim
 from sklearn.metrics import r2_score
 from torch.utils.tensorboard import SummaryWriter  # 用于保存训练过程
+from tqdm import tqdm , trange
 
 import logging
 from .networks import SWNN, STPNN
@@ -333,7 +334,7 @@ class GNNWR:
         file_str = self._log_path + self._log_file_name
         logging.basicConfig(format='%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s',
                             filename=file_str, level=logging.INFO)
-        for epoch in range(0, max_epoch):
+        for epoch in trange(0, max_epoch):
             self._epoch = epoch
 
             # print("Epoch: ", epoch + 1)
@@ -344,13 +345,7 @@ class GNNWR:
             # record the information of the validation process
             self.__valid()
             # out put log every 50 epoch:
-            i = (epoch + 1) % 50
-            if i != 0:
-                sys.stdout.write('\r')
-                sys.stdout.write(
-                    "[%-50s] %d%%" % ('#' * int(i * 50.0 / 50 + 1), int(100.0 * i / 50 + 2)))
-                sys.stdout.flush()
-            else:
+            if (epoch + 1) % 50 == 0:
                 print("\nEpoch: ", epoch + 1)
                 print("learning rate: ", self._optimizer.param_groups[0]['lr'])
                 print("Train Loss: ", self._trainLossList[-1])

@@ -56,10 +56,11 @@ class baseDataset(Dataset):
         :return: the index-th distance matrix and the index-th sample
         """
         if self.is_need_STNN:
-            return [torch.tensor(self.distances[index], dtype=torch.float),
-                    torch.tensor(self.temporal[index], dtype=torch.float)], torch.tensor(self.x_data[index],
-                                                                                         dtype=torch.float), torch.tensor(
-                self.y_data[index], dtype=torch.float), torch.tensor(self.id_data[index], dtype=torch.float)
+            return torch.cat((torch.tensor(self.distances[index], dtype=torch.float),
+                              torch.tensor(self.temporal[index], dtype=torch.float)), dim=-1), \
+                torch.tensor(self.x_data[index], dtype=torch.float), \
+                torch.tensor(self.y_data[index], dtype=torch.float), \
+                torch.tensor(self.id_data[index], dtype=torch.float)
         return torch.tensor(self.distances[index], dtype=torch.float), torch.tensor(self.x_data[index],
                                                                                     dtype=torch.float), torch.tensor(
             self.y_data[index], dtype=torch.float), torch.tensor(self.id_data[index], dtype=torch.float)
@@ -86,7 +87,7 @@ class baseDataset(Dataset):
             self.x_data = x_scale_params.transform(pd.DataFrame(self.x_data, columns=self.x))
             # self.y_scale_info = {"mean": y_scale_params.mean_, "var": y_scale_params.var_}
             # self.y_data = y_scale_params.transform(pd.DataFrame(self.y_data, columns=self.y))
-        
+
         self.getScaledDataframe()
 
         self.x_data = np.concatenate((self.x_data, np.ones(
@@ -105,17 +106,16 @@ class baseDataset(Dataset):
             y_scale_params = scale_params[1]
             self.x_data = self.x_data * np.sqrt(x_scale_params["var"]) + x_scale_params["mean"]
             self.y_data = self.y_data * np.sqrt(y_scale_params["var"]) + y_scale_params["mean"]
-        
-        self.getScaledDataframe();
+
+        self.getScaledDataframe()
 
         self.x_data = np.concatenate((self.x_data, np.ones(
             (self.datasize, 1))), axis=1)
 
-    #TODO:储存归一化后的Dataframe
     def getScaledDataframe(self):
-        columns = np.concatenate((self.x,self.y),axis=0)
-        scaledData = np.concatenate((self.x_data,self.y_data),axis=1)
-        self.scaledDataframe = pd.DataFrame(scaledData,columns=columns)
+        columns = np.concatenate((self.x, self.y), axis=0)
+        scaledData = np.concatenate((self.x_data, self.y_data), axis=1)
+        self.scaledDataframe = pd.DataFrame(scaledData, columns=columns)
 
     def rescale(self, x, y):
         """
@@ -156,6 +156,7 @@ class baseDataset(Dataset):
         np.save(os.path.join(dirname, "distances.npy"), self.distances)
         # save dataframe
         self.dataframe.to_csv(os.path.join(dirname, "dataframe.csv"), index=False)
+        self.scaledDataframe.to_csv(os.path.join(dirname, "scaledDataframe.csv"), index=False)
 
     def read(self, dirname):
         if not os.path.exists(dirname):
@@ -252,9 +253,9 @@ class predictDataset(Dataset):
         :return: 距离矩阵、输入属性数据、输出属性数据
         """
         if self.is_need_STNN:
-            return (torch.tensor(self.distances[index], dtype=torch.float),
-                    torch.tensor(self.temporal[index], dtype=torch.float)), torch.tensor(self.x_data[index],
-                                                                                         dtype=torch.float)
+            return torch.cat((torch.tensor(self.distances[index], dtype=torch.float),
+                              torch.tensor(self.temporal[index], dtype=torch.float)), dim=-1), torch.tensor(
+                self.x_data[index], dtype=torch.float)
         return torch.tensor(self.distances[index], dtype=torch.float), torch.tensor(self.x_data[index],
                                                                                     dtype=torch.float)
 
@@ -360,10 +361,10 @@ def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_colu
         raise ValueError(
             "dist_column must be a column name in data")
 
-    if id_column==None:
+    if id_column == None:
         if not 'id' in data.columns:
             data['id'] = [i for i in range(data.shape[0])]
-            id_column=['id']
+            id_column = ['id']
         else:
             raise ValueError("'id' column has been occupied, please offer another column")
 
@@ -713,7 +714,7 @@ def init_predict_dataset(data, train_dataset, x_column, spatial_column=None, tem
         # if not use STNN, calculate spatial/temporal distance matrix and concatenate them
         if train_dataset.simple_distance:
             predict_dataset.distances = spatial_fun(
-            data[spatial_column].values, reference_data[spatial_column].values)
+                data[spatial_column].values, reference_data[spatial_column].values)
 
             if temp_column is not None:
                 # if temp_column is not None, calculate temporal distance matrix
@@ -725,21 +726,21 @@ def init_predict_dataset(data, train_dataset, x_column, spatial_column=None, tem
                     axis=2)  # concatenate spatial and temporal distance matrix
         else:
             predict_dataset.distances = np.repeat(data[spatial_column].values[:, np.newaxis, :],
-                                                len(reference_data),
-                                                axis=1)
+                                                  len(reference_data),
+                                                  axis=1)
             predict_temp_distance = np.repeat(reference_data[spatial_column].values[:, np.newaxis, :],
-                                            predict_dataset.datasize,
-                                            axis=1)
+                                              predict_dataset.datasize,
+                                              axis=1)
             predict_dataset.distances = np.concatenate(
                 (predict_dataset.distances, np.transpose(predict_temp_distance, (1, 0, 2))), axis=2)
-            
+
             if temp_column is not None:
                 predict_dataset.temporal = np.repeat(data[temp_column].values[:, np.newaxis, :],
-                                                   len(reference_data),
-                                                   axis=1)
+                                                     len(reference_data),
+                                                     axis=1)
                 predict_temp_temporal = np.repeat(reference_data[temp_column].values[:, np.newaxis, :],
-                                                predict_dataset.datasize,
-                                                axis=1)
+                                                  predict_dataset.datasize,
+                                                  axis=1)
                 predict_dataset.temporal = np.concatenate(
                     (predict_dataset.temporal, np.transpose(predict_temp_temporal, (1, 0, 2))), axis=2)
             predict_dataset.distances = np.concatenate(
@@ -766,9 +767,13 @@ def init_predict_dataset(data, train_dataset, x_column, spatial_column=None, tem
             predict_dataset.temporal = np.concatenate(
                 (predict_dataset.temporal, np.transpose(predict_temp_temporal, (1, 0, 2))), axis=2)
     if process_fn == "minmax_scale":
-        predict_dataset.distances = predict_dataset.minmax_scaler(predict_dataset.distances,train_dataset.distances_scale_param['min'],train_dataset.distances_scale_param['max'])
+        predict_dataset.distances = predict_dataset.minmax_scaler(predict_dataset.distances,
+                                                                  train_dataset.distances_scale_param['min'],
+                                                                  train_dataset.distances_scale_param['max'])
     else:
-        predict_dataset.distances = predict_dataset.standard_scaler(predict_dataset.distances,train_dataset.distances_scale_param['mean'],train_dataset.distances_scale_param['var'])
+        predict_dataset.distances = predict_dataset.standard_scaler(predict_dataset.distances,
+                                                                    train_dataset.distances_scale_param['mean'],
+                                                                    train_dataset.distances_scale_param['var'])
     # initialize dataloader for train/val/test dataset
     if max_size < 0: max_size = len(predict_dataset)
     predict_dataset.dataloader = DataLoader(

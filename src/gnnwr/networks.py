@@ -92,40 +92,35 @@ class STPNN(nn.Module):
                     m.bias.data.fill_(0)
 
     def forward(self, x):
-        if isinstance(x, list):
-            spatial_x, temporal_x = x
-            spatial_x = spatial_x.squeeze()
-            temporal_x = temporal_x.squeeze()
-            # TPNN
-            temporal_model = nn.Sequential(torch.nn.Linear(temporal_x.shape[-1], self.outsize), nn.PReLU(init=0.4))
-            temporal_output = weight_share(temporal_model, temporal_x, self.outsize)
 
-            # SPNN
-            spatial_model = nn.Sequential(torch.nn.Linear(spatial_x.shape[-1], self.outsize), nn.PReLU(init=0.4))
-            spatial_output = weight_share(spatial_model, spatial_x, self.outsize)
-            x = torch.cat((spatial_output, temporal_output), dim=2)
         # STPNN
         x.to(torch.float32)
         batch = x.shape[0]
         height = x.shape[1]
         x = torch.reshape(x, shape=(batch * height, x.shape[2]))
         output = self.fc(x)
-        # print(self.fc[0].weight)
         output = torch.reshape(output, shape=(batch, height * self.outsize))
-        # batch = x.shape[0]
-        # height = x.shape[1]
-        # x = torch.reshape(x, shape=(batch * height, x.shape[2]))
-        # hidden_w = torch.autograd.Variable(torch.randn(x.shape[1], 3), requires_grad=True)
-        # hidden_bias = torch.autograd.Variable(torch.randn(batch * height, 1), requires_grad=True)
-        # output_w = torch.autograd.Variable(torch.randn(3, 1), requires_grad=True)
-        # output_bias = torch.autograd.Variable(torch.randn(batch * height, 1), requires_grad=True)
-        # # print(x.shape,hidden_w.shape,hidden_bias.shape,output_w.shape,output_bias.shape)
-        # output = torch.mm(x, hidden_w) + hidden_bias
-        # output = torch.nn.LeakyReLU(0.4)(output)
-        # output = torch.mm(output, output_w) + output_bias
-        # output = torch.nn.ReLU()(output)
-        # output = torch.reshape(output, shape=(batch, height*1))
-        # print(output.shape)
+        return output
+
+
+class STNN_SPNN(nn.Module):
+    def __init__(self, STNN_insize:int, STNN_outsize, SPNN_insize:int, SPNN_outsize, activate_func=nn.ReLU()):
+        super(STNN_SPNN, self).__init__()
+        self.STNN_insize = STNN_insize
+        self.STNN_outsize = STNN_outsize
+        self.SPNN_insize = SPNN_insize
+        self.SPNN_outsize = SPNN_outsize
+        print(self.STNN_insize, self.STNN_outsize, self.SPNN_insize, self.SPNN_outsize)
+        self.activate_func = activate_func
+        self.STNN = nn.Sequential(nn.Linear(self.STNN_insize, self.STNN_outsize), self.activate_func)
+        self.SPNN = nn.Sequential(nn.Linear(self.SPNN_insize, self.SPNN_outsize), self.activate_func)
+
+    def forward(self, input1):
+        STNN_input = input1[:, :, self.SPNN_insize:]
+        SPNN_input = input1[:, :, 0:self.SPNN_insize]
+        STNN_output = self.STNN(STNN_input)
+        SPNN_output = self.SPNN(SPNN_input)
+        output = torch.cat((STNN_output, SPNN_output), dim=-1)
         return output
 
 

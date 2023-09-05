@@ -11,7 +11,7 @@ from sklearn.metrics import r2_score
 from torch.utils.tensorboard import SummaryWriter  # 用于保存训练过程
 
 import logging
-from .networks import SWNN, STPNN
+from .networks import SWNN, STPNN, STNN_SPNN
 from .utils import OLS, DIAGNOSIS
 
 
@@ -191,11 +191,7 @@ class GNNWR:
         for index, (data, coef, label, id) in enumerate(data_loader):
             # move the data to gpu
             device = torch.device('cuda') if self._use_gpu else torch.device('cpu')
-            if self._train_dataset.is_need_STNN:
-                data = [d.to(device) for d in data]
-                coef, label = coef.to(device), label.to(device)
-            else:
-                data, coef, label = data.to(device), coef.to(device), label.to(device)
+            data, coef, label = data.to(device), coef.to(device), label.to(device)
             weight_all, x_true, y_true, y_pred = weight_all.to(device), x_true.to(device), y_true.to(device), y_pred.to(
                 device)
 
@@ -212,8 +208,6 @@ class GNNWR:
             weight = self._model(data)
             weight_all = torch.cat((weight_all, weight.mul(torch.tensor(self._weight).to(torch.float32).to(device))), 0)
             output = self._out(weight.mul(coef.to(torch.float32)))
-            # output = torch.diag(torch.matmul(weight, torch.transpose(coef.to(torch.float32), 0, 1)))
-            # output = torch.unsqueeze(output, 1)
             y_pred = torch.cat((y_pred, output), 0)
             loss = self._criterion(output, label)  # calculate the loss
             loss.backward()  # back propagation
@@ -240,11 +234,7 @@ class GNNWR:
         with torch.no_grad():  # disable gradient calculation
             for data, coef, label, id in data_loader:
                 device = torch.device('cuda') if self._use_gpu else torch.device('cpu')
-                if self._train_dataset.is_need_STNN:
-                    data = [d.to(device) for d in data]
-                    coef, label = coef.to(device), label.to(device)
-                else:
-                    data, coef, label = data.to(device), coef.to(device), label.to(device)
+                data, coef, label = data.to(device), coef.to(device), label.to(device)
                 # weight = self._model(data)
                 output = self._out(self._model(
                     data).mul(coef.to(torch.float32)))
@@ -287,11 +277,7 @@ class GNNWR:
         with torch.no_grad():
             for data, coef, label, id in data_loader:
                 device = torch.device('cuda') if self._use_gpu else torch.device('cpu')
-                if self._train_dataset.is_need_STNN:
-                    data = [d.to(device) for d in data]
-                    coef, label = coef.to(device), label.to(device)
-                else:
-                    data, coef, label = data.to(device), coef.to(device), label.to(device)
+                data, coef, label = data.to(device), coef.to(device), label.to(device)
                 x_data, y_data, y_pred, weight_all = x_data.to(device), y_data.to(device), y_pred.to(
                     device), weight_all.to(device)
                 # data,label = data.view(data.shape[0],-1),label.view(data.shape[0],-1)
@@ -475,31 +461,19 @@ class GNNWR:
         result = torch.tensor([]).to(torch.float32).to(device)
         with torch.no_grad():
             for data, coef, label, id in self._train_dataset.dataloader:
-                if self._train_dataset.is_need_STNN:
-                    data = [d.to(device) for d in data]
-                    coef, label, id = coef.to(device), label.to(device), id.to(device)
-                else:
-                    data, coef, label, id = data.to(device), coef.to(device), label.to(device), id.to(device)
+                data, coef, label, id = data.to(device), coef.to(device), label.to(device), id.to(device)
                 output = self._out(self._model(data).mul(coef.to(torch.float32)))
                 weight = self._model(data).mul(torch.tensor(self._weight).to(torch.float32).to(device))
                 output = torch.cat((weight, output, id), dim=1)
                 result = torch.cat((result, output), 0)
             for data, coef, label, id in self._valid_dataset.dataloader:
-                if self._train_dataset.is_need_STNN:
-                    data = [d.to(device) for d in data]
-                    coef, label, id = coef.to(device), label.to(device), id.to(device)
-                else:
-                    data, coef, label, id = data.to(device), coef.to(device), label.to(device), id.to(device)
+                data, coef, label, id = data.to(device), coef.to(device), label.to(device), id.to(device)
                 output = self._out(self._model(data).mul(coef.to(torch.float32)))
                 weight = self._model(data).mul(torch.tensor(self._weight).to(torch.float32).to(device))
                 output = torch.cat((weight, output, id), dim=1)
                 result = torch.cat((result, output), 0)
             for data, coef, label, id in self._test_dataset.dataloader:
-                if self._train_dataset.is_need_STNN:
-                    data = [d.to(device) for d in data]
-                    coef, label, id = coef.to(device), label.to(device), id.to(device)
-                else:
-                    data, coef, label, id = data.to(device), coef.to(device), label.to(device), id.to(device)
+                data, coef, label, id = data.to(device), coef.to(device), label.to(device), id.to(device)
                 output = self._out(self._model(data).mul(coef.to(torch.float32)))
                 weight = self._model(data).mul(torch.tensor(self._weight).to(torch.float32).to(device))
                 output = torch.cat((weight, output, id), dim=1)
@@ -525,7 +499,7 @@ class GTNNWR(GNNWR):
                  drop_out=0.2,
                  batch_norm=True,
                  activate_func=nn.PReLU(init=0.4),
-                 model_name="GTNNWR_" + datetime.date.today().strftime("%Y%m%d-%H%M%S"),
+                 model_name="GTNNWR_" + datetime.datetime.today().strftime("%Y%m%d-%H%M%S"),
                  model_save_path="../gtnnwr_models",
                  write_path="../gtnnwr_runs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),
                  use_gpu: bool = True,
@@ -534,6 +508,8 @@ class GTNNWR(GNNWR):
                  log_file_name: str = "gtnnwr" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".log",
                  log_level: int = logging.INFO,
                  optimizer_params=None,
+                 STPNN_outsize=1,
+                 STNN_SPNN_params=None,
                  ):
         if optimizer_params is None:
             optimizer_params = {}
@@ -542,14 +518,26 @@ class GTNNWR(GNNWR):
         super(GTNNWR, self).__init__(train_dataset, valid_dataset, test_dataset, dense_layers[1], start_lr, optimizer,
                                      drop_out, batch_norm, activate_func, model_name, model_save_path, write_path,
                                      use_gpu,use_ols, log_path, log_file_name, log_level, optimizer_params)
-        self._STPNN_out = 1
+        self._STPNN_out = STPNN_outsize
         self._modelName = model_name  # model name
         if train_dataset.simple_distance:
             insize = 2
         else:
             insize = train_dataset.distances.shape[-1]
-        self._model = nn.Sequential(STPNN(dense_layers[0], insize, self._STPNN_out, drop_out, batch_norm=False),
-                                    SWNN(dense_layers[1], self._STPNN_out  * self._insize, self._outsize, drop_out,
+        if STNN_SPNN_params is None:
+            STNN_SPNN_params = dict()
+        self.STNN_outsize = STNN_SPNN_params.get("STNN_outsize", 1)
+        self.SPNN_outsize = STNN_SPNN_params.get("SPNN_outsize", 1)
+        if train_dataset.is_need_STNN:
+            self._model = nn.Sequential(STNN_SPNN(train_dataset.temporal.shape[-1],self.STNN_outsize,
+                                                  train_dataset.distances.shape[-1],self.SPNN_outsize),
+                                        STPNN(dense_layers[0], self.STNN_outsize+self.SPNN_outsize,
+                                              self._STPNN_out, drop_out, batch_norm=False),
+                                        SWNN(dense_layers[1], self._STPNN_out * self._insize, self._outsize, drop_out,
+                                             activate_func, batch_norm))
+        else:
+            self._model = nn.Sequential(STPNN(dense_layers[0], insize, self._STPNN_out, drop_out, batch_norm=False),
+                                    SWNN(dense_layers[1], self._STPNN_out * self._insize, self._outsize, drop_out,
                                          activate_func, batch_norm))
         self.init_optimizer(optimizer, optimizer_params)
         print(self._model)

@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.optim as optim
 from sklearn.metrics import r2_score
 from torch.utils.tensorboard import SummaryWriter  # 用于保存训练过程
-from tqdm import tqdm , trange
+from tqdm import tqdm, trange
 
 import logging
 from .networks import SWNN, STPNN, STNN_SPNN
@@ -107,17 +107,16 @@ class GNNWR:
         self._log_level = log_level  # log level
         self.__istrained = False  # whether the model is trained
 
-
         self._weight = OLS(
             train_dataset.scaledDataframe, train_dataset.x, train_dataset.y).params  # OLS for weight
         self._out = nn.Linear(
             self._outsize, 1, bias=False)  # layer to multiply weight,coefficients, and model output
         if use_ols:
             self._out.weight = nn.Parameter(torch.tensor([self._weight]).to(
-            torch.float32), requires_grad=False)  # define the weight
-        else :
-            self._out.weight = nn.Parameter(torch.tensor(np.ones((1,self._outsize))).to(
-            torch.float32), requires_grad=False)  # define the weight
+                torch.float32), requires_grad=False)  # define the weight
+        else:
+            self._out.weight = nn.Parameter(torch.tensor(np.ones((1, self._outsize))).to(
+                torch.float32), requires_grad=False)  # define the weight
         self._criterion = nn.MSELoss()  # loss function
         self._trainLossList = []  # record the loss in training process
         self._validLossList = []  # record the loss in validation process
@@ -137,7 +136,8 @@ class GNNWR:
             else:
                 self._use_gpu = False
         self.init_optimizer(optimizer, optimizer_params)  # initialize the optimizer
-    def init_optimizer(self,optimizer, optimizer_params=None):
+
+    def init_optimizer(self, optimizer, optimizer_params=None):
         # initialize the optimizer
         if optimizer == "SGD":
             self._optimizer = optim.SGD(
@@ -174,7 +174,8 @@ class GNNWR:
                 self._optimizer, lr_lambda=lamda_lr)
         else:
             self._scheduler = optim.lr_scheduler.MultiStepLR(
-                self._optimizer, milestones=[100, 200], gamma=0.1)
+                self._optimizer, milestones=[500, 1000, 2000, 4000], gamma=0.5)
+
     def __train(self):
         """
         train the network
@@ -403,6 +404,12 @@ class GNNWR:
         add graph to tensorboard
         """
         for data, coef, label, id in self._train_dataset.dataloader:
+            if self._use_gpu:
+                data = data.cuda()
+                self._model = self._model.cuda()
+            else:
+                self._model = self._model.cpu()
+                data = data.cpu()
             self._writer.add_graph(self._model, data)
             break
         print("Add Graph Successfully")
@@ -510,7 +517,7 @@ class GTNNWR(GNNWR):
             dense_layers = [[], []]
         super(GTNNWR, self).__init__(train_dataset, valid_dataset, test_dataset, dense_layers[1], start_lr, optimizer,
                                      drop_out, batch_norm, activate_func, model_name, model_save_path, write_path,
-                                     use_gpu,use_ols, log_path, log_file_name, log_level, optimizer_params)
+                                     use_gpu, use_ols, log_path, log_file_name, log_level, optimizer_params)
         self._STPNN_out = STPNN_outsize
         self._modelName = model_name  # model name
         if train_dataset.simple_distance:
@@ -522,15 +529,15 @@ class GTNNWR(GNNWR):
         self.STNN_outsize = STNN_SPNN_params.get("STNN_outsize", 1)
         self.SPNN_outsize = STNN_SPNN_params.get("SPNN_outsize", 1)
         if train_dataset.is_need_STNN:
-            self._model = nn.Sequential(STNN_SPNN(train_dataset.temporal.shape[-1],self.STNN_outsize,
-                                                  train_dataset.distances.shape[-1],self.SPNN_outsize),
-                                        STPNN(dense_layers[0], self.STNN_outsize+self.SPNN_outsize,
+            self._model = nn.Sequential(STNN_SPNN(train_dataset.temporal.shape[-1], self.STNN_outsize,
+                                                  train_dataset.distances.shape[-1], self.SPNN_outsize),
+                                        STPNN(dense_layers[0], self.STNN_outsize + self.SPNN_outsize,
                                               self._STPNN_out, drop_out, batch_norm=False),
                                         SWNN(dense_layers[1], self._STPNN_out * self._insize, self._outsize, drop_out,
                                              activate_func, batch_norm))
         else:
             self._model = nn.Sequential(STPNN(dense_layers[0], insize, self._STPNN_out, drop_out, batch_norm=False),
-                                    SWNN(dense_layers[1], self._STPNN_out * self._insize, self._outsize, drop_out,
-                                         activate_func, batch_norm))
+                                        SWNN(dense_layers[1], self._STPNN_out * self._insize, self._outsize, drop_out,
+                                             activate_func, batch_norm))
         self.init_optimizer(optimizer, optimizer_params)
         print(self._model)

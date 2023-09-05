@@ -190,7 +190,6 @@ class baseDataset(Dataset):
         self.scale2(self.scale_fn, [self.x_scale_info, self.y_scale_info])
 
 
-# wss 这个类是什么用的？
 class predictDataset(Dataset):
     def __init__(self, data, x_column, process_fn="minmax_scale", scale_info=[], is_need_STNN=False):
         """
@@ -405,10 +404,6 @@ def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_colu
     val_dataset.scale(process_fn, scaler_params)
     test_dataset.scale(process_fn, scaler_params)
 
-    # wss is_need_STNN参数是做什么用的？
-    # wss 计算距离的参照样本点可能要有两种选择：一种是以训练集的点为参考，一种是以训练集+验证集的点为参考
-    # wss 因为如果是十折交叉，要以训练集为准的话，得保证这10折的训练集个数是一致的；而如果以训练集+验证集的话，就不用考虑这个问题。从这个
-    # 角度来说训练集+验证集作为算距离的参考点更为合适。 添加参数判断？
 
     if Reference is None:
         reference_data = train_data
@@ -587,9 +582,11 @@ def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_colu
 
 
 def init_dataset_cv(data, test_ratio, k_fold, x_column, y_column, spatial_column=None, temp_column=None,
+                    id_column=None,
                     sample_seed=100,
                     process_fn="minmax_scale", batch_size=32, shuffle=True, use_class=baseDataset,
-                    spatial_fun=BasicDistance, temporal_fun=Manhattan_distance, max_val_size=-1, max_test_size=-1):
+                    spatial_fun=BasicDistance, temporal_fun=Manhattan_distance, max_val_size=-1, max_test_size=-1,
+                    is_need_STNN=False, Reference=None, simple_distance=True):
     """
 
     :param data: input data
@@ -617,50 +614,50 @@ def init_dataset_cv(data, test_ratio, k_fold, x_column, y_column, spatial_column
         train_dataset, val_dataset, test_dataset = init_dataset(data, test_ratio, valid_ratio, x_column, y_column,
                                                                 spatial_column,
                                                                 temp_column,
+                                                                id_column,
                                                                 sample_seed,
                                                                 process_fn, batch_size, shuffle, use_class,
                                                                 spatial_fun, temporal_fun, max_val_size, max_test_size,
-                                                                from_for_cv=i)
+                                                                i,is_need_STNN,Reference,simple_distance)
         cv_data_set.append((train_dataset, val_dataset))
     return cv_data_set, test_dataset
 
 
-# TODO 这里的归一化和上面的不一样，需要修改
-def init_dataset_with_dist_frame(data, train_ratio, valid_ratio, x_column, y_column, id_column, dist_frame=None,
-                                 process_fn="minmax_scale", batch_size=32, shuffle=True, use_class=baseDataset):
-    train_data, val_data, test_data = np.split(data.sample(frac=1),
-                                               [int(train_ratio * len(data)),
-                                                int((train_ratio + valid_ratio) * len(data))])  # 划分数据集
-
-    # wss 这三个数据集的归一化方式应该要保持一致的（最大值、最小值等，可以考虑整个数据集的特征），这里的结果会有问题
-    # 初始化train_dataset,val_dataset,test_dataset
-    train_dataset = use_class(train_data, x_column, y_column, process_fn)
-    val_dataset = use_class(val_data, x_column, y_column, process_fn)
-    test_dataset = use_class(test_data, x_column, y_column, process_fn)
-
-    dist_frame.columns = ['id1', 'id2', 'dis']
-    dist_frame = dist_frame.set_index(['id1', 'id2'])[
-        'dis'].unstack().reset_index().drop('id1', axis=1)
-
-    train_ids = train_data[id_column[0]].tolist()
-    val_ids = val_data[id_column[0]].tolist()
-    test_ids = test_data[id_column[0]].tolist()
-
-    train_dataset.distances = np.float32(
-        dist_frame[dist_frame.index.isin(train_ids)][train_ids].values)
-    val_dataset.distances = np.float32(
-        dist_frame[dist_frame.index.isin(val_ids)][train_ids].values)
-    test_dataset.distances = np.float32(
-        dist_frame[dist_frame.index.isin(test_ids)][train_ids].values)
-
-    train_dataset.dataloader = DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=shuffle)
-    val_dataset.dataloader = DataLoader(
-        val_dataset, batch_size=batch_size, shuffle=shuffle)
-    test_dataset.dataloader = DataLoader(
-        test_dataset, batch_size=batch_size, shuffle=shuffle)
-
-    return train_dataset, val_dataset, test_dataset
+# TODO Not finished
+# def init_dataset_with_dist_frame(data, train_ratio, valid_ratio, x_column, y_column, id_column, dist_frame=None,
+#                                  process_fn="minmax_scale", batch_size=32, shuffle=True, use_class=baseDataset):
+#     train_data, val_data, test_data = np.split(data.sample(frac=1),
+#                                                [int(train_ratio * len(data)),
+#                                                 int((train_ratio + valid_ratio) * len(data))])
+#
+#     # 初始化train_dataset,val_dataset,test_dataset
+#     train_dataset = use_class(train_data, x_column, y_column, process_fn)
+#     val_dataset = use_class(val_data, x_column, y_column, process_fn)
+#     test_dataset = use_class(test_data, x_column, y_column, process_fn)
+#
+#     dist_frame.columns = ['id1', 'id2', 'dis']
+#     dist_frame = dist_frame.set_index(['id1', 'id2'])[
+#         'dis'].unstack().reset_index().drop('id1', axis=1)
+#
+#     train_ids = train_data[id_column[0]].tolist()
+#     val_ids = val_data[id_column[0]].tolist()
+#     test_ids = test_data[id_column[0]].tolist()
+#
+#     train_dataset.distances = np.float32(
+#         dist_frame[dist_frame.index.isin(train_ids)][train_ids].values)
+#     val_dataset.distances = np.float32(
+#         dist_frame[dist_frame.index.isin(val_ids)][train_ids].values)
+#     test_dataset.distances = np.float32(
+#         dist_frame[dist_frame.index.isin(test_ids)][train_ids].values)
+#
+#     train_dataset.dataloader = DataLoader(
+#         train_dataset, batch_size=batch_size, shuffle=shuffle)
+#     val_dataset.dataloader = DataLoader(
+#         val_dataset, batch_size=batch_size, shuffle=shuffle)
+#     test_dataset.dataloader = DataLoader(
+#         test_dataset, batch_size=batch_size, shuffle=shuffle)
+#
+#     return train_dataset, val_dataset, test_dataset
 
 
 def init_predict_dataset(data, train_dataset, x_column, spatial_column=None, temp_column=None,

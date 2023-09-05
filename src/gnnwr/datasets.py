@@ -383,11 +383,11 @@ def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_colu
     scaler_params_y = scaler_y.fit(data[y_column])
     scaler_params = [scaler_params_x, scaler_params_y]
     if process_fn == "minmax_scale":
-        print("min:" + str(scaler_params_x.data_min_) + ";  max:" + str(scaler_params_x.data_max_))
-        print("min:" + str(scaler_params_y.data_min_) + ";  max:" + str(scaler_params_y.data_max_))
+        print("x_min:" + str(scaler_params_x.data_min_) + ";  x_max:" + str(scaler_params_x.data_max_))
+        print("y_min:" + str(scaler_params_y.data_min_) + ";  y_max:" + str(scaler_params_y.data_max_))
     elif process_fn == "standard_scale":
-        print("mean:" + str(scaler_params_x.mean_) + ";  var:" + str(scaler_params_x.var_))
-        print("mean:" + str(scaler_params_y.mean_) + ";  var:" + str(scaler_params_y.var_))
+        print("x_mean:" + str(scaler_params_x.mean_) + ";  x_var:" + str(scaler_params_x.var_))
+        print("y_mean:" + str(scaler_params_y.mean_) + ";  y_var:" + str(scaler_params_y.var_))
 
     # data split
     test_data = data[int((1 - test_ratio) * len(data)):]

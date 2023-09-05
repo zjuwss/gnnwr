@@ -110,7 +110,6 @@ class STNN_SPNN(nn.Module):
         self.STNN_outsize = STNN_outsize
         self.SPNN_insize = SPNN_insize
         self.SPNN_outsize = SPNN_outsize
-        print(self.STNN_insize, self.STNN_outsize, self.SPNN_insize, self.SPNN_outsize)
         self.activate_func = activate_func
         self.STNN = nn.Sequential(nn.Linear(self.STNN_insize, self.STNN_outsize), self.activate_func)
         self.SPNN = nn.Sequential(nn.Linear(self.SPNN_insize, self.SPNN_outsize), self.activate_func)

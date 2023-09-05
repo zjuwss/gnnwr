@@ -168,8 +168,6 @@ class GNNWR:
             uprate = (maxlr - minlr) / upepoch * 1000
             decayepoch = optimizer_params.get("decayepoch", 200)
             decayrate = optimizer_params.get("decayrate", 0.1)
-            print('maxlr:{:f}'.format(maxlr))
-            print('minlr:{:f}'.format(minlr))
             lamda_lr = lambda epoch: (epoch // 1000) * uprate + minlr if epoch < upepoch else (
                 maxlr if epoch < decayepoch else maxlr * (decayrate ** (epoch - decayepoch)))
             self._scheduler = optim.lr_scheduler.LambdaLR(

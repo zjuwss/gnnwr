@@ -1,5 +1,5 @@
-numpy==1.24.1
+numpy==1.19.5
 pandas==1.5.3
-scikit_learn==1.2.2
+scikit_learn==1.0.0
 statsmodels==0.13.5
 torch==1.0

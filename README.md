@@ -1,7 +1,8 @@
 # gnnwr
 
 ![PyPI - License](https://img.shields.io/pypi/l/gnnwr)
-[![PyPI version](https://badge.fury.io/py/gnnwr.svg)](https://badge.fury.io/py/gnnwr)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/gnnwr)
+![PyPI - Version](https://img.shields.io/pypi/v/gnnwr)
 ![GitHub all releases](https://img.shields.io/github/downloads/zjuwss/gnnwr/total)
 
 A pytorch implementation of the Geographically Neural Network Weighted Regression (GNNWR) and its derived models

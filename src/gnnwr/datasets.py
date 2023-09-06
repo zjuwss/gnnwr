@@ -209,7 +209,6 @@ class predictDataset(Dataset):
         self.process_fn = process_fn
         if len(scale_info):
             self.scale_info_x = scale_info[0]  # scale information of x_data
-            self.scale_info_y = scale_info[1]  # scale information of y_data
             self.use_scale_info = True
         else:
             self.use_scale_info = False
@@ -690,11 +689,9 @@ def init_predict_dataset(data, train_dataset, x_column, spatial_column=None, tem
 
     # initialize the predict_dataset
     if train_dataset.scale_fn == "minmax_scale":
-        process_params = [[train_dataset.x_scale_info['min'], train_dataset.x_scale_info['max']],
-                          [train_dataset.y_scale_info['min'], train_dataset.y_scale_info['max']]]
+        process_params = [[train_dataset.x_scale_info['min'], train_dataset.x_scale_info['max']]]
     elif train_dataset.scale_fn == "standard_scale":
-        process_params = [[train_dataset.x_scale_info['mean'], train_dataset.x_scale_info['std']],
-                          [train_dataset.y_scale_info['mean'], train_dataset.y_scale_info['std']]]
+        process_params = [[train_dataset.x_scale_info['mean'], train_dataset.x_scale_info['std']]]
     else:
         raise ValueError("scale_fn must be minmax_scale or standard_scale")
     # print("ProcessParams:",process_params)

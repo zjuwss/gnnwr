@@ -381,7 +381,7 @@ class GNNWR:
                 output = self._out(self._model(data).mul(coef.to(torch.float32)))
                 output = output.view(-1).cpu().detach().numpy()
                 result = np.append(result, output)
-        result = dataset.rescale(result)
+        # result = dataset.rescale(result)
         return result
 
     def load_model(self, path, use_dict=False):

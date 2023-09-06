@@ -29,7 +29,13 @@ This repository contains:
 <img title="GNNWR" src="assets/The_estimation_process_of_GNNWR_model.jpeg" alt="GNNWR" width=75%>
 </p>
 
-- [GTNNWR](https://doi.org/10.1080/13658816.2020.1775836): Geographically and temporally neural network weighted regression, a model for estimating spatiotemporal non-stationary relationships. A spatiotemporal proximity neural network (STPNN) is proposed in this paper to accurately generate space-time distance.
+- [GTNNWR](https://doi.org/10.1080/13658816.2020.1775836): Geographically and temporally neural network weighted regression, a model for estimating spatiotemporal non-stationary relationships.
+Due to the existence of spatiotemporal non-stationary, the spatial relationships of features exhibit significant differences with changes in spatiotemporal structure.
+The calculation of spatiotemporal distance is an important aspect of solving spatiotemporal non-stationary problems. 
+Therefore, this model introduces spatiotemporal distance into the GNNWR model and proposes a spatiotemporal proximity neural network (STPNN) to accurately calculate spatiotemporal distance. 
+Collaborate with SWNN in the GNNWR model to calculate the spatiotemporal non-stationary weight matrix, thereby achieving accurate modeling of spatiotemporal non-stationary relationships.
+
+
 <p align="center">
 <img title="GTNNWR" src="assets/The_estimation_process_of_GTNNWR_model.jpeg" alt="GTNNWR" width=75%>
 </p>

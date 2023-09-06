@@ -38,6 +38,7 @@ class GNNWR:
             log_file_name="gnnwr" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".log",
             log_level=logging.INFO,
             optimizer_params=None,
+            show_detail_info = True
     ):
         """
         Parameters
@@ -129,6 +130,7 @@ class GNNWR:
         self._test_diagnosis = None  # diagnosis of test
         self._valid_r2 = None  # r2 of validation
         self._use_gpu = use_gpu
+        self._show_detail_info = show_detail_info
         if self._use_gpu:
             if torch.cuda.is_available():
                 devices = [i for i in range(torch.cuda.device_count())]
@@ -331,15 +333,19 @@ class GNNWR:
             self.__valid()
             # out put log every 50 epoch:
             if (epoch + 1) % 50 == 0:
-                print("\nEpoch: ", epoch + 1)
-                print("learning rate: ", self._optimizer.param_groups[0]['lr'])
-                print("Train Loss: ", self._trainLossList[-1])
-                print("Train R2: {:.5f}".format(self._train_diagnosis.R2().data))
-                print("Train RMSE: {:.5f}".format(self._train_diagnosis.RMSE().data))
-                print("Train AIC: {:.5f}".format(self._train_diagnosis.AIC()))
-                print("Train AICc: {:.5f}".format(self._train_diagnosis.AICc()))
-                print("Valid Loss: ", self._validLossList[-1])
-                print("Valid R2: {:.5f}".format(self._valid_r2), "\n")
+                if (self._show_detail_info):
+                    print("\nEpoch: ", epoch + 1)
+                    print("learning rate: ", self._optimizer.param_groups[0]['lr'])
+                    print("Train Loss: ", self._trainLossList[-1])
+                    print("Train R2: {:.5f}".format(self._train_diagnosis.R2().data))
+                    print("Train RMSE: {:.5f}".format(self._train_diagnosis.RMSE().data))
+                    print("Train AIC: {:.5f}".format(self._train_diagnosis.AIC()))
+                    print("Train AICc: {:.5f}".format(self._train_diagnosis.AICc()))
+                    print("Valid Loss: ", self._validLossList[-1])
+                    print("Valid R2: {:.5f}".format(self._valid_r2), "\n")
+                else:
+                    print("\nEpoch: ", epoch + 1)
+                    print("Train R2: {:.5f}  Valid R2: {:.5f}\n".format(self._train_diagnosis.R2().data,self._valid_r2))
             self._scheduler.step()  # update the learning rate
             # tensorboard
             self._writer.add_scalar('Training/Learning Rate', self._optimizer.param_groups[0]['lr'], self._epoch)

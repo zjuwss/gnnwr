@@ -254,8 +254,7 @@ class GNNWR:
             try:
                 r2 = r2_score(label_list, out_list)  # calculate the R square
             except:
-                print(label_list)
-                print(out_list)
+                print('Error: the output of the model is nan')
             self._valid_r2 = r2
             if r2 > self._bestr2:  # if the R square is better than the best R square,record the R square and save the model
                 self._bestr2 = r2
@@ -487,11 +486,11 @@ class GNNWR:
                 output = torch.cat((weight, output, id), dim=1)
                 result = torch.cat((result, output), 0)
         result = result.cpu().detach().numpy()
-        columns = self._train_dataset.x
+        columns = self._train_dataset.x.copy()
         for i in range(len(columns)):
             columns[i] = "weight_" + columns[i]
         columns.append("bias")
-        columns = columns + self._train_dataset.y + self._train_dataset.id
+        columns = columns + self._train_dataset.y.copy() + self._train_dataset.id.copy()
         result = pd.DataFrame(result, columns=columns)
         result.to_csv(filename, index=False)
 

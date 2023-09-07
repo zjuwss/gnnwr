@@ -304,7 +304,7 @@ class GNNWR:
             self.__testr2 = r2_score(label_list, out_list)
             self._test_diagnosis = DIAGNOSIS(weight_all, x_data, y_data, y_pred)
 
-    def run(self, max_epoch=1, early_stop=-1):
+    def run(self, max_epoch=1, early_stop=-1,output_epoch=200):
         """
         run the model
         """
@@ -331,8 +331,8 @@ class GNNWR:
             # record the information of the validation process
             self.__valid()
             # out put log every 50 epoch:
-            if (epoch + 1) % 50 == 0:
-                if (self._show_detail_info):
+            if (epoch + 1) % output_epoch == 0:
+                if self._show_detail_info:
                     print("\nEpoch: ", epoch + 1)
                     print("learning rate: ", self._optimizer.param_groups[0]['lr'])
                     print("Train Loss: ", self._trainLossList[-1])

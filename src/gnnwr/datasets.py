@@ -199,12 +199,17 @@ class predictDataset(Dataset):
         :process_params: 数据预处理参数（如最大最小值、均值方差等）
         :param is_need_STNN: 是否需要STNN
         """
-        data = data.astype(np.float32)
+        # data = data.astype(np.float32)
         self.dataframe = data
         self.x = x_column
-        self.x_data = data[x_column].values  # x_data is independent variables data
-        self.datasize = self.x_data.shape[0]  # datasize is the number of samples
-        self.coefsize = len(x_column) + 1  # coefsize is dependent variables data
+        if data is None:
+            self.x_data = None
+            self.datasize = -1
+            self.coefsize = -1
+        else:
+            self.x_data = data[x_column].astype(np.float32).values  # x_data is independent variables data
+            self.datasize = self.x_data.shape[0]  # datasize is the number of samples
+            self.coefsize = len(x_column) + 1  # coefsize is the number of coefficients
         self.is_need_STNN = is_need_STNN
         self.process_fn = process_fn
         if len(scale_info):

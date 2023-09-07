@@ -388,7 +388,9 @@ class GNNWR:
                 output = output.view(-1).cpu().detach().numpy()
                 result = np.append(result, output)
         # result = dataset.rescale(result)
-        return result
+        dataset.dataframe['pred_result'] = result
+        dataset.pred_result = result 
+        return dataset.dataframe
 
     def load_model(self, path, use_dict=False):
         # load model

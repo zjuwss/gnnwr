@@ -268,9 +268,9 @@ class predictDataset(Dataset):
         :return: 预处理后的输入属性数据、输出属性数据
         """
         if self.scale_fn == "minmax_scale":
-            x = x * (self.scale_info_y[1] - self.scale_info_y[0]) + self.scale_info_y[0]
+            x = x * (self.scale_info_x[1] - self.scale_info_x[0]) + self.scale_info_x[0]
         elif self.scale_fn == "standard_scale":
-            x = x * np.sqrt(self.scale_info_y[1]) + self.scale_info_y[0]
+            x = x * np.sqrt(self.scale_info_x[1]) + self.scale_info_x[0]
         else:
             raise ValueError("invalid process_fn")
 

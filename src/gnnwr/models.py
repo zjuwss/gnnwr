@@ -37,8 +37,7 @@ class GNNWR:
             log_path="../gnnwr_logs/",
             log_file_name="gnnwr" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".log",
             log_level=logging.INFO,
-            optimizer_params=None,
-            show_detail_info = True
+            optimizer_params=None
     ):
         """
         Parameters
@@ -130,7 +129,6 @@ class GNNWR:
         self._test_diagnosis = None  # diagnosis of test
         self._valid_r2 = None  # r2 of validation
         self._use_gpu = use_gpu
-        self._show_detail_info = show_detail_info
         if self._use_gpu:
             if torch.cuda.is_available():
                 devices = [i for i in range(torch.cuda.device_count())]
@@ -254,7 +252,8 @@ class GNNWR:
             try:
                 r2 = r2_score(label_list, out_list)  # calculate the R square
             except:
-                print('Error: the output of the model is nan')
+                print(label_list)
+                print(out_list)
             self._valid_r2 = r2
             if r2 > self._bestr2:  # if the R square is better than the best R square,record the R square and save the model
                 self._bestr2 = r2
@@ -304,7 +303,7 @@ class GNNWR:
             self.__testr2 = r2_score(label_list, out_list)
             self._test_diagnosis = DIAGNOSIS(weight_all, x_data, y_data, y_pred)
 
-    def run(self, max_epoch=1, early_stop=-1,output_epoch=200):
+    def run(self, max_epoch=1, early_stop=-1,print_frequency=50,show_detailed_info=True):
         """
         run the model
         """
@@ -331,8 +330,8 @@ class GNNWR:
             # record the information of the validation process
             self.__valid()
             # out put log every 50 epoch:
-            if (epoch + 1) % output_epoch == 0:
-                if self._show_detail_info:
+            if (epoch + 1) % print_frequency == 0:
+                if (show_detailed_info):
                     print("\nEpoch: ", epoch + 1)
                     print("learning rate: ", self._optimizer.param_groups[0]['lr'])
                     print("Train Loss: ", self._trainLossList[-1])
@@ -387,7 +386,9 @@ class GNNWR:
                 output = output.view(-1).cpu().detach().numpy()
                 result = np.append(result, output)
         # result = dataset.rescale(result)
-        return result
+        dataset.dataframe['pred_result'] = result
+        dataset.pred_result = result 
+        return dataset.dataframe
 
     def load_model(self, path, use_dict=False):
         # load model
@@ -484,11 +485,11 @@ class GNNWR:
                 output = torch.cat((weight, output, id), dim=1)
                 result = torch.cat((result, output), 0)
         result = result.cpu().detach().numpy()
-        columns = self._train_dataset.x.copy()
+        columns = self._train_dataset.x
         for i in range(len(columns)):
             columns[i] = "weight_" + columns[i]
         columns.append("bias")
-        columns = columns + self._train_dataset.y.copy() + self._train_dataset.id.copy()
+        columns = columns + self._train_dataset.y + self._train_dataset.id
         result = pd.DataFrame(result, columns=columns)
         result.to_csv(filename, index=False)
 

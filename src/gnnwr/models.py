@@ -173,8 +173,27 @@ class GNNWR:
             self._scheduler = optim.lr_scheduler.LambdaLR(
                 self._optimizer, lr_lambda=lamda_lr)
         else:
-            self._scheduler = optim.lr_scheduler.MultiStepLR(
-                self._optimizer, milestones=[500, 1000, 2000, 4000], gamma=0.5)
+            if optimizer_params is None:
+                optimizer_params = {}
+            scheduler = optimizer_params.get("scheduler", "CosineAnnealingWarmRestarts")
+            scheduler_milestones = optimizer_params.get(
+                "scheduler_milestones", [500, 1000, 2000, 4000])
+            scheduler_gamma = optimizer_params.get("scheduler_gamma", 0.5)
+            scheduler_T_max = optimizer_params.get("scheduler_T_max", 1000)
+            scheduler_eta_min = optimizer_params.get("scheduler_eta_min", 0.01)
+            scheduler_T_0 = optimizer_params.get("scheduler_T_0", 1000)
+            scheduler_T_mult = optimizer_params.get("scheduler_T_mult", 3)
+            if scheduler == "MultiStepLR":
+                self._scheduler = optim.lr_scheduler.MultiStepLR(
+                self._optimizer, milestones=scheduler_milestones, gamma=scheduler_gamma)
+            elif scheduler == "CosineAnnealingLR":
+                self._scheduler = optim.lr_scheduler.CosineAnnealingLR(
+                self._optimizer, T_max=scheduler_T_max, eta_min=scheduler_eta_min)
+            elif scheduler == "CosineAnnealingWarmRestarts":
+                self._scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+                self._optimizer, T_0=scheduler_T_0, T_mult=scheduler_T_mult, eta_min=scheduler_eta_min)
+            else:
+                raise ValueError("Invalid Scheduler")
 
     def __train(self):
         """
@@ -534,15 +553,17 @@ class GTNNWR(GNNWR):
             STNN_SPNN_params = dict()
         self.STNN_outsize = STNN_SPNN_params.get("STNN_outsize", 1)
         self.SPNN_outsize = STNN_SPNN_params.get("SPNN_outsize", 1)
+        self.STPNN_batch_norm = STNN_SPNN_params.get("STPNN_batch_norm", True)
         if train_dataset.is_need_STNN:
             self._model = nn.Sequential(STNN_SPNN(train_dataset.temporal.shape[-1], self.STNN_outsize,
                                                   train_dataset.distances.shape[-1], self.SPNN_outsize),
                                         STPNN(dense_layers[0], self.STNN_outsize + self.SPNN_outsize,
-                                              self._STPNN_out, drop_out, batch_norm=False),
+                                              self._STPNN_out, drop_out, batch_norm=self.STPNN_batch_norm),
                                         SWNN(dense_layers[1], self._STPNN_out * self._insize, self._outsize, drop_out,
                                              activate_func, batch_norm))
         else:
-            self._model = nn.Sequential(STPNN(dense_layers[0], insize, self._STPNN_out, drop_out, batch_norm=False),
+            self._model = nn.Sequential(STPNN(dense_layers[0], insize, self._STPNN_out, drop_out,
+                                              batch_norm=self.STPNN_batch_norm),
                                         SWNN(dense_layers[1], self._STPNN_out * self._insize, self._outsize, drop_out,
                                              activate_func, batch_norm))
         self.init_optimizer(optimizer, optimizer_params)

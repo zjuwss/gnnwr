@@ -181,7 +181,7 @@ class GNNWR:
             scheduler_gamma = optimizer_params.get("scheduler_gamma", 0.5)
             scheduler_T_max = optimizer_params.get("scheduler_T_max", 1000)
             scheduler_eta_min = optimizer_params.get("scheduler_eta_min", 0.01)
-            scheduler_T_0 = optimizer_params.get("scheduler_T_0", 1000)
+            scheduler_T_0 = optimizer_params.get("scheduler_T_0", 100)
             scheduler_T_mult = optimizer_params.get("scheduler_T_mult", 3)
             if scheduler == "MultiStepLR":
                 self._scheduler = optim.lr_scheduler.MultiStepLR(

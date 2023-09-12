@@ -97,9 +97,16 @@ For other uses of customization, the [demos](https://github.com/zjuwss/gnnwr/tre
 
 Air pollution, especially the measurement of PM2.5, has recently been a popular researching topic in China. Using the data of PM2.5 which is collected by separated station and Considering the complicated terrain variability and wide geographical scope in China, the work of estimating and mapping the PM2.5 distributions across China with high accuracy and reasonable details is challenged by significant spatial nonstationary and complex nonlinearity. GNNWR model can obtain spatially continuous PM2.5 estimates in China with the processed data of AOD, DEM, as well as some climate factors. The estimation of PM2.5 is closer to the ground observation than the results of traditional regression model, and it is more accurate in the high value zone and more detailed.
 
+<p align="center">
+<img title="PM 2.5" src="assets/figure_PM25.png" alt="GTNNWR" width=75%>
+</p>
+
 #### Water quality
 
 Transferring dissolved silicate (DSi) from land to coastal environments is vital for global biogeochemical cycling. Yet pinpointing coastal DSi distribution is complex due to spatiotemporal variability, nonlinear modeling, and low sampling resolution. GTNNWR model, by converting the spatiotemporal relationships between sparse sampling points and unknown points into space-time distances and weights, and using neural networks to determine the nonlinear distances and nonstationary weights, outperforms traditional regression models in both fitting accuracy and generalization ability. This effective data-driven-based method can help explore the fine-scale dynamic changes in coastal seas like surface DSi. 
+<p align="center">
+<img title="DSI" src="assets/figure_DSI.jpg" alt="GTNNWR" width=75%>
+</p>
 
 ### Urban
 

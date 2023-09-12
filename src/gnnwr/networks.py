@@ -15,7 +15,7 @@ def default_dense_layer(insize, outsize):
 
 class SWNN(nn.Module):
     # dense_layer：全连接层大小,insize：输入层大小,outsize：输出层大小，drop_out默认0.2,activate_func：激活函数，默认为PRelu(0.4),batch_norm：是否使用批归一化层
-    def __init__(self, dense_layer=None, insize=-1, outsize=-1, drop_out=0.2, activate_func=nn.PReLU(init=0.4),
+    def __init__(self, dense_layer=None, insize=-1, outsize=-1, drop_out=0.2, activate_func=nn.PReLU(init=0.1),
                  batch_norm=True):
         super(SWNN, self).__init__()
         if dense_layer is None or len(dense_layer) == 0:

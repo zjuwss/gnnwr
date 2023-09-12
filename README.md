@@ -100,6 +100,9 @@ Air pollution, especially the measurement of PM2.5, has recently been a popular 
 <p align="center">
 <img title="PM 2.5" src="assets/figure_PM25.png" alt="GTNNWR" width=75%>
 </p>
+> Chen, Y., Wu, S., Wang, Y., Zhang, F., Liu, R., & Du, Z. (2021). Satellite-based mapping of high-resolution ground-level pm2. 5 with VIIRS IP AOD in china through spatially neural network weighted regression. *Remote Sensing*, *13*(10), 1979.
+
+👉 [Modeling PM2.5 with GNNWR on Deep-time.org](https://mydde.deep-time.org/org-portal/MyDDE/project/64f94d982a7491e657efb01b)
 
 #### Water quality
 
@@ -108,24 +111,38 @@ Transferring dissolved silicate (DSi) from land to coastal environments is vital
 <img title="DSI" src="assets/figure_DSI.jpg" alt="GTNNWR" width=75%>
 </p>
 
+> Qi, J., Du, Z., Wu, S., Chen, Y., & Wang, Y. (2023). A spatiotemporally weighted intelligent method for exploring fine-scale distributions of surface dissolved silicate in coastal seas. _Science of The Total Environment_ , 886, 163981.
+
+
+👉 [Modeling DSi with GTNNWR on Deep-time.org](https://mydde.deep-time.org/org-portal/MyDDE/project/64f976f12a7491e657f02793)
+
 ### Urban
 
 #### House price
 
 Housing prices are closely related to the lives of new urban residents, and they also comprise a vital economic index to which the government needs to pay close attention. Compare with traditional regression models, GNNWR and GTNNWR model can improve the accuracy of real estate appraisal with the help of neural networks, which are practical and powerful ways to assess house prices.
 
+> Wang, Z., Wang, Y., Wu, S., & Du, Z. (2022). House Price Valuation Model Based on Geographically Neural Network Weighted Regression: The Case Study of Shenzhen, China. *ISPRS International Journal of Geo-Information*, *11*(8), 450.
+
 Further, these model can be applied to other valuation problems concerning geographical data to promote the prediction accuracy of socioeconomic phenomena.
 
-## Reference
+## Related Research Papers
 
 ### algorithm  
 
-1. Du, Z., Wang, Z., Wu, S., Zhang, F., and Liu, R., 2020. Geographically neural network weighted regression for the accurate estimation of spatial non-stationarity. International Journal of Geographical Information Science, 34 (7), 1353–1377.  
-2. Wu, S., Wang, Z., Du, Z., Huang, B., Zhang, F., and Liu, R., 2021. Geographically and temporally neural network weighted regression for modeling spatiotemporal non-stationary relationships. International Journal of Geographical Information Science, 35 (3), 582–608.
-
+1. Du, Z., Wang, Z., Wu, S., Zhang, F., & Liu, R. (2020). Geographically neural network weighted regression for the accurate estimation of spatial non-stationarity. *International Journal of Geographical Information Science*, 34(7), 1353-1377.  
+2. Wu, S., Wang, Z., Du, Z., Huang, B., Zhang, F., & Liu, R. (2021). Geographically and temporally neural network weighted regression for modeling spatiotemporal non-stationary relationships. *International Journal of Geographical Information Science* , 35(3), 582-608.
+3. Dai, Z., Wu, S., Wang, Y., Zhou, H., Zhang, F., Huang, B., & Du, Z. (2022). Geographically convolutional neural network weighted regression: A method for modeling spatially non-stationary relationships based on a global spatial proximity grid. *International Journal of Geographical Information Science*, *36*(11), 2248-2269.
 
 ### case study demo
-1. Jin Qi, Zhenhong Du, Sensen Wu, Yijun Chen, Yuanyuan Wang, 2023. A spatiotemporally weighted intelligent method for exploring fine-scale distributions of surface dissolved silicate in coastal seas. Science of The Total Environment, 886 , 163981.
+1. Chen, Y., Wu, S., Wang, Y., Zhang, F., Liu, R., & Du, Z. (2021). Satellite-based mapping of high-resolution ground-level pm2. 5 with VIIRS IP AOD in china through spatially neural network weighted regression. *Remote Sensing*, *13*(10), 1979.
+2. Qi, J., Du, Z., Wu, S., Chen, Y., & Wang, Y. (2023). A spatiotemporally weighted intelligent method for exploring fine-scale distributions of surface dissolved silicate in coastal seas. *Science of The Total Environment* , 886, 163981.
+3. Du, Z., Qi, J., Wu, S., Zhang, F., & Liu, R. (2021). A spatially weighted neural network based water quality assessment method for large-scale coastal areas. *Environmental science & technology*, *55*(4), 2553-2563.
+4. Liang, M., Zhang, L., Wu, S., Zhu, Y., Dai, Z., Wang, Y., ... & Du, Z. (2023). A High-Resolution Land Surface Temperature Downscaling Method Based on Geographically Weighted Neural Network Regression. *Remote Sensing*, *15*(7), 1740.
+5. Liu, C., Wu, S., Dai, Z., Wang, Y., Du, Z., Liu, X., & Qiu, C. (2023). High-Resolution Daily Spatiotemporal Distribution and Evaluation of Ground-Level Nitrogen Dioxide Concentration in the Beijing–Tianjin–Hebei Region Based on TROPOMI Data. *Remote Sensing*, *15*(15), 3878.
+6. Wang, Z., Wang, Y., Wu, S., & Du, Z. (2022). House Price Valuation Model Based on Geographically Neural Network Weighted Regression: The Case Study of Shenzhen, China. *ISPRS International Journal of Geo-Information*, *11*(8), 450.
+7. Wu, S., Du, Z., Wang, Y., Lin, T., Zhang, F., & Liu, R. (2020). Modeling spatially anisotropic nonstationary processes in coastal environments based on a directional geographically neural network weighted regression. *Science of the Total Environment*, *709*, 136097.
+
 
 ## Contributing
 

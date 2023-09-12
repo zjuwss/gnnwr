@@ -143,8 +143,8 @@ class baseDataset(Dataset):
         y_scale_info = {}
         for key, value in self.x_scale_info.items():
             x_scale_info[key] = value.tolist()
-        for key, value in self.y_scale_info.items():
-            y_scale_info[key] = value.tolist()
+        # for key, value in self.y_scale_info.items():
+        #     y_scale_info[key] = value.tolist()
         # save the information of dataset
         with open(os.path.join(dirname, "dataset_info.json"), "w") as f:
             json.dump({"x": self.x, "y": self.y, "id": self.id,
@@ -170,14 +170,14 @@ class baseDataset(Dataset):
         self.is_need_STNN = dataset_info["is_need_STNN"]
         self.scale_fn = dataset_info["scale_fn"]
         self.x_scale_info = json.loads(dataset_info["x_scale_info"])
-        self.y_scale_info = json.loads(dataset_info["y_scale_info"])
+        # self.y_scale_info = json.loads(dataset_info["y_scale_info"])
         self.distances_scale_param = json.loads(dataset_info["distance_scale_info"])
         x_scale_info = self.x_scale_info
-        y_scale_info = self.y_scale_info
+        # y_scale_info = self.y_scale_info
         for key, value in x_scale_info.items():
             x_scale_info[key] = np.array(value)
-        for key, value in y_scale_info.items():
-            y_scale_info[key] = np.array(value)
+        # for key, value in y_scale_info.items():
+        #     y_scale_info[key] = np.array(value)
         # read the distance matrix
         self.distances = np.load(os.path.join(dirname, "distances.npy")).astype(np.float32)
         # read dataframe

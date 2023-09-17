@@ -13,13 +13,13 @@ A pytorch implementation of the STIR models, and the repository contains:
 
 ## Table of Contents
 
-- [Introduction](#1 Introduction)
-- [Models](#2 models)
-- [Install & Usage](#3 Install & Usage)
-- [Research Cases](#4 Research Cases)
-- [Reference](#5 Reference)
-- [Contributing](#6 Contributing)
-- [License](#7 License)
+- [Introduction](#1-Introduction)
+- [Models](#2-Models)
+- [Install & Usage](#3-Install-&-Usage)
+- [Research Cases](#4-Research-Cases)
+- [Reference](#5-Reference)
+- [Contributing](#6-Contributing)
+- [License](#7-License)
 
 ## 1 Introduction
 

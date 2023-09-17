@@ -36,6 +36,7 @@ The model performance is significantly better than classical spatiotemporal regr
 <p align="center">
 <img title="GNNWR" src="assets/The_estimation_process_of_GNNWR_model.jpeg" alt="GNNWR" width=75%>
 </p>
+
 > Du, Z., Wang, Z., Wu, S., Zhang, F., & Liu, R. (2020). Geographically neural network weighted regression for the accurate estimation of spatial non-stationarity. *International Journal of Geographical Information Science*, 34(7), 1353-1377.
 
 ### 2.2 GTNNWR
@@ -45,6 +46,7 @@ The model performance is significantly better than classical spatiotemporal regr
 <p align="center">
 <img title="GTNNWR" src="assets/The_estimation_process_of_GTNNWR_model.jpeg" alt="GTNNWR" width=75%>
 </p>
+
 > Wu, S., Wang, Z., Du, Z., Huang, B., Zhang, F., & Liu, R. (2021). Geographically and temporally neural network weighted regression for modeling spatiotemporal non-stationary relationships. *International Journal of Geographical Information Science* , 35(3), 582-608.
 
 ## 3 Install & Usage
@@ -127,6 +129,7 @@ The accurate assessment of large-scale and complex coastal waters is a grand cha
 <p align="center">
 <img title="WaterQuality" src="assets/figure_WaterQuality.jpg" alt="WaterQuality" width=75%>
 </p>
+
 > Du, Z., Qi, J., Wu, S., Zhang, F., & Liu, R. (2021). A spatially weighted neural network based water quality assessment method for large-scale coastal areas. *Environmental science & technology*, *55*(4), 2553-2563.
 
 #### 4.2.2 Coastal Environment
@@ -161,6 +164,7 @@ Spatial downscaling is an important approach to obtain high-resolution land surf
 <p align="center">
 <img title="LST" src="assets/figure_LST.png" alt="LST" width=75%>
 </p>
+
 > Liang, M., Zhang, L., Wu, S., Zhu, Y., Dai, Z., Wang, Y., ... & Du, Z. (2023). A High-Resolution Land Surface Temperature Downscaling Method Based on Geographically Weighted Neural Network Regression. *Remote Sensing*, *15*(7), 1740.
 
 **!!Further, these spatiotemporal intelligent regression models can be applied to other spatiotemporal modelling problems and socioeconomic phenomena.**

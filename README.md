@@ -5,9 +5,9 @@
 [![PyPI - Version](https://img.shields.io/pypi/v/gnnwr)](https://pypi.org/project/gnnwr/)
 [![GitHub all releases](https://img.shields.io/github/downloads/zjuwss/gnnwr/total)](https://github.com/zjuwss/gnnwr/releases)
 
-A pytorch implementation of the STIR models, and the repository contains:
+A PyTorch implementation of the spatiotemporal intelligent regression (STIR) models and the repository contains:
 
-1. Source code of GNNWR, GTNNWR model and other derived models
+1. Source code of GNNWR, GTNNWR model, and other derived models
 2. Tutorial notebooks of how to use these model
 3. Released Python wheels
 
@@ -31,7 +31,7 @@ The model performance is significantly better than classical spatiotemporal regr
 
 ### 2.1 GNNWR
 
-[GNNWR](https://doi.org/10.1080/13658816.2019.1707834) (Geographically neural network weighted regression) is a model address spatial non-stationarity in various domains with complex geographical processes. A spatially weighted neural network (SWNN) is proposed to represent the nonstationary weight matrix and to achieve local estimation by weighted least squares with these weights. With the superior fitting ability of the neural network, GNNWR has a well-constructed nonstationary weight matrix, which makes it possible to better describe the complex geo-processes in environment and urban research.
+[GNNWR](https://doi.org/10.1080/13658816.2019.1707834) (Geographically neural network weighted regression) is a model to address spatial non-stationarity in various domains with complex geographical processes. A spatially weighted neural network (SWNN) is proposed to represent the nonstationary weight matrix and to achieve local estimation by weighted least squares with these weights. With the superior fitting ability of the neural network, GNNWR has a well-constructed nonstationary weight matrix, which makes it possible to better describe the complex geo-processes in environment and urban research.
 
 <p align="center">
 <img title="GNNWR" src="assets/The_estimation_process_of_GNNWR_model.jpeg" alt="GNNWR" width=75%>
@@ -100,13 +100,13 @@ For other uses of customization, the [demos](https://github.com/zjuwss/gnnwr/tre
 
 #### 4.1.1 Air pollution of PM2.5
 
-Air pollution, especially the measurement of PM2.5, has recently been a popular researching topic in China. Using the data of PM2.5 which is collected by separated station and considering the complicated terrain variability and wide geographical scope in China, the work of estimating and mapping the PM2.5 distributions across China with high accuracy and reasonable details is challenged by significant spatial nonstationary and complex nonlinearity. GNNWR model can obtain spatially continuous PM2.5 estimates in China with the processed data of AOD, DEM, as well as some climate factors. The estimation of PM2.5 is closer to the ground observation than the results of traditional regression model, and it is more accurate in the high value zone and more detailed.
+Air pollution, especially the measurement of PM2.5, has recently been a popular research topic in China. Using the data of PM2.5 which is collected by separated stations and considering the complicated terrain variability and wide geographical scope in China, the work of estimating and mapping the PM2.5 distributions across China with high accuracy and reasonable details is challenged by significant spatial nonstationary and complex nonlinearity. GNNWR model can obtain spatially continuous PM2.5 estimates in China with the processed data of AOD, DEM, as well as some climate factors. The estimation of PM2.5 is closer to the ground observation than the results of the traditional regression model, and it is more accurate in the high-value zone and more detailed.
 
 <p align="center">
 <img title="PM 2.5" src="assets/figure_PM25.png" alt="PM25" width=75%>
 </p>
 
-> Chen, Y., Wu, S., Wang, Y., Zhang, F., Liu, R., & Du, Z. (2021). Satellite-based mapping of high-resolution ground-level pm2. 5 with VIIRS IP AOD in china through spatially neural network weighted regression. *Remote Sensing*, *13*(10), 1979.
+> Chen, Y., Wu, S., Wang, Y., Zhang, F., Liu, R., & Du, Z. (2021). Satellite-based mapping of high-resolution ground-level pm2. 5 with VIIRS IP AOD in China through spatially neural network weighted regression. *Remote Sensing*, *13*(10), 1979.
 
 👉 [Modeling PM2.5 with GNNWR on Deep-time.org](https://mydde.deep-time.org/org-portal/MyDDE/project/64f94d982a7491e657efb01b)
 
@@ -167,7 +167,7 @@ Spatial downscaling is an important approach to obtain high-resolution land surf
 
 > Liang, M., Zhang, L., Wu, S., Zhu, Y., Dai, Z., Wang, Y., ... & Du, Z. (2023). A High-Resolution Land Surface Temperature Downscaling Method Based on Geographically Weighted Neural Network Regression. *Remote Sensing*, *15*(7), 1740.
 
-**!!Further, these spatiotemporal intelligent regression models can be applied to other spatiotemporal modelling problems and socioeconomic phenomena.**
+**!!Further, these spatiotemporal intelligent regression models can be applied to other spatiotemporal modeling problems and socioeconomic phenomena.**
 
 ## 5 Related Research Papers
 
@@ -178,7 +178,7 @@ Spatial downscaling is an important approach to obtain high-resolution land surf
 3. Dai, Z., Wu, S., Wang, Y., Zhou, H., Zhang, F., Huang, B., & Du, Z. (2022). Geographically convolutional neural network weighted regression: A method for modeling spatially non-stationary relationships based on a global spatial proximity grid. *International Journal of Geographical Information Science*, *36*(11), 2248-2269.
 
 ### 5.2 Case study demo
-1. Chen, Y., Wu, S., Wang, Y., Zhang, F., Liu, R., & Du, Z. (2021). Satellite-based mapping of high-resolution ground-level pm2. 5 with VIIRS IP AOD in china through spatially neural network weighted regression. *Remote Sensing*, *13*(10), 1979.
+1. Chen, Y., Wu, S., Wang, Y., Zhang, F., Liu, R., & Du, Z. (2021). Satellite-based mapping of high-resolution ground-level pm2. 5 with VIIRS IP AOD in China through spatially neural network weighted regression. *Remote Sensing*, *13*(10), 1979.
 2. Qi, J., Du, Z., Wu, S., Chen, Y., & Wang, Y. (2023). A spatiotemporally weighted intelligent method for exploring fine-scale distributions of surface dissolved silicate in coastal seas. *Science of The Total Environment* , 886, 163981.
 3. Du, Z., Qi, J., Wu, S., Zhang, F., & Liu, R. (2021). A spatially weighted neural network based water quality assessment method for large-scale coastal areas. *Environmental science & technology*, *55*(4), 2553-2563.
 4. Liang, M., Zhang, L., Wu, S., Zhu, Y., Dai, Z., Wang, Y., ... & Du, Z. (2023). A High-Resolution Land Surface Temperature Downscaling Method Based on Geographically Weighted Neural Network Regression. *Remote Sensing*, *15*(7), 1740.

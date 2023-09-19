@@ -40,54 +40,27 @@ class GNNWR:
             optimizer_params=None
     ):
         """
-        Parameters
-        ----------
-        train_dataset       : baseDataset
-                              dataset for tarining the network
+        GNNWR is a model used to regress the output of a system with the input of the system. It is a combination of
+        SWNN and STNN.
 
-        valid_dataset       : baseDataset
-                              dataset for validation
-
-        test_dataset        : baseDataset
-                              dataset for test the trained network
-
-        dense_layers        : list
-                              neural size for each dense layer
-
-        start_lr            : numbers
-                              start learning rate
-
-        optimizer           : string
-                              type of optimizer used to change the weights or learning rates of neural network;
-                              avaliable options:
-                                'SGD'
-                                'Adam'
-                                'RMSprop'
-                                'Adagrad'
-                                'Adadelta'
-
-        drop_out            : numbers
-                              dropout rate at each training step
-
-        batch_norm          : bool
-                              True for use batch normalization method in training
-
-        activate_func       : class
-                              activate function defined in torch.nn
-
-        model_name           : string
-                              name of the model
-
-        model_save_path     : string
-                                path to save the trained model
-
-        write_path          : string
-                                path to save the training process
-
-        log_path            : string
-                                path to save the log file
-        use_gpu             : bool
-                                True for use gpu
+        :param train_dataset: train dataset
+        :param valid_dataset: valid dataset
+        :param test_dataset: test dataset
+        :param dense_layers: structure of layers (can be None, which means the default structure will be used)
+        :param start_lr: initial learning rate
+        :param optimizer: optimizer types(SGD, Adam, RMSprop, Adagrad)
+        :param drop_out: drop_out ratio
+        :param batch_norm: batch normalization
+        :param activate_func: activate function , default: PRelu(0.4)
+        :param model_name: name of model
+        :param model_save_path: path to save model
+        :param write_path: path to save tensorboard logs
+        :param use_gpu: whether to use gpu
+        :param use_ols: whether to use OLS
+        :param log_path: path to save log
+        :param log_file_name: name of log file
+        :param log_level: log level
+        :param optimizer_params: parameters of optimizer and learning rate scheduler
         """
         self._train_dataset = train_dataset  # train dataset
         self._valid_dataset = valid_dataset  # valid dataset
@@ -138,6 +111,12 @@ class GNNWR:
         self.init_optimizer(optimizer, optimizer_params)  # initialize the optimizer
 
     def init_optimizer(self, optimizer, optimizer_params=None):
+        """
+        Initialize the optimizer and set the learning rate scheduler
+
+        :param optimizer: optimizer type name
+        :param optimizer_params: parameters of optimizer and learning rate scheduler
+        """
         # initialize the optimizer
         if optimizer == "SGD":
             self._optimizer = optim.SGD(
@@ -284,6 +263,9 @@ class GNNWR:
                 self._noUpdateEpoch += 1
 
     def __test(self):
+        """
+        test the network
+        """
         self._model.eval()
         test_loss = 0
         label_list = np.array([])
@@ -324,9 +306,13 @@ class GNNWR:
 
     def run(self, max_epoch=1, early_stop=-1,print_frequency=50,show_detailed_info=True):
         """
-        run the model
+        train and validate the model
+
+        :param max_epoch: max epoch of training
+        :param early_stop: early stop epoch
+        :param print_frequency: print frequency
+        :param show_detailed_info: whether to show detailed information
         """
-        # 23.6.8_TODO: 丰富输出信息  输出Log文件
         self.__istrained = True
         if self._use_gpu:
             self._model = nn.DataParallel(module=self._model)  # parallel computing
@@ -340,8 +326,6 @@ class GNNWR:
                             filename=file_str, level=logging.INFO)
         for epoch in trange(0, max_epoch):
             self._epoch = epoch
-
-            # print("Epoch: ", epoch + 1)
             # train the network
             # record the information of the training process
             self.__train()
@@ -392,6 +376,11 @@ class GNNWR:
         print("Best_r2:", self._bestr2)
 
     def predict(self, dataset):
+        """
+        predict the result of the dataset
+
+        :param dataset: Input dataset
+        """
         data_loader = dataset.dataloader
         if not self.__istrained:
             print("WARNING! The model hasn't been trained or loaded!")
@@ -404,13 +393,17 @@ class GNNWR:
                 output = self._out(self._model(data).mul(coef.to(torch.float32)))
                 output = output.view(-1).cpu().detach().numpy()
                 result = np.append(result, output)
-        # result = dataset.rescale(result)
         dataset.dataframe['pred_result'] = result
         dataset.pred_result = result 
         return dataset.dataframe
 
     def load_model(self, path, use_dict=False):
-        # load model
+        """
+        load model from the path
+
+        :param path: the path of the model
+        :param use_dict: whether use dict to load the model
+        """
         if use_dict:
             data = torch.load(path).state_dict()
             self._model.load_state_dict(data)
@@ -441,7 +434,10 @@ class GNNWR:
 
     def result(self, path=None, use_dict=False):
         """
-        get the result of the model
+        print the result of the model, including the model structure, optimizer,the result of test dataset
+
+        :param path: the path of the model
+        :param use_dict: whether use dict to load the model
         """
         # load model
         if path is None:
@@ -474,7 +470,13 @@ class GNNWR:
         print("F1:   | {:5f}".format(self._test_diagnosis.F1_GNN().data))
 
     def reg_result(self, filename, model_path=None, use_dict=False):
+        """
+        save the result of the model, including the weight, the result of dataset
 
+        :param filename: the path of the result
+        :param model_path: the path of the model
+        :param use_dict: whether use dict to load the model
+        """
         if model_path is None:
             model_path = self._modelSavePath + "/" + self._modelName + ".pkl"
         if use_dict:
@@ -536,6 +538,31 @@ class GTNNWR(GNNWR):
                  STPNN_outsize=1,
                  STNN_SPNN_params=None,
                  ):
+        """
+        GTNNWR model is a model based on GNNWR and STPNN, which is a model that can be used to solve the problem of
+        spatial-temporal non-stationarity.
+
+        :param train_dataset: the dataset of training
+        :param valid_dataset: the dataset of validation
+        :param test_dataset: the dataset of testing
+        :param dense_layers: the dense layers of the model
+        :param start_lr: the start learning rate of the model
+        :param optimizer: the optimizer of the model
+        :param drop_out: the drop out rate of the model
+        :param batch_norm: whether use batch normalization
+        :param activate_func: the activate function of the model (default: nn.PReLU(init=0.4))
+        :param model_name: the name of the model
+        :param model_save_path: the path of the model
+        :param write_path: the path of the log
+        :param use_gpu: whether use gpu
+        :param use_ols: whether use ols
+        :param log_path: the path of the log
+        :param log_file_name: the name of the log
+        :param log_level: the level of the log
+        :param optimizer_params: the params of the optimizer and the scheduler
+        :param STPNN_outsize: the output size of the STPNN
+        :param STNN_SPNN_params: the params of the STNN and SPNN
+        """
         if optimizer_params is None:
             optimizer_params = {}
         if dense_layers is None:
@@ -567,4 +594,3 @@ class GTNNWR(GNNWR):
                                         SWNN(dense_layers[1], self._STPNN_out * self._insize, self._outsize, drop_out,
                                              activate_func, batch_norm))
         self.init_optimizer(optimizer, optimizer_params)
-        print(self._model)

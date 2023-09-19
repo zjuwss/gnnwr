@@ -8,10 +8,25 @@ import torch
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from torch.utils.data import Dataset, DataLoader
 
-
+"""
+The package of `datasets` includes the following functions:
+    1. init_dataset: initialize the dataset for training, validation and testing
+    2. init_dataset_cv: initialize the dataset for cross-validation
+    3. init_predict_dataset: initialize the dataset for prediction
+    4. BasicDistance: calculate the distance matrix of spatial/spatio-temporal data
+    5. ManhattanDistance: calculate the Manhattan distance matrix of spatial/spatio-temporal data
+and the following classes:
+    1. baseDataset: the base class of dataset
+    2. predictDataset: the class of dataset for prediction
+the purpose of this package is to provide the basic functions of pre-processing data and calculating distance matrix
+to facilitate the use of the model.
+"""
 class baseDataset(Dataset):
     def __init__(self, data=None, x_column=None, y_column=None, id_column=None, is_need_STNN=False):
         """
+        baseDataset is the base class of dataset, which is used to store the data and other information.
+        it also provides the function of data scaling, data saving and data loading.
+
         :param data: DataSets with x_column and y_column
         :param x_column: independent variables column name
         :param y_column: dependent variables column name
@@ -67,9 +82,10 @@ class baseDataset(Dataset):
 
     def scale(self, scale_fn=None, scale_params=None):
         """
+        scale the data by MinMaxScaler or StandardScaler
+
         :param scale_fn: scale function
         :param scale_params: scale parameters like MinMaxScaler or StandardScaler
-        :return:
         """
         if scale_fn == "minmax_scale":
             self.scale_fn = "minmax_scale"
@@ -94,6 +110,12 @@ class baseDataset(Dataset):
             (self.datasize, 1))), axis=1)
 
     def scale2(self, scale_fn, scale_params):
+        """
+        scale the data with the scale function and scale parameters
+
+        :param scale_fn: scale function
+        :param scale_params: scale parameters like max and min
+        """
         if scale_fn == "minmax_scale":
             self.scale_fn = "minmax_scale"
             x_scale_params = scale_params[0]
@@ -113,15 +135,18 @@ class baseDataset(Dataset):
             (self.datasize, 1))), axis=1)
 
     def getScaledDataframe(self):
+        """
+        get the scaled dataframe
+        """
         columns = np.concatenate((self.x, self.y), axis=0)
         scaledData = np.concatenate((self.x_data, self.y_data), axis=1)
         self.scaledDataframe = pd.DataFrame(scaledData, columns=columns)
 
     def rescale(self, x, y):
         """
-        :param x: 输入属性数据
-        :param y: 输出属性数据
-        :return: 预处理后的输入属性数据、输出属性数据
+        :param x: Input independent variable data
+        :param y: Input dependent variable data
+        :return: rescaled x and y
         """
         if self.scale_fn == "minmax_scale":
             x = np.multiply(x, self.x_scale_info["max"] - self.x_scale_info["min"]) + self.x_scale_info["min"]
@@ -134,6 +159,11 @@ class baseDataset(Dataset):
         return x, y
 
     def save(self, dirname):
+        """
+        save the dataset
+
+        :param dirname: save directory
+        """
         if os.path.exists(dirname):
             raise ValueError("dir is already exists")
         if self.dataframe is None:
@@ -143,9 +173,6 @@ class baseDataset(Dataset):
         y_scale_info = {}
         for key, value in self.x_scale_info.items():
             x_scale_info[key] = value.tolist()
-        # for key, value in self.y_scale_info.items():
-        #     y_scale_info[key] = value.tolist()
-        # save the information of dataset
         with open(os.path.join(dirname, "dataset_info.json"), "w") as f:
             json.dump({"x": self.x, "y": self.y, "id": self.id,
                        "is_need_STNN": self.is_need_STNN, "scale_fn": self.scale_fn,
@@ -159,6 +186,11 @@ class baseDataset(Dataset):
         self.scaledDataframe.to_csv(os.path.join(dirname, "scaledDataframe.csv"), index=False)
 
     def read(self, dirname):
+        """
+        read the dataset by the directory
+
+        :param dirname: read directory
+        """
         if not os.path.exists(dirname):
             raise ValueError("dir is not exists")
         # read the information of dataset
@@ -193,11 +225,13 @@ class baseDataset(Dataset):
 class predictDataset(Dataset):
     def __init__(self, data, x_column, process_fn="minmax_scale", scale_info=[], is_need_STNN=False):
         """
-        :param data: 数据集
-        :param x_column: 输入属性列名
-        :param process_fn: 数据预处理函数
-        :process_params: 数据预处理参数（如最大最小值、均值方差等）
-        :param is_need_STNN: 是否需要STNN
+        Predict dataset is used to predict the dependent variable of the data.
+
+        :param data: dataframe
+        :param x_column: independent variable column name
+        :param process_fn: process function name
+        :param scale_info: process function parameters
+        :param is_need_STNN: whether need STNN
         """
         # data = data.astype(np.float32)
         self.dataframe = data
@@ -246,14 +280,14 @@ class predictDataset(Dataset):
 
     def __len__(self):
         """
-        :return: 数据集大小
+        :return: the number of samples
         """
         return len(self.x_data)
 
     def __getitem__(self, index):
         """
-        :param index: 数据索引
-        :return: 距离矩阵、输入属性数据、输出属性数据
+        :param index: sample index
+        :return: distance matrix and independent variable data and dependent variable data
         """
         if self.is_need_STNN:
             return torch.cat((torch.tensor(self.distances[index], dtype=torch.float),
@@ -264,8 +298,10 @@ class predictDataset(Dataset):
 
     def rescale(self, x):
         """
-        :param x: 输入属性数据
-        :return: 预处理后的输入属性数据、输出属性数据
+        rescale the attribute data
+
+        :param x: Input attribute data
+        :return: rescaled attribute data
         """
         if self.scale_fn == "minmax_scale":
             x = x * (self.scale_info_x[1] - self.scale_info_x[0]) + self.scale_info_x[0]
@@ -277,6 +313,14 @@ class predictDataset(Dataset):
         return x
 
     def minmax_scaler(self, x, min=[], max=[]):
+        """
+        function of minmax scaler
+
+        :param x: Input attribute data
+        :param min: minimum value of each attribute
+        :param max: maximum value of each attribute
+        :return: Output attribute data
+        """
         if len(min) == 0:
             x = (x - x.min(axis=0)) / (x.max(axis=0) - x.min(axis=0))
         else:
@@ -284,44 +328,39 @@ class predictDataset(Dataset):
         return x
 
     def standard_scaler(self, x, mean=[], std=[]):
+        """
+        function of standard scaler
+
+        :param x: Input attribute data
+        :param mean: mean value of each attribute
+        :param std: standard deviation of each attribute
+        :return: Output attribute data
+        """
         if len(mean) == 0:
             x = (x - x.mean(axis=0)) / x.std(axis=0)
         else:
             x = (x - mean) / std
         return x
 
-    # def generatePredictData(self, x, y):
-    #     """
-    #     :param x: 输入属性数据
-    #     :param y: 输出属性数据
-    #     :return: 预处理后的输入属性数据、输出属性数据
-    #     """
-    #     if self.scale_fn == "minmax_scale":
-    #         x = (x - self.x_scale_info["min"]) / (self.x_scale_info["max"] - self.x_scale_info["min"])
-    #         y = (y - self.y_scale_info["min"]) / (self.y_scale_info["max"] - self.y_scale_info["min"])
-    #     elif self.scale_fn == "standard_scale":
-    #         x = (x - self.x_scale_info["mean"]) / np.sqrt(self.x_scale_info["var"])
-    #         y = (y - self.y_scale_info["mean"]) / np.sqrt(self.y_scale_info["var"])
-    #     else:
-    #         raise ValueError("invalid process_fn")
-    #     x = np.concatenate((x, np.ones((x.shape[0], 1))), axis=1)
-    #     return x, y
-
 
 def BasicDistance(x, y):
     """
-    :param x: 输入点坐标数据
-    :param y: 输入训练集点坐标数据
-    :return: 距离矩阵
+    Calculate the distance between two points
+
+    :param x: Input point coordinate data
+    :param y: Input target point coordinate data
+    :return: distance matrix
     """
     return np.float32(np.sqrt(np.sum((x[:, np.newaxis, :] - y) ** 2, axis=2)))
 
 
 def Manhattan_distance(x, y):
     """
-    :param x: 输入点坐标数据
-    :param y: 输入训练集点坐标数据
-    :return: 距离矩阵
+    Calculate the Manhattan distance between two points
+
+    :param x: Input point coordinate data
+    :param y: Input target point coordinate data
+    :return: distance matrix
     """
     return np.float32(np.sum(np.abs(x[:, np.newaxis, :] - y), axis=2))
 
@@ -332,6 +371,8 @@ def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_colu
                  spatial_fun=BasicDistance, temporal_fun=Manhattan_distance, max_val_size=-1, max_test_size=-1,
                  from_for_cv=0, is_need_STNN=False, Reference=None, simple_distance=True):
     """
+    Initialize the dataset and return the training set, validation set and test set for the model
+
     :param data: dataset
     :param test_ratio: test data ratio
     :param valid_ratio: valid data ratio
@@ -592,6 +633,7 @@ def init_dataset_cv(data, test_ratio, k_fold, x_column, y_column, spatial_column
                     spatial_fun=BasicDistance, temporal_fun=Manhattan_distance, max_val_size=-1, max_test_size=-1,
                     is_need_STNN=False, Reference=None, simple_distance=True):
     """
+    initialize dataset for cross validation
 
     :param data: input data
     :param test_ratio: test set ratio
@@ -668,19 +710,21 @@ def init_predict_dataset(data, train_dataset, x_column, spatial_column=None, tem
                          process_fn="minmax_scale", scale_sync=True, use_class=predictDataset,
                          spatial_fun=BasicDistance, temporal_fun=Manhattan_distance, max_size=-1, is_need_STNN=False):
     """
-    :param data: 输入预测数据
-    :param train_data: 输入训练数据集
-    :param x_column: 输入属性列名
-    :param spatial_column: 距离属性列名
-    :param temp_column: 时间距离属性列名
-    :param process_fn: 数据预处理函数
-    :param scale_sync: 是否用训练集相同的缩放参数
-    :param max_size: 一次注入最大预测数据大小
-    :param use_class: 使用的数据集类
-    :param spatial_fun: 距离计算函数
-    :param temporal_fun: 时间距离计算函数
-    :param is_need_STNN: 是否需要STNN
-    :return: 预测数据集
+    initialize predict dataset
+
+    :param data: input data
+    :param train_data: train data
+    :param x_column: attribute column name
+    :param spatial_column: spatial distance column name
+    :param temp_column: temporal distance column name
+    :param process_fn: data process function
+    :param scale_sync: scale sync or not
+    :param max_size: max size of predict dataset
+    :param use_class: dataset class
+    :param spatial_fun: spatial distance calculate function
+    :param temporal_fun: temporal distance calculate function
+    :param is_need_STNN: is need STNN or not
+    :return: predict_dataset
     """
     if spatial_fun is None:
         # if dist_fun is None, raise error

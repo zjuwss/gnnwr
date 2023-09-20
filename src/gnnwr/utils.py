@@ -4,14 +4,15 @@ import torch
 
 
 class OLS():
-    def __init__(self, dataset, xName: list, yName: list):
-        """
-        OLS is the class to calculate the OLR weights of data.Get the weight by `object.params`.
+    """
+    OLS is the class to calculate the OLR weights of data.Get the weight by `object.params`.
 
-        :param dataset: Input data
-        :param xName: the independent variables' column
-        :param yName:the dependent variable's column
-        """
+    :param dataset: Input data
+    :param xName: the independent variables' column
+    :param yName: the dependent variable's column
+    """
+    def __init__(self, dataset, xName: list, yName: list):
+
         self.__dataset = dataset
         self.__xName = xName
         self.__yName = yName
@@ -25,15 +26,15 @@ class OLS():
 
 class DIAGNOSIS:
     # TODO 更多诊断方法
-    def __init__(self, weight, x_data, y_data, y_pred):
-        """
-        Diagnosis is the class to calculate the diagnoses of GNNWR/GTNNWR.
+    """
+    Diagnosis is the class to calculate the diagnoses of GNNWR/GTNNWR.
 
-        :param weight: output of the neural network
-        :param x_data: the independent variables
-        :param y_data: the dependent variables
-        :param y_pred: output of the GNNWR/GTNNWR
-        """
+    :param weight: output of the neural network
+    :param x_data: the independent variables
+    :param y_data: the dependent variables
+    :param y_pred: output of the GNNWR/GTNNWR
+    """
+    def __init__(self, weight, x_data, y_data, y_pred):
         self.__weight = weight
         self.__x_data = x_data
         self.__y_data = y_data

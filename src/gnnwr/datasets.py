@@ -119,15 +119,17 @@ class baseDataset(Dataset):
         if scale_fn == "minmax_scale":
             self.scale_fn = "minmax_scale"
             x_scale_params = scale_params[0]
-            y_scale_params = scale_params[1]
-            self.x_data = self.x_data * (x_scale_params["max"] - x_scale_params["min"]) + x_scale_params["min"]
-            self.y_data = self.y_data * (y_scale_params["max"] - y_scale_params["min"]) + y_scale_params["min"]
+            # y_scale_params = scale_params[1]
+            # self.x_data = self.x_data * (x_scale_params["max"] - x_scale_params["min"]) + x_scale_params["min"]
+            self.x_data = (self.x_data - x_scale_params["min"]) / (x_scale_params["max"] - x_scale_params["min"])
+            # self.y_data = self.y_data * (y_scale_params["max"] - y_scale_params["min"]) + y_scale_params["min"]
         elif scale_fn == "standard_scale":
             self.scale_fn = "standard_scale"
             x_scale_params = scale_params[0]
-            y_scale_params = scale_params[1]
-            self.x_data = self.x_data * np.sqrt(x_scale_params["var"]) + x_scale_params["mean"]
-            self.y_data = self.y_data * np.sqrt(y_scale_params["var"]) + y_scale_params["mean"]
+            # y_scale_params = scale_params[1]
+            # self.x_data = self.x_data * np.sqrt(x_scale_params["var"]) + x_scale_params["mean"]
+            self.x_data = (self.x_data - x_scale_params['mean']) / np.sqrt(x_scale_params["var"])
+            # self.y_data = self.y_data * np.sqrt(y_scale_params["var"]) + y_scale_params["mean"]
 
         self.getScaledDataframe()
 
@@ -174,10 +176,13 @@ class baseDataset(Dataset):
         for key, value in self.x_scale_info.items():
             x_scale_info[key] = value.tolist()
         with open(os.path.join(dirname, "dataset_info.json"), "w") as f:
-            json.dump({"x": self.x, "y": self.y, "id": self.id,
+            distance_scale_info = {}
+            for key in self.distances_scale_param.keys():
+                distance_scale_info[key] = self.distances_scale_param[key].tolist()
+            json.dump({"x": self.x, "y": self.y, "id": self.id,"batch_size":self.batch_size,"shuffle":self.shuffle,
                        "is_need_STNN": self.is_need_STNN, "scale_fn": self.scale_fn,
                        "x_scale_info": json.dumps(x_scale_info), "y_scale_info": json.dumps(y_scale_info),
-                       "distance_scale_info": json.dumps(self.distances_scale_param)
+                       "distance_scale_info": json.dumps(distance_scale_info)
                        }, f)
         # save the distance matrix
         np.save(os.path.join(dirname, "distances.npy"), self.distances)
@@ -199,6 +204,8 @@ class baseDataset(Dataset):
         self.x = dataset_info["x"]
         self.y = dataset_info["y"]
         self.id = dataset_info["id"]
+        self.batch_size = dataset_info["batch_size"]
+        self.shuffle = dataset_info["shuffle"]
         self.is_need_STNN = dataset_info["is_need_STNN"]
         self.scale_fn = dataset_info["scale_fn"]
         self.x_scale_info = json.loads(dataset_info["x_scale_info"])
@@ -213,7 +220,7 @@ class baseDataset(Dataset):
         # read the distance matrix
         self.distances = np.load(os.path.join(dirname, "distances.npy")).astype(np.float32)
         # read dataframe
-        self.dataframe = pd.read_csv(os.path.join(dirname, "dataframe.csv")).astype(np.float32)
+        self.dataframe = pd.read_csv(os.path.join(dirname, "dataframe.csv"))
         self.x_data = self.dataframe[self.x].astype(np.float32).values
         self.datasize = self.x_data.shape[0]
         self.y_data = self.dataframe[self.y].astype(np.float32).values
@@ -622,7 +629,9 @@ def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_colu
         val_dataset, batch_size=max_val_size, shuffle=shuffle)
     test_dataset.dataloader = DataLoader(
         test_dataset, batch_size=max_test_size, shuffle=shuffle)
-
+    train_dataset.batch_size,train_dataset.shuffle = batch_size,shuffle
+    val_dataset.batch_size,val_dataset.shuffle = max_val_size,shuffle
+    test_dataset.batch_size,test_dataset.shuffle = max_test_size,shuffle
     return train_dataset, val_dataset, test_dataset
 
 
@@ -823,3 +832,9 @@ def init_predict_dataset(data, train_dataset, x_column, spatial_column=None, tem
         predict_dataset, batch_size=max_size, shuffle=False)
 
     return predict_dataset
+
+def load_dataset(dir,use_class=baseDataset):
+    dataset = use_class()
+    dataset.read(dir)
+    dataset.dataloader =  DataLoader(dataset, batch_size=dataset.batch_size, shuffle=dataset.shuffle)
+    return dataset

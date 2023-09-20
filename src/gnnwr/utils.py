@@ -4,7 +4,14 @@ import torch
 
 
 class OLS():
-    def __init__(self, dataset, xName: list, yName: list):  # xName为自变量字段名，yName为因变量字段名（需为列表）
+    def __init__(self, dataset, xName: list, yName: list):
+        """
+        OLS is the class to calculate the OLR weights of data.Get the weight by `object.params`.
+
+        :param dataset: Input data
+        :param xName: the independent variables' column
+        :param yName:the dependent variable's column
+        """
         self.__dataset = dataset
         self.__xName = xName
         self.__yName = yName
@@ -14,12 +21,19 @@ class OLS():
         intercept = self.__fit.params[0]
         self.params = self.params[1:]
         self.params.append(intercept)
-        #print(self.params)
 
 
 class DIAGNOSIS:
     # TODO 更多诊断方法
     def __init__(self, weight, x_data, y_data, y_pred):
+        """
+        Diagnosis is the class to calculate the diagnoses of GNNWR/GTNNWR.
+
+        :param weight: output of the neural network
+        :param x_data: the independent variables
+        :param y_data: the dependent variables
+        :param y_pred: output of the GNNWR/GTNNWR
+        """
         self.__weight = weight
         self.__x_data = x_data
         self.__y_data = y_data
@@ -45,10 +59,15 @@ class DIAGNOSIS:
         self.__S = torch.trace(self.__hat)
 
     def hat(self):
-        
+        """
+        :return: hat matrix
+        """
         return self.__hat
 
-    def F1_GNN(self):  # 因变量的空间非平稳性F1检验
+    def F1_GNN(self):
+        """
+        :return: F1-test
+        """
         k1 = self.__n - 2 * torch.trace(self.__hat) + \
              torch.trace(torch.mm(self.__hat.transpose(-2,-1), self.__hat))
         k2 = self.__n - self.__k - 1
@@ -57,16 +76,35 @@ class DIAGNOSIS:
         return self.__ssr / k1 / (rss_olr / k2)
 
     def AIC(self):
+        """
+        :return: AIC
+        """
         return self.__n * (math.log(self.__ssr / self.__n * 2 * math.pi, math.e)) + self.__n + self.__k
     def AICc(self):
+        """
+
+        :return: AICc
+        """
         return self.__n * (math.log(self.__ssr / self.__n * 2 * math.pi, math.e) + (self.__n + self.__S) / (
                 self.__n - self.__S - 2))
 
     def R2(self):
+        """
+
+        :return: R2 of the result
+        """
         return 1 - torch.sum(self.__residual ** 2) / torch.sum((self.__y_data - torch.mean(self.__y_data)) ** 2)
 
     def Adjust_R2(self):
+        """
+
+        :return: Adjust R2 of the result
+        """
         return 1 - (1 - self.R2()) * (self.__n - 1) / (self.__n - self.__k - 1)
 
     def RMSE(self):
+        """
+
+        :return: RMSE of the result
+        """
         return torch.sqrt(torch.sum(self.__residual ** 2) / self.__n)

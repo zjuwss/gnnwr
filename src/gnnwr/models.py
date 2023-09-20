@@ -18,6 +18,29 @@ from .utils import OLS, DIAGNOSIS
 
 # 23.6.8_TODO: 寻找合适的优化器  考虑SGD+学习率调整  输出权重
 class GNNWR:
+    """
+    GNNWR is a model used to regress the output of a system with the input of the system. It is a combination of
+    SWNN and STNN.
+
+    :param train_dataset: train dataset
+    :param valid_dataset: valid dataset
+    :param test_dataset: test dataset
+    :param dense_layers: structure of layers (can be None, which means the default structure will be used)
+    :param start_lr: initial learning rate
+    :param optimizer: optimizer types(SGD, Adam, RMSprop, Adagrad)
+    :param drop_out: drop_out ratio
+    :param batch_norm: batch normalization
+    :param activate_func: activate function , default: PRelu(0.4)
+    :param model_name: name of model
+    :param model_save_path: path to save model
+    :param write_path: path to save tensorboard logs
+    :param use_gpu: whether to use gpu
+    :param use_ols: whether to use OLS
+    :param log_path: path to save log
+    :param log_file_name: name of log file
+    :param log_level: log level
+    :param optimizer_params: parameters of optimizer and learning rate scheduler
+    """
     def __init__(
             self,
             train_dataset,
@@ -39,29 +62,6 @@ class GNNWR:
             log_level=logging.INFO,
             optimizer_params=None
     ):
-        """
-        GNNWR is a model used to regress the output of a system with the input of the system. It is a combination of
-        SWNN and STNN.
-
-        :param train_dataset: train dataset
-        :param valid_dataset: valid dataset
-        :param test_dataset: test dataset
-        :param dense_layers: structure of layers (can be None, which means the default structure will be used)
-        :param start_lr: initial learning rate
-        :param optimizer: optimizer types(SGD, Adam, RMSprop, Adagrad)
-        :param drop_out: drop_out ratio
-        :param batch_norm: batch normalization
-        :param activate_func: activate function , default: PRelu(0.4)
-        :param model_name: name of model
-        :param model_save_path: path to save model
-        :param write_path: path to save tensorboard logs
-        :param use_gpu: whether to use gpu
-        :param use_ols: whether to use OLS
-        :param log_path: path to save log
-        :param log_file_name: name of log file
-        :param log_level: log level
-        :param optimizer_params: parameters of optimizer and learning rate scheduler
-        """
         self._train_dataset = train_dataset  # train dataset
         self._valid_dataset = valid_dataset  # valid dataset
         self._test_dataset = test_dataset  # test dataset
@@ -516,6 +516,31 @@ class GNNWR:
 
 
 class GTNNWR(GNNWR):
+    """
+    GTNNWR model is a model based on GNNWR and STPNN, which is a model that can be used to solve the problem of
+    spatial-temporal non-stationarity.
+
+    :param train_dataset: the dataset of training
+    :param valid_dataset: the dataset of validation
+    :param test_dataset: the dataset of testing
+    :param dense_layers: the dense layers of the model
+    :param start_lr: the start learning rate of the model
+    :param optimizer: the optimizer of the model
+    :param drop_out: the drop out rate of the model
+    :param batch_norm: whether use batch normalization
+    :param activate_func: the activate function of the model (default: nn.PReLU(init=0.4))
+    :param model_name: the name of the model
+    :param model_save_path: the path of the model
+    :param write_path: the path of the log
+    :param use_gpu: whether use gpu
+    :param use_ols: whether use ols
+    :param log_path: the path of the log
+    :param log_file_name: the name of the log
+    :param log_level: the level of the log
+    :param optimizer_params: the params of the optimizer and the scheduler
+    :param STPNN_outsize: the output size of the STPNN
+    :param STNN_SPNN_params: the params of the STNN and SPNN
+    """
     def __init__(self,
                  train_dataset,
                  valid_dataset,
@@ -538,31 +563,7 @@ class GTNNWR(GNNWR):
                  STPNN_outsize=1,
                  STNN_SPNN_params=None,
                  ):
-        """
-        GTNNWR model is a model based on GNNWR and STPNN, which is a model that can be used to solve the problem of
-        spatial-temporal non-stationarity.
 
-        :param train_dataset: the dataset of training
-        :param valid_dataset: the dataset of validation
-        :param test_dataset: the dataset of testing
-        :param dense_layers: the dense layers of the model
-        :param start_lr: the start learning rate of the model
-        :param optimizer: the optimizer of the model
-        :param drop_out: the drop out rate of the model
-        :param batch_norm: whether use batch normalization
-        :param activate_func: the activate function of the model (default: nn.PReLU(init=0.4))
-        :param model_name: the name of the model
-        :param model_save_path: the path of the model
-        :param write_path: the path of the log
-        :param use_gpu: whether use gpu
-        :param use_ols: whether use ols
-        :param log_path: the path of the log
-        :param log_file_name: the name of the log
-        :param log_level: the level of the log
-        :param optimizer_params: the params of the optimizer and the scheduler
-        :param STPNN_outsize: the output size of the STPNN
-        :param STNN_SPNN_params: the params of the STNN and SPNN
-        """
         if optimizer_params is None:
             optimizer_params = {}
         if dense_layers is None:

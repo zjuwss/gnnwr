@@ -22,16 +22,17 @@ the purpose of this package is to provide the basic functions of pre-processing 
 to facilitate the use of the model.
 """
 class baseDataset(Dataset):
-    def __init__(self, data=None, x_column=None, y_column=None, id_column=None, is_need_STNN=False):
-        """
-        baseDataset is the base class of dataset, which is used to store the data and other information.
-        it also provides the function of data scaling, data saving and data loading.
+    """
+    baseDataset is the base class of dataset, which is used to store the data and other information.
+    it also provides the function of data scaling, data saving and data loading.
 
-        :param data: DataSets with x_column and y_column
-        :param x_column: independent variables column name
-        :param y_column: dependent variables column name
-        :param is_need_STNN: whether to use STNN
-        """
+    :param data: DataSets with x_column and y_column
+    :param x_column: independent variables column name
+    :param y_column: dependent variables column name
+    :param is_need_STNN: whether to use STNN
+    """
+    def __init__(self, data=None, x_column=None, y_column=None, id_column=None, is_need_STNN=False):
+
         self.dataframe = data
         self.x = x_column
         self.y = y_column
@@ -230,16 +231,17 @@ class baseDataset(Dataset):
 
 
 class predictDataset(Dataset):
-    def __init__(self, data, x_column, process_fn="minmax_scale", scale_info=[], is_need_STNN=False):
-        """
-        Predict dataset is used to predict the dependent variable of the data.
+    """
+    Predict dataset is used to predict the dependent variable of the data.
 
-        :param data: dataframe
-        :param x_column: independent variable column name
-        :param process_fn: process function name
-        :param scale_info: process function parameters
-        :param is_need_STNN: whether need STNN
-        """
+    :param data: dataframe
+    :param x_column: independent variable column name
+    :param process_fn: process function name
+    :param scale_info: process function parameters
+    :param is_need_STNN: whether need STNN
+    """
+    def __init__(self, data, x_column, process_fn="minmax_scale", scale_info=[], is_need_STNN=False):
+
         # data = data.astype(np.float32)
         self.dataframe = data
         self.x = x_column

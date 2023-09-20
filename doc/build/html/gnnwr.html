@@ -127,6 +127,18 @@
 <dt class="sig sig-object py" id="gnnwr.datasets.baseDataset">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gnnwr.datasets.</span></span><span class="sig-name descname"><span class="pre">baseDataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_column</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_column</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_column</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_need_STNN</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gnnwr.datasets.baseDataset" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Dataset</span></code></p>
+<p>baseDataset is the base class of dataset, which is used to store the data and other information.
+it also provides the function of data scaling, data saving and data loading.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> – DataSets with x_column and y_column</p></li>
+<li><p><strong>x_column</strong> – independent variables column name</p></li>
+<li><p><strong>y_column</strong> – dependent variables column name</p></li>
+<li><p><strong>is_need_STNN</strong> – whether to use STNN</p></li>
+</ul>
+</dd>
+</dl>
 <dl class="py method">
 <dt class="sig sig-object py" id="gnnwr.datasets.baseDataset.getScaledDataframe">
 <span class="sig-name descname"><span class="pre">getScaledDataframe</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gnnwr.datasets.baseDataset.getScaledDataframe" title="Permalink to this definition"></a></dt>
@@ -303,6 +315,18 @@
 <dt class="sig sig-object py" id="gnnwr.datasets.predictDataset">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gnnwr.datasets.</span></span><span class="sig-name descname"><span class="pre">predictDataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_column</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">process_fn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'minmax_scale'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale_info</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_need_STNN</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gnnwr.datasets.predictDataset" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Dataset</span></code></p>
+<p>Predict dataset is used to predict the dependent variable of the data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> – dataframe</p></li>
+<li><p><strong>x_column</strong> – independent variable column name</p></li>
+<li><p><strong>process_fn</strong> – process function name</p></li>
+<li><p><strong>scale_info</strong> – process function parameters</p></li>
+<li><p><strong>is_need_STNN</strong> – whether need STNN</p></li>
+</ul>
+</dd>
+</dl>
 <dl class="py method">
 <dt class="sig sig-object py" id="gnnwr.datasets.predictDataset.minmax_scaler">
 <span class="sig-name descname"><span class="pre">minmax_scaler</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gnnwr.datasets.predictDataset.minmax_scaler" title="Permalink to this definition"></a></dt>
@@ -360,8 +384,34 @@
 <span id="gnnwr-models-module"></span><h2>gnnwr.models module<a class="headerlink" href="#module-gnnwr.models" title="Permalink to this heading"></a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="gnnwr.models.GNNWR">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gnnwr.models.</span></span><span class="sig-name descname"><span class="pre">GNNWR</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">train_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">valid_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dense_layers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_lr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Adagrad'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_out</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_norm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">activate_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">PReLU(num_parameters=1)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'GNNWR_20230920-000000'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_save_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'../gnnwr_models'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'../gnnwr_runs/20230920-161303'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_gpu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_ols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'../gnnwr_logs/'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_file_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'gnnwr20230920-161303.log'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer_params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gnnwr.models.GNNWR" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gnnwr.models.</span></span><span class="sig-name descname"><span class="pre">GNNWR</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">train_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">valid_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dense_layers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_lr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Adagrad'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_out</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_norm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">activate_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">PReLU(num_parameters=1)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'GNNWR_20230920-000000'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_save_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'../gnnwr_models'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'../gnnwr_runs/20230920-161710'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_gpu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_ols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'../gnnwr_logs/'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_file_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'gnnwr20230920-161710.log'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer_params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gnnwr.models.GNNWR" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>GNNWR is a model used to regress the output of a system with the input of the system. It is a combination of
+SWNN and STNN.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>train_dataset</strong> – train dataset</p></li>
+<li><p><strong>valid_dataset</strong> – valid dataset</p></li>
+<li><p><strong>test_dataset</strong> – test dataset</p></li>
+<li><p><strong>dense_layers</strong> – structure of layers (can be None, which means the default structure will be used)</p></li>
+<li><p><strong>start_lr</strong> – initial learning rate</p></li>
+<li><p><strong>optimizer</strong> – optimizer types(SGD, Adam, RMSprop, Adagrad)</p></li>
+<li><p><strong>drop_out</strong> – drop_out ratio</p></li>
+<li><p><strong>batch_norm</strong> – batch normalization</p></li>
+<li><p><strong>activate_func</strong> – activate function , default: PRelu(0.4)</p></li>
+<li><p><strong>model_name</strong> – name of model</p></li>
+<li><p><strong>model_save_path</strong> – path to save model</p></li>
+<li><p><strong>write_path</strong> – path to save tensorboard logs</p></li>
+<li><p><strong>use_gpu</strong> – whether to use gpu</p></li>
+<li><p><strong>use_ols</strong> – whether to use OLS</p></li>
+<li><p><strong>log_path</strong> – path to save log</p></li>
+<li><p><strong>log_file_name</strong> – name of log file</p></li>
+<li><p><strong>log_level</strong> – log level</p></li>
+<li><p><strong>optimizer_params</strong> – parameters of optimizer and learning rate scheduler</p></li>
+</ul>
+</dd>
+</dl>
 <dl class="py method">
 <dt class="sig sig-object py" id="gnnwr.models.GNNWR.add_graph">
 <span class="sig-name descname"><span class="pre">add_graph</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gnnwr.models.GNNWR.add_graph" title="Permalink to this definition"></a></dt>
@@ -462,8 +512,36 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="gnnwr.models.GTNNWR">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gnnwr.models.</span></span><span class="sig-name descname"><span class="pre">GTNNWR</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">train_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">valid_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dense_layers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_lr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Adam'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_out</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_norm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">activate_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">PReLU(num_parameters=1)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'GTNNWR_20230920-161303'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_save_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'../gtnnwr_models'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'../gtnnwr_runs/20230920-161303'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_gpu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_ols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'../gtnnwr_logs/'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_file_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'gtnnwr20230920-161303.log'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer_params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">STPNN_outsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">STNN_SPNN_params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gnnwr.models.GTNNWR" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gnnwr.models.</span></span><span class="sig-name descname"><span class="pre">GTNNWR</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">train_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">valid_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dense_layers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_lr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Adam'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_out</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_norm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">activate_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">PReLU(num_parameters=1)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'GTNNWR_20230920-161710'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_save_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'../gtnnwr_models'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'../gtnnwr_runs/20230920-161710'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_gpu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_ols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'../gtnnwr_logs/'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_file_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'gtnnwr20230920-161710.log'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer_params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">STPNN_outsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">STNN_SPNN_params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gnnwr.models.GTNNWR" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <a class="reference internal" href="#gnnwr.models.GNNWR" title="gnnwr.models.GNNWR"><code class="xref py py-class docutils literal notranslate"><span class="pre">GNNWR</span></code></a></p>
+<p>GTNNWR model is a model based on GNNWR and STPNN, which is a model that can be used to solve the problem of
+spatial-temporal non-stationarity.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>train_dataset</strong> – the dataset of training</p></li>
+<li><p><strong>valid_dataset</strong> – the dataset of validation</p></li>
+<li><p><strong>test_dataset</strong> – the dataset of testing</p></li>
+<li><p><strong>dense_layers</strong> – the dense layers of the model</p></li>
+<li><p><strong>start_lr</strong> – the start learning rate of the model</p></li>
+<li><p><strong>optimizer</strong> – the optimizer of the model</p></li>
+<li><p><strong>drop_out</strong> – the drop out rate of the model</p></li>
+<li><p><strong>batch_norm</strong> – whether use batch normalization</p></li>
+<li><p><strong>activate_func</strong> – the activate function of the model (default: nn.PReLU(init=0.4))</p></li>
+<li><p><strong>model_name</strong> – the name of the model</p></li>
+<li><p><strong>model_save_path</strong> – the path of the model</p></li>
+<li><p><strong>write_path</strong> – the path of the log</p></li>
+<li><p><strong>use_gpu</strong> – whether use gpu</p></li>
+<li><p><strong>use_ols</strong> – whether use ols</p></li>
+<li><p><strong>log_path</strong> – the path of the log</p></li>
+<li><p><strong>log_file_name</strong> – the name of the log</p></li>
+<li><p><strong>log_level</strong> – the level of the log</p></li>
+<li><p><strong>optimizer_params</strong> – the params of the optimizer and the scheduler</p></li>
+<li><p><strong>STPNN_outsize</strong> – the output size of the STPNN</p></li>
+<li><p><strong>STNN_SPNN_params</strong> – the params of the STNN and SPNN</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 </section>
@@ -473,6 +551,19 @@
 <dt class="sig sig-object py" id="gnnwr.networks.STNN_SPNN">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gnnwr.networks.</span></span><span class="sig-name descname"><span class="pre">STNN_SPNN</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">STNN_insize</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">STNN_outsize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">SPNN_insize</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">SPNN_outsize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">activate_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">ReLU()</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gnnwr.networks.STNN_SPNN" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
+<p>STNN_SPNN is a neural network with dense layers, which is used to calculate the spatial proximity of two nodes
+and temporal proximity of two nodes at the same time.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>STNN_insize</strong> – input size of STNN</p></li>
+<li><p><strong>STNN_outsize</strong> – output size of STNN</p></li>
+<li><p><strong>SPNN_insize</strong> – input size of SPNN</p></li>
+<li><p><strong>SPNN_outsize</strong> – output size of SPNN</p></li>
+<li><p><strong>activate_func</strong> – activate function</p></li>
+</ul>
+</dd>
+</dl>
 <dl class="py method">
 <dt class="sig sig-object py" id="gnnwr.networks.STNN_SPNN.forward">
 <span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gnnwr.networks.STNN_SPNN.forward" title="Permalink to this definition"></a></dt>
@@ -493,6 +584,20 @@ registered hooks while the latter silently ignores them.</p>
 <dt class="sig sig-object py" id="gnnwr.networks.STPNN">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gnnwr.networks.</span></span><span class="sig-name descname"><span class="pre">STPNN</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dense_layer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">insize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outsize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_out</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">activate_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">ReLU()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_norm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gnnwr.networks.STPNN" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
+<p>STPNN is a neural network with dense layers, which is used to calculate the spatial and temporal proximity
+of two nodes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dense_layer</strong> – a list of dense layers of Neural Network</p></li>
+<li><p><strong>insize</strong> – input size of Neural Network</p></li>
+<li><p><strong>outsize</strong> – Output size of Neural Network</p></li>
+<li><p><strong>drop_out</strong> – drop out rate</p></li>
+<li><p><strong>activate_func</strong> – activate function</p></li>
+<li><p><strong>batch_norm</strong> – whether use batch normalization</p></li>
+</ul>
+</dd>
+</dl>
 <dl class="py method">
 <dt class="sig sig-object py" id="gnnwr.networks.STPNN.forward">
 <span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gnnwr.networks.STPNN.forward" title="Permalink to this definition"></a></dt>
@@ -513,6 +618,20 @@ registered hooks while the latter silently ignores them.</p>
 <dt class="sig sig-object py" id="gnnwr.networks.SWNN">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gnnwr.networks.</span></span><span class="sig-name descname"><span class="pre">SWNN</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dense_layer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">insize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_out</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">activate_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">PReLU(num_parameters=1)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_norm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gnnwr.networks.SWNN" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
+<p>SWNN is a simple neural network with dense layers, which is used to extract temporal and spatial features
+from the input data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dense_layer</strong> – a list of dense layers of Neural Network</p></li>
+<li><p><strong>insize</strong> – input size of Neural Network</p></li>
+<li><p><strong>outsize</strong> – Output size of Neural Network</p></li>
+<li><p><strong>drop_out</strong> – drop out rate</p></li>
+<li><p><strong>activate_func</strong> – activate function</p></li>
+<li><p><strong>batch_norm</strong> – whether use batch normalization</p></li>
+</ul>
+</dd>
+</dl>
 <dl class="py method">
 <dt class="sig sig-object py" id="gnnwr.networks.SWNN.forward">
 <span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gnnwr.networks.SWNN.forward" title="Permalink to this definition"></a></dt>
@@ -571,6 +690,17 @@ registered hooks while the latter silently ignores them.</p>
 <dt class="sig sig-object py" id="gnnwr.utils.DIAGNOSIS">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gnnwr.utils.</span></span><span class="sig-name descname"><span class="pre">DIAGNOSIS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">weight</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_pred</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#gnnwr.utils.DIAGNOSIS" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Diagnosis is the class to calculate the diagnoses of GNNWR/GTNNWR.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>weight</strong> – output of the neural network</p></li>
+<li><p><strong>x_data</strong> – the independent variables</p></li>
+<li><p><strong>y_data</strong> – the dependent variables</p></li>
+<li><p><strong>y_pred</strong> – output of the GNNWR/GTNNWR</p></li>
+</ul>
+</dd>
+</dl>
 <dl class="py method">
 <dt class="sig sig-object py" id="gnnwr.utils.DIAGNOSIS.AIC">
 <span class="sig-name descname"><span class="pre">AIC</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gnnwr.utils.DIAGNOSIS.AIC" title="Permalink to this definition"></a></dt>
@@ -653,10 +783,10 @@ registered hooks while the latter silently ignores them.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>dataset</strong> – Input data</p></li>
 <li><p><strong>xName</strong> – the independent variables’ column</p></li>
+<li><p><strong>yName</strong> – the dependent variable’s column</p></li>
 </ul>
 </dd>
 </dl>
-<p>:param yName:the dependent variable’s column</p>
 </dd></dl>
 
 </section>

@@ -332,7 +332,7 @@ class GNNWR:
             # validate the network
             # record the information of the validation process
             self.__valid()
-            # out put log every 50 epoch:
+            # out put log every {print_frequency} epoch:
             if (epoch + 1) % print_frequency == 0:
                 if (show_detailed_info):
                     print("\nEpoch: ", epoch + 1)
@@ -372,6 +372,7 @@ class GNNWR:
                       "; Learning Rate: " + str(self._optimizer.param_groups[0]['lr'])
             logging.info(log_str)
             if 0 < early_stop < self._noUpdateEpoch:  # stop when the model has not been updated for long time
+                print("Training stop! Model has not been improved for over {} epochs.".format(early_stop))
                 break
         self.load_model(self._modelSavePath + '/' + self._modelName + ".pkl")
         print("Best_r2:", self._bestr2)
@@ -511,7 +512,7 @@ class GNNWR:
                 output = torch.cat((weight, output, id), dim=1)
                 result = torch.cat((result, output), 0)
         result = result.cpu().detach().numpy()
-        columns = self._train_dataset.x
+        columns = list(self._train_dataset.x)
         for i in range(len(columns)):
             columns[i] = "weight_" + columns[i]
         columns.append("bias")

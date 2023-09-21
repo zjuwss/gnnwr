@@ -447,6 +447,10 @@ class GNNWR:
             self._model.load_state_dict(data)
         else:
             self._model = torch.load(path)
+        if self._use_gpu:
+            self._model = nn.DataParallel(module=self._model)  # parallel computing
+            self._model = self._model.cuda()
+            self._out = self._out.cuda()
         with torch.no_grad():
             self.__test()
         print("Test Loss: ", self.__testLoss, " Test R2: ", self.__testr2)

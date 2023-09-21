@@ -474,7 +474,7 @@ class GNNWR:
         print("AICc: | {:5f}".format(self._test_diagnosis.AICc()))
         print("F1:   | {:5f}".format(self._test_diagnosis.F1_GNN().data))
 
-    def reg_result(self, filename, model_path=None, use_dict=False):
+    def reg_result(self, filename=None, model_path=None, use_dict=False):
         """
         save the result of the model, including the weight, the result of dataset
 
@@ -517,7 +517,22 @@ class GNNWR:
         columns.append("bias")
         columns = columns + self._train_dataset.y + self._train_dataset.id
         result = pd.DataFrame(result, columns=columns)
-        result.to_csv(filename, index=False)
+        if filename != None:
+            result.to_csv(filename, index=False)
+        return result
+    
+    def getWeights(self):
+        """
+        get weight of each argument
+        """
+        result_data = self.reg_result()
+        result_data['id'] = result_data['id'].astype(np.int64)
+        result_data.rename(columns={"PM2_5":"Pred_PM2_5"},inplace=True)
+        data = pd.concat([self._train_dataset.dataframe,self._valid_dataset.dataframe,self._test_dataset.dataframe])
+        data.set_index('id',inplace=True)
+        result_data.set_index('id',inplace=True)
+        result_data = result_data.join(data)
+        return result_data
 
 
 class GTNNWR(GNNWR):

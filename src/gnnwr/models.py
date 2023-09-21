@@ -344,9 +344,10 @@ class GNNWR:
                     print("Train AICc: {:.5f}".format(self._train_diagnosis.AICc()))
                     print("Valid Loss: ", self._validLossList[-1])
                     print("Valid R2: {:.5f}".format(self._valid_r2), "\n")
+                    print("Best R2: {:.5f}".format(self._bestr2), "\n")
                 else:
                     print("\nEpoch: ", epoch + 1)
-                    print("Train R2: {:.5f}  Valid R2: {:.5f}\n".format(self._train_diagnosis.R2().data,self._valid_r2))
+                    print("Train R2: {:.5f}  Valid R2: {:.5f}  Best R2: {:.5f}\n".format(self._train_diagnosis.R2().data,self._valid_r2,self._bestr2))
             self._scheduler.step()  # update the learning rate
             # tensorboard
             self._writer.add_scalar('Training/Learning Rate', self._optimizer.param_groups[0]['lr'], self._epoch)

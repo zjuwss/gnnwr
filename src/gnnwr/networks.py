@@ -20,20 +20,20 @@ def default_dense_layer(insize, outsize):
 
 
 class SWNN(nn.Module):
-    # dense_layer：全连接层大小,insize：输入层大小,outsize：输出层大小，drop_out默认0.2,activate_func：激活函数，默认为PRelu(0.4),batch_norm：是否使用批归一化层
+    """
+    SWNN is a simple neural network with dense layers, which is used to extract temporal and spatial features
+    from the input data.
+
+    :param dense_layer: a list of dense layers of Neural Network
+    :param insize: input size of Neural Network
+    :param outsize: Output size of Neural Network
+    :param drop_out: drop out rate
+    :param activate_func: activate function
+    :param batch_norm: whether use batch normalization
+    """
     def __init__(self, dense_layer=None, insize=-1, outsize=-1, drop_out=0.2, activate_func=nn.PReLU(init=0.1),
                  batch_norm=True):
-        """
-        SWNN is a simple neural network with dense layers, which is used to extract temporal and spatial features
-        from the input data.
 
-        :param dense_layer: a list of dense layers of Neural Network
-        :param insize: input size of Neural Network
-        :param outsize: Output size of Neural Network
-        :param drop_out: drop out rate
-        :param activate_func: activate function
-        :param batch_norm: whether use batch normalization
-        """
         super(SWNN, self).__init__()
         if dense_layer is None or len(dense_layer) == 0:
             self.dense_layer = default_dense_layer(insize, outsize)
@@ -76,18 +76,19 @@ class SWNN(nn.Module):
 
 
 class STPNN(nn.Module):
-    def __init__(self, dense_layer, insize, outsize, drop_out=0.2, activate_func=nn.ReLU(), batch_norm=False):
-        """
-        STPNN is a neural network with dense layers, which is used to calculate the spatial and temporal proximity
-        of two nodes.
+    """
+    STPNN is a neural network with dense layers, which is used to calculate the spatial and temporal proximity
+    of two nodes.
 
-        :param dense_layer: a list of dense layers of Neural Network
-        :param insize: input size of Neural Network
-        :param outsize: Output size of Neural Network
-        :param drop_out: drop out rate
-        :param activate_func: activate function
-        :param batch_norm: whether use batch normalization
-        """
+    :param dense_layer: a list of dense layers of Neural Network
+    :param insize: input size of Neural Network
+    :param outsize: Output size of Neural Network
+    :param drop_out: drop out rate
+    :param activate_func: activate function
+    :param batch_norm: whether use batch normalization
+    """
+    def __init__(self, dense_layer, insize, outsize, drop_out=0.2, activate_func=nn.ReLU(), batch_norm=False):
+
         super(STPNN, self).__init__()
         # default dense layer
         self.dense_layer = dense_layer
@@ -131,17 +132,18 @@ class STPNN(nn.Module):
 
 
 class STNN_SPNN(nn.Module):
-    def __init__(self, STNN_insize:int, STNN_outsize, SPNN_insize:int, SPNN_outsize, activate_func=nn.ReLU()):
-        """
-        STNN_SPNN is a neural network with dense layers, which is used to calculate the spatial proximity of two nodes
-        and temporal proximity of two nodes at the same time.
+    """
+    STNN_SPNN is a neural network with dense layers, which is used to calculate the spatial proximity of two nodes
+    and temporal proximity of two nodes at the same time.
 
-        :param STNN_insize: input size of STNN
-        :param STNN_outsize: output size of STNN
-        :param SPNN_insize: input size of SPNN
-        :param SPNN_outsize: output size of SPNN
-        :param activate_func: activate function
-        """
+    :param STNN_insize: input size of STNN
+    :param STNN_outsize: output size of STNN
+    :param SPNN_insize: input size of SPNN
+    :param SPNN_outsize: output size of SPNN
+    :param activate_func: activate function
+    """
+    def __init__(self, STNN_insize:int, STNN_outsize, SPNN_insize:int, SPNN_outsize, activate_func=nn.ReLU()):
+
         super(STNN_SPNN, self).__init__()
         self.STNN_insize = STNN_insize
         self.STNN_outsize = STNN_outsize

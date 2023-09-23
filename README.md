@@ -190,6 +190,12 @@ Spatial downscaling is an important approach to obtain high-resolution land surf
 ## 6 Contributing
 
 ### Contributors
+- Sensen Wu, Associate Professor, Zhejiang University
+- Zhenhong Du, Professor, Zhejiang University
+- Jin Qi, Postdoctoral fellow, Zhejiang University
+- Jiale Ding, PhD student, Zhejiang University
+- Yi Liu, Undergraduate student, Zhejiang University
+- Ziyu Yin, Undergraduate student, Zhejiang University
 
 <a href="https://github.com/zjuwss/gnnwr/graphs/contributors"><img src="https://contrib.rocks/image?repo=zjuwss/gnnwr" /></a>
 

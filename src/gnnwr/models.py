@@ -516,9 +516,9 @@ class GNNWR:
         for i in range(len(columns)):
             columns[i] = "weight_" + columns[i]
         columns.append("bias")
-        columns = columns + self._train_dataset.y + self._train_dataset.id
+        columns = columns + ["Pred_"+self._train_dataset.y[0]] + self._train_dataset.id
         result = pd.DataFrame(result, columns=columns)
-        if filename != None:
+        if filename is None:
             result.to_csv(filename, index=False)
         return result
     
@@ -528,7 +528,6 @@ class GNNWR:
         """
         result_data = self.reg_result()
         result_data['id'] = result_data['id'].astype(np.int64)
-        result_data.rename(columns={"PM2_5":"Pred_PM2_5"},inplace=True)
         data = pd.concat([self._train_dataset.dataframe,self._valid_dataset.dataframe,self._test_dataset.dataframe])
         data.set_index('id',inplace=True)
         result_data.set_index('id',inplace=True)

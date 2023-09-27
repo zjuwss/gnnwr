@@ -21,6 +21,8 @@ and the following classes:
 the purpose of this package is to provide the basic functions of pre-processing data and calculating distance matrix
 to facilitate the use of the model.
 """
+
+
 class baseDataset(Dataset):
     """
     baseDataset is the base class of dataset, which is used to store the data and other information.
@@ -31,7 +33,8 @@ class baseDataset(Dataset):
     :param y_column: dependent variables column name
     :param is_need_STNN: whether to use STNN
     """
-    def __init__(self, data=None, x_column=None, y_column=None, id_column=None, is_need_STNN=False):
+
+    def __init__(self, data=None, x_column: list = None, y_column: list = None, id_column=None, is_need_STNN=False):
 
         self.dataframe = data
         self.x = x_column
@@ -180,7 +183,7 @@ class baseDataset(Dataset):
             distance_scale_info = {}
             for key in self.distances_scale_param.keys():
                 distance_scale_info[key] = self.distances_scale_param[key].tolist()
-            json.dump({"x": self.x, "y": self.y, "id": self.id,"batch_size":self.batch_size,"shuffle":self.shuffle,
+            json.dump({"x": self.x, "y": self.y, "id": self.id, "batch_size": self.batch_size, "shuffle": self.shuffle,
                        "is_need_STNN": self.is_need_STNN, "scale_fn": self.scale_fn,
                        "x_scale_info": json.dumps(x_scale_info), "y_scale_info": json.dumps(y_scale_info),
                        "distance_scale_info": json.dumps(distance_scale_info)
@@ -240,6 +243,7 @@ class predictDataset(Dataset):
     :param scale_info: process function parameters
     :param is_need_STNN: whether need STNN
     """
+
     def __init__(self, data, x_column, process_fn="minmax_scale", scale_info=[], is_need_STNN=False):
 
         # data = data.astype(np.float32)
@@ -458,7 +462,6 @@ def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_colu
     val_dataset.scale(process_fn, scaler_params)
     test_dataset.scale(process_fn, scaler_params)
 
-
     if Reference is None:
         reference_data = train_data
     elif isinstance(Reference, str):
@@ -631,9 +634,9 @@ def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_colu
         val_dataset, batch_size=max_val_size, shuffle=shuffle)
     test_dataset.dataloader = DataLoader(
         test_dataset, batch_size=max_test_size, shuffle=shuffle)
-    train_dataset.batch_size,train_dataset.shuffle = batch_size,shuffle
-    val_dataset.batch_size,val_dataset.shuffle = max_val_size,shuffle
-    test_dataset.batch_size,test_dataset.shuffle = max_test_size,shuffle
+    train_dataset.batch_size, train_dataset.shuffle = batch_size, shuffle
+    val_dataset.batch_size, val_dataset.shuffle = max_val_size, shuffle
+    test_dataset.batch_size, test_dataset.shuffle = max_test_size, shuffle
     return train_dataset, val_dataset, test_dataset
 
 
@@ -675,7 +678,7 @@ def init_dataset_cv(data, test_ratio, k_fold, x_column, y_column, spatial_column
                                                                 sample_seed,
                                                                 process_fn, batch_size, shuffle, use_class,
                                                                 spatial_fun, temporal_fun, max_val_size, max_test_size,
-                                                                i,is_need_STNN,Reference,simple_distance)
+                                                                i, is_need_STNN, Reference, simple_distance)
         cv_data_set.append((train_dataset, val_dataset))
     return cv_data_set, test_dataset
 
@@ -835,8 +838,9 @@ def init_predict_dataset(data, train_dataset, x_column, spatial_column=None, tem
 
     return predict_dataset
 
-def load_dataset(dir,use_class=baseDataset):
+
+def load_dataset(dir, use_class=baseDataset):
     dataset = use_class()
     dataset.read(dir)
-    dataset.dataloader =  DataLoader(dataset, batch_size=dataset.batch_size, shuffle=dataset.shuffle)
+    dataset.dataloader = DataLoader(dataset, batch_size=dataset.batch_size, shuffle=dataset.shuffle)
     return dataset

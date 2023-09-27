@@ -332,7 +332,7 @@ class GNNWR:
             # validate the network
             # record the information of the validation process
             self.__valid()
-            # out put log every 50 epoch:
+            # out put log every {print_frequency} epoch:
             if (epoch + 1) % print_frequency == 0:
                 if (show_detailed_info):
                     print("\nEpoch: ", epoch + 1)
@@ -344,9 +344,10 @@ class GNNWR:
                     print("Train AICc: {:.5f}".format(self._train_diagnosis.AICc()))
                     print("Valid Loss: ", self._validLossList[-1])
                     print("Valid R2: {:.5f}".format(self._valid_r2), "\n")
+                    print("Best R2: {:.5f}".format(self._bestr2), "\n")
                 else:
                     print("\nEpoch: ", epoch + 1)
-                    print("Train R2: {:.5f}  Valid R2: {:.5f}\n".format(self._train_diagnosis.R2().data,self._valid_r2))
+                    print("Train R2: {:.5f}  Valid R2: {:.5f}  Best R2: {:.5f}\n".format(self._train_diagnosis.R2().data,self._valid_r2,self._bestr2))
             self._scheduler.step()  # update the learning rate
             # tensorboard
             self._writer.add_scalar('Training/Learning Rate', self._optimizer.param_groups[0]['lr'], self._epoch)
@@ -371,6 +372,7 @@ class GNNWR:
                       "; Learning Rate: " + str(self._optimizer.param_groups[0]['lr'])
             logging.info(log_str)
             if 0 < early_stop < self._noUpdateEpoch:  # stop when the model has not been updated for long time
+                print("Training stop! Model has not been improved for over {} epochs.".format(early_stop))
                 break
         self.load_model(self._modelSavePath + '/' + self._modelName + ".pkl")
         print("Best_r2:", self._bestr2)
@@ -447,6 +449,10 @@ class GNNWR:
             self._model.load_state_dict(data)
         else:
             self._model = torch.load(path)
+        if self._use_gpu:
+            self._model = nn.DataParallel(module=self._model)  # parallel computing
+            self._model = self._model.cuda()
+            self._out = self._out.cuda()
         with torch.no_grad():
             self.__test()
         print("Test Loss: ", self.__testLoss, " Test R2: ", self.__testr2)
@@ -469,7 +475,7 @@ class GNNWR:
         print("AICc: | {:5f}".format(self._test_diagnosis.AICc()))
         print("F1:   | {:5f}".format(self._test_diagnosis.F1_GNN().data))
 
-    def reg_result(self, filename, model_path=None, use_dict=False):
+    def reg_result(self, filename=None, model_path=None, use_dict=False):
         """
         save the result of the model, including the weight, the result of dataset
 
@@ -506,13 +512,28 @@ class GNNWR:
                 output = torch.cat((weight, output, id), dim=1)
                 result = torch.cat((result, output), 0)
         result = result.cpu().detach().numpy()
-        columns = self._train_dataset.x
+        columns = list(self._train_dataset.x)
         for i in range(len(columns)):
             columns[i] = "weight_" + columns[i]
         columns.append("bias")
         columns = columns + self._train_dataset.y + self._train_dataset.id
         result = pd.DataFrame(result, columns=columns)
-        result.to_csv(filename, index=False)
+        if filename != None:
+            result.to_csv(filename, index=False)
+        return result
+    
+    def getWeights(self):
+        """
+        get weight of each argument
+        """
+        result_data = self.reg_result()
+        result_data['id'] = result_data['id'].astype(np.int64)
+        result_data.rename(columns={"PM2_5":"Pred_PM2_5"},inplace=True)
+        data = pd.concat([self._train_dataset.dataframe,self._valid_dataset.dataframe,self._test_dataset.dataframe])
+        data.set_index('id',inplace=True)
+        result_data.set_index('id',inplace=True)
+        result_data = result_data.join(data)
+        return result_data
 
 
 class GTNNWR(GNNWR):

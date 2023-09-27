@@ -3,7 +3,8 @@
 ![PyPI - License](https://img.shields.io/pypi/l/gnnwr)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/gnnwr)
 [![PyPI - Version](https://img.shields.io/pypi/v/gnnwr)](https://pypi.org/project/gnnwr/)
-[![GitHub all releases](https://img.shields.io/github/downloads/zjuwss/gnnwr/total)](https://github.com/zjuwss/gnnwr/releases)
+![PyPI - Downloads](https://img.shields.io/pypi/dm/gnnwr)
+
 
 A PyTorch implementation of the spatiotemporal intelligent regression (STIR) models and the repository contains:
 

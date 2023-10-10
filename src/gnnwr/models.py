@@ -518,8 +518,12 @@ class GNNWR:
         columns.append("bias")
         columns = columns + ["Pred_"+self._train_dataset.y[0]] + self._train_dataset.id
         result = pd.DataFrame(result, columns=columns)
-        if filename is None:
+        result[self._train_dataset.id] = result[self._train_dataset.id].astype(np.int32)
+        if filename is not None:
             result.to_csv(filename, index=False)
+        else:
+            result.to_csv("./result.csv", index=False)
+            raise Warning("The input write file path is not set, and the result is output to the default path.")
         return result
     
     def getWeights(self):

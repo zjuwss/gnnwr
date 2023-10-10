@@ -418,12 +418,12 @@ def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_colu
         raise ValueError(
             "dist_column must be a column name in data")
 
-    if id_column == None:
-        if not 'id' in data.columns:
+    if id_column is None:
+        id_column = ['id']
+        if 'id' not in data.columns:
             data['id'] = [i for i in range(data.shape[0])]
-            id_column = ['id']
         else:
-            raise ValueError("'id' column has been occupied, please offer another column")
+            raise Warning("id_column is None and use default id column in data")
 
     np.random.seed(sample_seed)
     data = data.sample(frac=1)  # shuffle data
@@ -649,6 +649,7 @@ def init_dataset_cv(data, test_ratio, k_fold, x_column, y_column, spatial_column
     """
     initialize dataset for cross validation
 
+
     :param data: input data
     :param test_ratio: test set ratio
     :param k_fold:  k of k-fold
@@ -656,6 +657,7 @@ def init_dataset_cv(data, test_ratio, k_fold, x_column, y_column, spatial_column
     :param y_column: label column name
     :param spatial_column: spatial distance column name
     :param temp_column: temporal distance column name
+    :param id_column: id column name
     :param sample_seed: random seed
     :param process_fn: data process function
     :param batch_size: batch size
@@ -665,6 +667,9 @@ def init_dataset_cv(data, test_ratio, k_fold, x_column, y_column, spatial_column
     :param temporal_fun: temporal distance calculate function
     :param max_val_size: validation set size
     :param max_test_size: test set size
+    :param is_need_STNN: whether need STNN
+    :param Reference: reference data
+    :param simple_distance: is simple distance
     :return: cv_data_set, test_dataset
     """
     cv_data_set = []
@@ -727,7 +732,7 @@ def init_predict_dataset(data, train_dataset, x_column, spatial_column=None, tem
     initialize predict dataset
 
     :param data: input data
-    :param train_data: train data
+    :param train_dataset: train data
     :param x_column: attribute column name
     :param spatial_column: spatial distance column name
     :param temp_column: temporal distance column name

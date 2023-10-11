@@ -7,6 +7,7 @@ import pandas as pd
 import torch
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from torch.utils.data import Dataset, DataLoader
+import warnings
 
 """
 The package of `datasets` includes the following functions:
@@ -423,8 +424,7 @@ def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_colu
         if 'id' not in data.columns:
             data['id'] = [i for i in range(data.shape[0])]
         else:
-            raise Warning("id_column is None and use default id column in data")
-
+            warnings.warn("id_column is None and use default id column in data")
     np.random.seed(sample_seed)
     data = data.sample(frac=1)  # shuffle data
     scaler_x = None

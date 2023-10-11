@@ -7,6 +7,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import warnings
 from sklearn.metrics import r2_score
 from torch.utils.tensorboard import SummaryWriter  # 用于保存训练过程
 from tqdm import tqdm, trange
@@ -525,7 +526,7 @@ class GNNWR:
         else:
             # result.to_csv("./result.csv", index=False)
             # raise Warning("The input write file path is not set. and the result is output to the default path.")
-            print("Warning! The input write file path is not set. Result is returned by function but not saved as file.")
+            warnings.warn("Warning! The input write file path is not set. Result is returned by function but not saved as file.")
         return result
     
     def getWeights(self):

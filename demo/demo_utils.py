@@ -12,4 +12,8 @@ def marker_map(markers:list,center:list,zoom=4):
         mc.add_to(map)
     return map
 
-
+def Heatmap(data,center,zoom=4):
+    tiles= 'https://wprd01.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=en&size=1&scl=1&style=7'
+    map = folium.Map(location=center,zoom_start=zoom,tiles = tiles,attr="高德")
+    map.add_child(HeatMap(data))
+    return map

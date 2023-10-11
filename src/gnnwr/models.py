@@ -475,7 +475,7 @@ class GNNWR:
         print("AICc: | {:5f}".format(self._test_diagnosis.AICc()))
         print("F1:   | {:5f}".format(self._test_diagnosis.F1_GNN().data))
 
-    def reg_result(self, filename=None, model_path=None, use_dict=False):
+    def reg_result(self, filename=None, model_path=None, use_dict=False, only_return=False):
         """
         save the result of the model, including the weight, the result of dataset
 
@@ -519,18 +519,20 @@ class GNNWR:
         columns = columns + ["Pred_"+self._train_dataset.y[0]] + self._train_dataset.id
         result = pd.DataFrame(result, columns=columns)
         result[self._train_dataset.id] = result[self._train_dataset.id].astype(np.int32)
+        if only_return : return result
         if filename is not None:
             result.to_csv(filename, index=False)
         else:
-            result.to_csv("./result.csv", index=False)
-            raise Warning("The input write file path is not set, and the result is output to the default path.")
+            # result.to_csv("./result.csv", index=False)
+            # raise Warning("The input write file path is not set. and the result is output to the default path.")
+            print("Warning! The input write file path is not set. Result is returned by function but not saved as file.")
         return result
     
     def getWeights(self):
         """
         get weight of each argument
         """
-        result_data = self.reg_result()
+        result_data = self.reg_result(only_return=True)
         result_data['id'] = result_data['id'].astype(np.int64)
         data = pd.concat([self._train_dataset.dataframe,self._valid_dataset.dataframe,self._test_dataset.dataframe])
         data.set_index('id',inplace=True)

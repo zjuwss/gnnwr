@@ -422,7 +422,7 @@ def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_colu
     if id_column is None:
         id_column = ['id']
         if 'id' not in data.columns:
-            data['id'] = [i for i in range(data.shape[0])]
+            data['id'] = np.arange(len(data))
         else:
             warnings.warn("id_column is None and use default id column in data")
     np.random.seed(sample_seed)

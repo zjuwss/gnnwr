@@ -187,3 +187,20 @@ class Visualize():
         HeatMap(data=data,gradient=gradient_map,radius=10).add_to(res)
         return res
     
+    def dot_map(self,data,lon_column,lat_column,y_column,zoom=4):
+        center_lon = data[lon_column].mean()
+        center_lat = data[lat_column].mean()
+        dst_min = data[y_column].min()
+        dst_max = data[y_column].max()
+        res = folium.Map(location=[center_lat,center_lon],zoom_start=zoom,tiles = self.__tiles,attr="高德")
+        colormap = branca.colormap.linear.YlOrRd_09.scale(dst_min,dst_max).to_step(20)
+        for idx,row in data.iterrows():
+            folium.CircleMarker(location=[row[lat_column],row[lon_column]],radius=7,color=colormap.rgb_hex_str(row[y_column]),fill=True,fill_opacity=1,
+            popup="""
+            longitude:{}
+            latitude:{}
+            {}:{}
+            """.format(row[lon_column],row[lat_column],y_column,row[y_column])
+            ).add_to(res)
+        colormap.add_to(res)
+        return res

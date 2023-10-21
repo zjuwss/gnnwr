@@ -1,8 +1,12 @@
 import math
 import statsmodels.api as sm
+import pandas as pd
 import torch
-
-
+import warnings
+import copy
+import folium
+from folium.plugins import HeatMap, MarkerCluster
+import branca
 class OLS():
     """
     OLS is the class to calculate the OLR weights of data.Get the weight by `object.params`.
@@ -109,3 +113,77 @@ class DIAGNOSIS:
         :return: RMSE of the result
         """
         return torch.sqrt(torch.sum(self.__residual ** 2) / self.__n)
+
+class Visualize():
+
+    def __init__(self,data,lon_lat_columns = None,zoom = 4):
+        self.__raw_data = data
+        self.__tiles= 'https://wprd01.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=en&size=1&scl=1&style=7'
+        self.__zoom = zoom
+        if (hasattr(self.__raw_data,'_use_gpu')):
+            self._train_dataset = self.__raw_data._train_dataset.dataframe
+            self._valid_dataset = self.__raw_data._valid_dataset.dataframe
+            self._test_dataset = self.__raw_data._test_dataset.dataframe
+            self._result_data = self.__raw_data.result_data
+            self._all_data = pd.concat([self._train_dataset,self._valid_dataset,self._test_dataset])
+            if lon_lat_columns == None:
+                warnings.warn("lon_lat columns are not given. Using the spatial columns in dataset")
+                self._spatial_column = self._train_dataset.spatial_column
+                self.__center_lon = self._all_data[self._spatial_column[0]].mean()
+                self.__center_lat = self._all_data[self._spatial_column[1]].mean()
+                self.__lon_column = self._spatial_column[0]
+                self.__lat_column = self._spatial_column[1]
+            else :
+                self._spatial_column = lon_lat_columns
+                self.__center_lon = self._all_data[self._spatial_column[0]].mean()
+                self.__center_lat = self._all_data[self._spatial_column[1]].mean()
+                self.__lon_column = self._spatial_column[0]
+                self.__lat_column = self._spatial_column[1]
+            self._x_column = data._train_dataset.x_column
+            self._y_column = data._train_dataset.y_column
+            self.__map = folium.Map(location=[self.__center_lat,self.__center_lon],zoom_start=zoom,tiles = self.__tiles,attr="高德")
+        else:
+            raise ValueError("given data is not instance of GNNWR")
+    
+    def display_dataset(self,name="all",y_column=None,steps=20):
+        # colormap = branca.colormap.linear.RdYlGn_10.scale().to_step(steps)
+        if y_column == None:
+            warnings.warn("y_column is not given. Using the first y_column in dataset")
+            y_column = self._y_column[0]
+        if name == 'all':
+            dst = self._all_data
+        elif name == 'train':
+            dst = self._train_dataset
+        elif name == 'valid':
+            dst = self._valid_dataset
+        elif name == 'test':
+            dst = self._test_dataset
+        else:
+            raise ValueError("name is not included in 'all','train','valid','test'")
+        dst_min = dst[y_column].min()
+        dst_max = dst[y_column].max()
+        res = folium.Map(location=[self.__center_lat,self.__center_lon],zoom_start=self.__zoom,tiles = self.__tiles,attr="高德")
+        colormap = branca.colormap.linear.YlOrRd_09.scale(dst_min,dst_max).to_step(20)
+        for idx,row in dst.iterrows():
+            folium.CircleMarker(location=[row[self.__lat_column],row[self.__lon_column]],radius=7,color=colormap.rgb_hex_str(row[y_column]),fill=True,fill_opacity=1,
+            popup="""
+            longitude:{}
+            latitude:{}
+            {}:{}
+            """.format(row[self.__lon_column],row[self.__lat_column],y_column,row[y_column])
+            ).add_to(res)
+        res.add_child(colormap)
+        return res
+
+    def weights_heatmap(self,data_column):
+        res = folium.Map(location=[self.__center_lat,self.__center_lon],zoom_start=self.__zoom,tiles = self.__tiles,attr="高德")
+        dst = self._result_data
+        data = [[row[self.__lat_column],row[self.__lon_column],row[data_column]]for index,row in dst.iterrows()]
+        colormap = branca.colormap.linear.YlOrRd_09.scale(dst[data_column].min(),dst[data_column].max()).to_step(20)
+        gradient_map = dict()
+        for i in range(20):
+            gradient_map[i/20] = colormap.rgb_hex_str(i/20)
+        colormap.add_to(res)
+        HeatMap(data=data,gradient=gradient_map,radius=10).add_to(res)
+        return res
+    

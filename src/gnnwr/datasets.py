@@ -476,6 +476,9 @@ def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_colu
     if not isinstance(reference_data, pandas.DataFrame):
         raise ValueError("reference_data must be a pandas.DataFrame")
     train_dataset.reference, val_dataset.reference, test_dataset.reference = reference_data, reference_data, reference_data
+    train_dataset.spatial_column = val_dataset.spatial_column = test_dataset.spatial_column = spatial_column
+    train_dataset.x_column = val_dataset.x_column = test_dataset.x_column = x_column
+    train_dataset.y_column = val_dataset.y_column = test_dataset.y_column = y_column
     if not is_need_STNN:
         if simple_distance:
             # if not use STNN, calculate spatial/temporal distance matrix and concatenate them

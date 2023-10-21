@@ -102,6 +102,7 @@ class GNNWR:
         self._train_diagnosis = None  # diagnosis of training
         self._test_diagnosis = None  # diagnosis of test
         self._valid_r2 = None  # r2 of validation
+        self.result_data = None
         self._use_gpu = use_gpu
         if self._use_gpu:
             if torch.cuda.is_available():
@@ -376,6 +377,7 @@ class GNNWR:
                 print("Training stop! Model has not been improved for over {} epochs.".format(early_stop))
                 break
         self.load_model(self._modelSavePath + '/' + self._modelName + ".pkl")
+        self.result_data = self.getWeights()
         print("Best_r2:", self._bestr2)
 
     def predict(self, dataset):

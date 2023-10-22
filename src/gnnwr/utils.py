@@ -145,7 +145,7 @@ class Visualize():
         else:
             raise ValueError("given data is not instance of GNNWR")
     
-    def display_dataset(self,name="all",y_column=None,steps=20):
+    def display_dataset(self,name="all",y_column=None,colors=[],steps=20,vmin=None,vmax=None):
         # colormap = branca.colormap.linear.RdYlGn_10.scale().to_step(steps)
         if y_column == None:
             warnings.warn("y_column is not given. Using the first y_column in dataset")
@@ -160,10 +160,13 @@ class Visualize():
             dst = self._test_dataset
         else:
             raise ValueError("name is not included in 'all','train','valid','test'")
-        dst_min = dst[y_column].min()
-        dst_max = dst[y_column].max()
+        dst_min = dst[y_column].min() if vmin == None else vmin
+        dst_max = dst[y_column].max() if vmax == None else vmax
         res = folium.Map(location=[self.__center_lat,self.__center_lon],zoom_start=self.__zoom,tiles = self.__tiles,attr="高德")
-        colormap = branca.colormap.linear.YlOrRd_09.scale(dst_min,dst_max).to_step(20)
+        if len(colors)<=0:
+            colormap = branca.colormap.linear.YlOrRd_09.scale(dst_min,dst_max).to_step(steps)
+        else:
+            colormap = branca.colormap.LinearColormap(colors=colors,vmin=dst_min,vmax=dst_max).to_step(steps)
         for idx,row in dst.iterrows():
             folium.CircleMarker(location=[row[self.__lat_column],row[self.__lon_column]],radius=7,color=colormap.rgb_hex_str(row[y_column]),fill=True,fill_opacity=1,
             popup="""
@@ -175,25 +178,33 @@ class Visualize():
         res.add_child(colormap)
         return res
 
-    def weights_heatmap(self,data_column):
+    def weights_heatmap(self,data_column,colors=[],steps=20,vmin=None,vmax=None):
         res = folium.Map(location=[self.__center_lat,self.__center_lon],zoom_start=self.__zoom,tiles = self.__tiles,attr="高德")
         dst = self._result_data
+        dst_min = dst[data_column].min() if vmin == None else vmin
+        dst_max = dst[data_column].max() if vmax == None else vmax
         data = [[row[self.__lat_column],row[self.__lon_column],row[data_column]]for index,row in dst.iterrows()]
-        colormap = branca.colormap.linear.YlOrRd_09.scale(dst[data_column].min(),dst[data_column].max()).to_step(20)
+        if len(colors)<=0:
+            colormap = branca.colormap.linear.YlOrRd_09.scale(dst_min,dst_max).to_step(steps)
+        else:
+            colormap = branca.colormap.LinearColormap(colors=colors,vmin=dst_min,vmax=dst_max).to_step(steps)
         gradient_map = dict()
-        for i in range(20):
-            gradient_map[i/20] = colormap.rgb_hex_str(i/20)
+        for i in range(steps):
+            gradient_map[i/steps] = colormap.rgb_hex_str(i/steps)
         colormap.add_to(res)
         HeatMap(data=data,gradient=gradient_map,radius=10).add_to(res)
         return res
     
-    def dot_map(self,data,lon_column,lat_column,y_column,zoom=4):
+    def dot_map(self,data,lon_column,lat_column,y_column,zoom=4,colors=[],steps=20,vmin=None,vmax=None):
         center_lon = data[lon_column].mean()
-        center_lat = data[lat_column].mean()
-        dst_min = data[y_column].min()
-        dst_max = data[y_column].max()
+        center_lat = data[lat_column].mean() 
+        dst_min = data[y_column].min() if vmin == None else vmin
+        dst_max = data[y_column].max() if vmax == None else vmax
         res = folium.Map(location=[center_lat,center_lon],zoom_start=zoom,tiles = self.__tiles,attr="高德")
-        colormap = branca.colormap.linear.YlOrRd_09.scale(dst_min,dst_max).to_step(20)
+        if len(colors)<=0:
+            colormap = branca.colormap.linear.YlOrRd_09.scale(dst_min,dst_max).to_step(steps)
+        else:
+            colormap = branca.colormap.LinearColormap(colors=colors,vmin=dst_min,vmax=dst_max).to_step(steps)
         for idx,row in data.iterrows():
             folium.CircleMarker(location=[row[lat_column],row[lon_column]],radius=7,color=colormap.rgb_hex_str(row[y_column]),fill=True,fill_opacity=1,
             popup="""

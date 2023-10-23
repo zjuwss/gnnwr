@@ -8,7 +8,7 @@ import torch
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from torch.utils.data import Dataset, DataLoader
 import warnings
-
+from scipy.spatial import distance
 """
 The package of `datasets` includes the following functions:
     1. init_dataset: initialize the dataset for training, validation and testing
@@ -365,7 +365,10 @@ def BasicDistance(x, y):
     :param y: Input target point coordinate data
     :return: distance matrix
     """
-    return np.float32(np.sqrt(np.sum((x[:, np.newaxis, :] - y) ** 2, axis=2)))
+    x = np.float32(x)
+    y = np.float32(y)
+    dist = distance.cdist(x, y, 'euclidean')
+    return dist#np.float32(np.sqrt(np.sum((x[:, np.newaxis, :] - y) ** 2, axis=2)))
 
 
 def Manhattan_distance(x, y):

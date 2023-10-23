@@ -42,6 +42,7 @@ class GNNWR:
     :param log_level: log level
     :param optimizer_params: parameters of optimizer and learning rate scheduler
     """
+
     def __init__(
             self,
             train_dataset,
@@ -166,13 +167,13 @@ class GNNWR:
             scheduler_T_mult = optimizer_params.get("scheduler_T_mult", 3)
             if scheduler == "MultiStepLR":
                 self._scheduler = optim.lr_scheduler.MultiStepLR(
-                self._optimizer, milestones=scheduler_milestones, gamma=scheduler_gamma)
+                    self._optimizer, milestones=scheduler_milestones, gamma=scheduler_gamma)
             elif scheduler == "CosineAnnealingLR":
                 self._scheduler = optim.lr_scheduler.CosineAnnealingLR(
-                self._optimizer, T_max=scheduler_T_max, eta_min=scheduler_eta_min)
+                    self._optimizer, T_max=scheduler_T_max, eta_min=scheduler_eta_min)
             elif scheduler == "CosineAnnealingWarmRestarts":
                 self._scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
-                self._optimizer, T_0=scheduler_T_0, T_mult=scheduler_T_mult, eta_min=scheduler_eta_min)
+                    self._optimizer, T_0=scheduler_T_0, T_mult=scheduler_T_mult, eta_min=scheduler_eta_min)
             else:
                 raise ValueError("Invalid Scheduler")
 
@@ -257,6 +258,7 @@ class GNNWR:
             self._valid_r2 = r2
             if r2 > self._bestr2:  # if the R square is better than the best R square,record the R square and save the model
                 self._bestr2 = r2
+                self._besttrainr2 = self._train_diagnosis.R2().data
                 self._noUpdateEpoch = 0
                 if not os.path.exists(self._modelSavePath):
                     os.mkdir(self._modelSavePath)
@@ -306,7 +308,7 @@ class GNNWR:
             self.__testr2 = r2_score(label_list, out_list)
             self._test_diagnosis = DIAGNOSIS(weight_all, x_data, y_data, y_pred)
 
-    def run(self, max_epoch=1, early_stop=-1,print_frequency=50,show_detailed_info=True):
+    def run(self, max_epoch=1, early_stop=-1, print_frequency=50, show_detailed_info=True):
         """
         train and validate the model
 
@@ -336,7 +338,7 @@ class GNNWR:
             self.__valid()
             # out put log every {print_frequency} epoch:
             if (epoch + 1) % print_frequency == 0:
-                if (show_detailed_info):
+                if show_detailed_info:
                     print("\nEpoch: ", epoch + 1)
                     print("learning rate: ", self._optimizer.param_groups[0]['lr'])
                     print("Train Loss: ", self._trainLossList[-1])
@@ -349,7 +351,9 @@ class GNNWR:
                     print("Best R2: {:.5f}".format(self._bestr2), "\n")
                 else:
                     print("\nEpoch: ", epoch + 1)
-                    print("Train R2: {:.5f}  Valid R2: {:.5f}  Best R2: {:.5f}\n".format(self._train_diagnosis.R2().data,self._valid_r2,self._bestr2))
+                    print(
+                        "Train R2: {:.5f}  Valid R2: {:.5f}  Best R2: {:.5f}\n".format(self._train_diagnosis.R2().data,
+                                                                                       self._valid_r2, self._bestr2))
             self._scheduler.step()  # update the learning rate
             # tensorboard
             self._writer.add_scalar('Training/Learning Rate', self._optimizer.param_groups[0]['lr'], self._epoch)
@@ -399,7 +403,7 @@ class GNNWR:
                 output = output.view(-1).cpu().detach().numpy()
                 result = np.append(result, output)
         dataset.dataframe['pred_result'] = result
-        dataset.pred_result = result 
+        dataset.pred_result = result
         return dataset.dataframe
 
     def load_model(self, path, use_dict=False):
@@ -458,7 +462,7 @@ class GNNWR:
             self._out = self._out.cuda()
         with torch.no_grad():
             self.__test()
-        print("Test Loss: ", self.__testLoss, " Test R2: ", self.__testr2)
+
         logging.info("Test Loss: " + str(self.__testLoss) + "; Test R2: " + str(self.__testr2))
         # print result
         # basic information
@@ -469,8 +473,10 @@ class GNNWR:
         print("independent variable: |", self._train_dataset.x)
         print("dependent variable:   |", self._train_dataset.y)
         print("\n----------------------------------------------------\n")
+        print("Test Loss: ", self.__testLoss, " Test R2: ", self.__testr2)
+        print("Train R2:  {:5f}".format(self._besttrainr2), " Valid R2: ", self._bestr2)
         # OLS
-        print("OLS:  |", self._weight)
+        print("\nOLS:  |", self._weight)
         # Diagnostics
         print("R2:   |", self.__testr2)
         print("RMSE: | {:5f}".format(self._test_diagnosis.RMSE().data))
@@ -519,27 +525,29 @@ class GNNWR:
         for i in range(len(columns)):
             columns[i] = "weight_" + columns[i]
         columns.append("bias")
-        columns = columns + ["Pred_"+self._train_dataset.y[0]] + self._train_dataset.id
+        columns = columns + ["Pred_" + self._train_dataset.y[0]] + self._train_dataset.id
         result = pd.DataFrame(result, columns=columns)
         result[self._train_dataset.id] = result[self._train_dataset.id].astype(np.int32)
-        if only_return : return result
+        if only_return: return result
         if filename is not None:
             result.to_csv(filename, index=False)
         else:
             # result.to_csv("./result.csv", index=False)
             # raise Warning("The input write file path is not set. and the result is output to the default path.")
-            warnings.warn("Warning! The input write file path is not set. Result is returned by function but not saved as file.",RuntimeWarning)
+            warnings.warn(
+                "Warning! The input write file path is not set. Result is returned by function but not saved as file.",
+                RuntimeWarning)
         return result
-    
+
     def getWeights(self):
         """
         get weight of each argument
         """
         result_data = self.reg_result(only_return=True)
         result_data['id'] = result_data['id'].astype(np.int64)
-        data = pd.concat([self._train_dataset.dataframe,self._valid_dataset.dataframe,self._test_dataset.dataframe])
-        data.set_index('id',inplace=True)
-        result_data.set_index('id',inplace=True)
+        data = pd.concat([self._train_dataset.dataframe, self._valid_dataset.dataframe, self._test_dataset.dataframe])
+        data.set_index('id', inplace=True)
+        result_data.set_index('id', inplace=True)
         result_data = result_data.join(data)
         return result_data
 
@@ -570,6 +578,7 @@ class GTNNWR(GNNWR):
     :param STPNN_outsize: the output size of the STPNN
     :param STNN_SPNN_params: the params of the STNN and SPNN
     """
+
     def __init__(self,
                  train_dataset,
                  valid_dataset,

@@ -406,6 +406,26 @@ class GNNWR:
         dataset.pred_result = result
         return dataset.dataframe
 
+    def predict_weight(self, dataset):
+        """
+        predict the result of the dataset
+
+        :param dataset: Input dataset
+        """
+        data_loader = dataset.dataloader
+        if not self.__istrained:
+            print("WARNING! The model hasn't been trained or loaded!")
+        self._model.eval()
+        result = torch.tensor([]).to(torch.float32)
+        with torch.no_grad():
+            for data, coef in data_loader:
+                if self._use_gpu:
+                    result, data, coef = result.cuda(), data.cuda(), coef.cuda()
+                    ols_w = torch.tensor(self._weight).to(torch.float32).cuda()
+                weight = self._model(data).mul(ols_w)
+                result = torch.cat((result, weight), 0)
+        result = result.cpu().detach().numpy()
+        return result
     def load_model(self, path, use_dict=False):
         """
         load model from the path

@@ -528,7 +528,7 @@ class GNNWR:
         else:
             # result.to_csv("./result.csv", index=False)
             # raise Warning("The input write file path is not set. and the result is output to the default path.")
-            warnings.warn("Warning! The input write file path is not set. Result is returned by function but not saved as file.")
+            warnings.warn("Warning! The input write file path is not set. Result is returned by function but not saved as file.",RuntimeWarning)
         return result
     
     def getWeights(self):

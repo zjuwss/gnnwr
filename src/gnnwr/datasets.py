@@ -9,6 +9,7 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from torch.utils.data import Dataset, DataLoader
 import warnings
 from scipy.spatial import distance
+
 """
 The package of `datasets` includes the following functions:
     1. init_dataset: initialize the dataset for training, validation and testing
@@ -368,7 +369,7 @@ def BasicDistance(x, y):
     x = np.float32(x)
     y = np.float32(y)
     dist = distance.cdist(x, y, 'euclidean')
-    return dist#np.float32(np.sqrt(np.sum((x[:, np.newaxis, :] - y) ** 2, axis=2)))
+    return dist  # np.float32(np.sqrt(np.sum((x[:, np.newaxis, :] - y) ** 2, axis=2)))
 
 
 def Manhattan_distance(x, y):
@@ -421,13 +422,12 @@ def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_colu
         # if dist_column is None, raise error
         raise ValueError(
             "dist_column must be a column name in data")
-
     if id_column is None:
         id_column = ['id']
         if 'id' not in data.columns:
             data['id'] = np.arange(len(data))
         else:
-            warnings.warn("id_column is None and use default id column in data")
+            warnings.warn("id_column is None and use default id column in data", RuntimeWarning)
     np.random.seed(sample_seed)
     data = data.sample(frac=1)  # shuffle data
     scaler_x = None

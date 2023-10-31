@@ -1,7 +1,5 @@
 import datetime
-import math
 import os
-import sys
 import pandas as pd
 import numpy as np
 import torch
@@ -10,8 +8,8 @@ import torch.optim as optim
 import warnings
 from sklearn.metrics import r2_score
 from torch.utils.tensorboard import SummaryWriter  # 用于保存训练过程
-from tqdm import tqdm, trange
-
+from tqdm import trange
+from collections import OrderedDict
 import logging
 from .networks import SWNN, STPNN, STNN_SPNN
 from .utils import OLS, DIAGNOSIS
@@ -54,7 +52,7 @@ class GNNWR:
             drop_out=0.2,
             batch_norm=True,
             activate_func=nn.PReLU(init=0.4),
-            model_name="GNNWR_" + datetime.date.today().strftime("%Y%m%d-%H%M%S"),
+            model_name="GNNWR_" + datetime.datetime.today().strftime("%Y%m%d-%H%M%S"),
             model_save_path="../gnnwr_models",
             write_path="../gnnwr_runs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),
             use_gpu: bool = True,
@@ -436,11 +434,33 @@ class GNNWR:
         :param map_location: map location
         """
         if use_dict:
-            data = torch.load(path, map_location=map_location).state_dict()
+            data = torch.load(path, map_location=map_location)
             self._model.load_state_dict(data)
         else:
             self._model = torch.load(path, map_location=map_location)
+        if self._use_gpu:
+            self._model = self._model.cuda()
+        else:
+            self._model = self._model.cpu()
         self.__istrained = True
+
+    def gpumodel_to_cpu(self, path, save_path, use_model=True):
+        """
+        convert gpu model to cpu model
+
+        :param path: the path of the model
+        :param save_path: the path of the model to be saved
+        :param use_model: whether use dict to load the model
+        """
+        if use_model:
+            data = torch.load(path, map_location='cpu').state_dict()
+        else:
+            data = torch.load(path, map_location='cpu')
+        new_state_dict = OrderedDict()
+        for k, v in data.items():
+            name = k[7:]  # remove module.
+            new_state_dict[name] = v
+        torch.save(new_state_dict, save_path)
 
     def getLoss(self):
         """
@@ -463,7 +483,7 @@ class GNNWR:
             break
         print("Add Graph Successfully")
 
-    def result(self, path=None, use_dict=False):
+    def result(self, path=None, use_dict=False, map_location=None):
         """
         print the result of the model, including the model structure, optimizer,the result of test dataset
 
@@ -471,17 +491,22 @@ class GNNWR:
         :param use_dict: whether use dict to load the model
         """
         # load model
+        if not self.__istrained:
+            raise Exception("The model hasn't been trained or loaded!")
         if path is None:
             path = self._modelSavePath + "/" + self._modelName + ".pkl"
         if use_dict:
-            data = torch.load(path).state_dict()
+            data = torch.load(path, map_location=map_location)
             self._model.load_state_dict(data)
         else:
-            self._model = torch.load(path)
+            self._model = torch.load(path, map_location=map_location)
         if self._use_gpu:
             self._model = nn.DataParallel(module=self._model)  # parallel computing
             self._model = self._model.cuda()
             self._out = self._out.cuda()
+        else:
+            self._model = self._model.cpu()
+            self._out = self._out.cpu()
         with torch.no_grad():
             self.__test()
 
@@ -506,7 +531,7 @@ class GNNWR:
         print("AICc: | {:5f}".format(self._test_diagnosis.AICc()))
         print("F1:   | {:5f}".format(self._test_diagnosis.F1_GNN().data))
 
-    def reg_result(self, filename=None, model_path=None, use_dict=False, only_return=False):
+    def reg_result(self, filename=None, model_path=None, use_dict=False, only_return=False, map_location=None):
         """
         save the result of the model, including the weight, the result of dataset
 
@@ -517,10 +542,18 @@ class GNNWR:
         if model_path is None:
             model_path = self._modelSavePath + "/" + self._modelName + ".pkl"
         if use_dict:
-            data = torch.load(model_path).state_dict()
+            data = torch.load(model_path, map_location=map_location)
             self._model.load_state_dict(data)
         else:
-            self._model = torch.load(model_path)
+            self._model = torch.load(model_path, map_location=map_location)
+
+        if self._use_gpu:
+            self._model = nn.DataParallel(module=self._model)
+            self._model = self._model.cuda()
+            self._out = self._out.cuda()
+        else:
+            self._model = self._model.cpu()
+            self._out = self._out.cpu()
         device = torch.device('cuda') if self._use_gpu else torch.device('cpu')
         result = torch.tensor([]).to(torch.float32).to(device)
         with torch.no_grad():

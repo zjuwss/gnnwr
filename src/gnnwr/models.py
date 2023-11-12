@@ -109,6 +109,9 @@ class GNNWR:
                 os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(map(str, devices))
             else:
                 self._use_gpu = False
+        self._optimizer = None
+        self._scheduler = None
+        self._optimizer_name = None
         self.init_optimizer(optimizer, optimizer_params)  # initialize the optimizer
 
     def init_optimizer(self, optimizer, optimizer_params=None):
@@ -121,10 +124,10 @@ class GNNWR:
         # initialize the optimizer
         if optimizer == "SGD":
             self._optimizer = optim.SGD(
-                self._model.parameters(), lr=1)
+                self._model.parameters(), lr=1, momentum=0.9, weight_decay=1e-3)
         elif optimizer == "Adam":
             self._optimizer = optim.Adam(
-                self._model.parameters(), lr=self._start_lr)
+                self._model.parameters(), lr=self._start_lr, weight_decay=1e-3)
         elif optimizer == "RMSprop":
             self._optimizer = optim.RMSprop(
                 self._model.parameters(), lr=self._start_lr)
@@ -145,10 +148,10 @@ class GNNWR:
             maxlr = optimizer_params.get("maxlr", 0.1)
             minlr = optimizer_params.get("minlr", 0.01)
             upepoch = optimizer_params.get("upepoch", 100)
-            uprate = (maxlr - minlr) / upepoch * 1000
+            uprate = (maxlr - minlr) / upepoch * (upepoch // 20)
             decayepoch = optimizer_params.get("decayepoch", 200)
             decayrate = optimizer_params.get("decayrate", 0.1)
-            lamda_lr = lambda epoch: (epoch // 1000) * uprate + minlr if epoch < upepoch else (
+            lamda_lr = lambda epoch: (epoch // (upepoch // 20)) * uprate + minlr if epoch < upepoch else (
                 maxlr if epoch < decayepoch else maxlr * (decayrate ** (epoch - decayepoch)))
             self._scheduler = optim.lr_scheduler.LambdaLR(
                 self._optimizer, lr_lambda=lamda_lr)
@@ -182,12 +185,11 @@ class GNNWR:
         self._model.train()  # set the model to train mode
         train_loss = 0  # initialize the loss
         data_loader = self._train_dataset.dataloader  # get the data loader
-        maxindex = len(data_loader)  # get the number of batches
         weight_all = torch.tensor([]).to(torch.float32)
         x_true = torch.tensor([]).to(torch.float32)
         y_true = torch.tensor([]).to(torch.float32)
         y_pred = torch.tensor([]).to(torch.float32)
-        for index, (data, coef, label, id) in enumerate(data_loader):
+        for index, (data, coef, label, data_index) in enumerate(data_loader):
             # move the data to gpu
             device = torch.device('cuda') if self._use_gpu else torch.device('cpu')
             data, coef, label = data.to(device), coef.to(device), label.to(device)
@@ -231,7 +233,7 @@ class GNNWR:
         data_loader = self._valid_dataset.dataloader  # get the data loader
 
         with torch.no_grad():  # disable gradient calculation
-            for data, coef, label, id in data_loader:
+            for data, coef, label, data_index in data_loader:
                 device = torch.device('cuda') if self._use_gpu else torch.device('cpu')
                 data, coef, label = data.to(device), coef.to(device), label.to(device)
                 # weight = self._model(data)
@@ -254,7 +256,8 @@ class GNNWR:
                 print(label_list)
                 print(out_list)
             self._valid_r2 = r2
-            if r2 > self._bestr2:  # if the R square is better than the best R square,record the R square and save the model
+            if r2 > self._bestr2:
+                # if the R square is better than the best R square,record the R square and save the model
                 self._bestr2 = r2
                 self._besttrainr2 = self._train_diagnosis.R2().data
                 self._noUpdateEpoch = 0
@@ -278,7 +281,7 @@ class GNNWR:
         y_pred = torch.tensor([]).to(torch.float32)
         weight_all = torch.tensor([]).to(torch.float32)
         with torch.no_grad():
-            for data, coef, label, id in data_loader:
+            for data, coef, label, data_index in data_loader:
                 device = torch.device('cuda') if self._use_gpu else torch.device('cpu')
                 data, coef, label = data.to(device), coef.to(device), label.to(device)
                 x_data, y_data, y_pred, weight_all = x_data.to(device), y_data.to(device), y_pred.to(
@@ -472,7 +475,7 @@ class GNNWR:
         """
         add graph to tensorboard
         """
-        for data, coef, label, id in self._train_dataset.dataloader:
+        for data, coef, label, data_index in self._train_dataset.dataloader:
             if self._use_gpu:
                 data = data.cuda()
                 self._model = self._model.cuda()
@@ -489,6 +492,7 @@ class GNNWR:
 
         :param path: the path of the model
         :param use_dict: whether use dict to load the model
+        :param map_location:
         """
         # load model
         if not self.__istrained:
@@ -557,23 +561,23 @@ class GNNWR:
         device = torch.device('cuda') if self._use_gpu else torch.device('cpu')
         result = torch.tensor([]).to(torch.float32).to(device)
         with torch.no_grad():
-            for data, coef, label, id in self._train_dataset.dataloader:
-                data, coef, label, id = data.to(device), coef.to(device), label.to(device), id.to(device)
+            for data, coef, label, data_index in self._train_dataset.dataloader:
+                data, coef, label, data_index = data.to(device), coef.to(device), label.to(device), data_index.to(device)
                 output = self._out(self._model(data).mul(coef.to(torch.float32)))
                 weight = self._model(data).mul(torch.tensor(self._weight).to(torch.float32).to(device))
-                output = torch.cat((weight, output, id), dim=1)
+                output = torch.cat((weight, output, data_index), dim=1)
                 result = torch.cat((result, output), 0)
-            for data, coef, label, id in self._valid_dataset.dataloader:
-                data, coef, label, id = data.to(device), coef.to(device), label.to(device), id.to(device)
+            for data, coef, label, data_index in self._valid_dataset.dataloader:
+                data, coef, label, data_index = data.to(device), coef.to(device), label.to(device), data_index.to(device)
                 output = self._out(self._model(data).mul(coef.to(torch.float32)))
                 weight = self._model(data).mul(torch.tensor(self._weight).to(torch.float32).to(device))
-                output = torch.cat((weight, output, id), dim=1)
+                output = torch.cat((weight, output, data_index), dim=1)
                 result = torch.cat((result, output), 0)
-            for data, coef, label, id in self._test_dataset.dataloader:
-                data, coef, label, id = data.to(device), coef.to(device), label.to(device), id.to(device)
+            for data, coef, label, data_index in self._test_dataset.dataloader:
+                data, coef, label, data_index = data.to(device), coef.to(device), label.to(device), data_index.to(device)
                 output = self._out(self._model(data).mul(coef.to(torch.float32)))
                 weight = self._model(data).mul(torch.tensor(self._weight).to(torch.float32).to(device))
-                output = torch.cat((weight, output, id), dim=1)
+                output = torch.cat((weight, output, data_index), dim=1)
                 result = torch.cat((result, output), 0)
         result = result.cpu().detach().numpy()
         columns = list(self._train_dataset.x)
@@ -583,7 +587,8 @@ class GNNWR:
         columns = columns + ["Pred_" + self._train_dataset.y[0]] + self._train_dataset.id
         result = pd.DataFrame(result, columns=columns)
         result[self._train_dataset.id] = result[self._train_dataset.id].astype(np.int32)
-        if only_return: return result
+        if only_return:
+            return result
         if filename is not None:
             result.to_csv(filename, index=False)
         else:
@@ -658,7 +663,7 @@ class GTNNWR(GNNWR):
                  ):
 
         if optimizer_params is None:
-            optimizer_params = {}
+            optimizer_params = {'scheduler': 'MultiStepLR', 'scheduler_milestones': [100, 300, 500]}
         if dense_layers is None:
             dense_layers = [[], []]
         super(GTNNWR, self).__init__(train_dataset, valid_dataset, test_dataset, dense_layers[1], start_lr, optimizer,

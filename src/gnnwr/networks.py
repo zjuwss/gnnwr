@@ -70,7 +70,7 @@ class SWNN(nn.Module):
                     m.bias.data.fill_(0)
 
     def forward(self, x):
-        x.to(torch.float32)
+        x.to(torch.float64)
         x = self.fc(x)
         return x
 
@@ -122,7 +122,7 @@ class STPNN(nn.Module):
 
     def forward(self, x):
         # STPNN
-        x.to(torch.float32)
+        x.to(torch.float64)
         batch = x.shape[0]
         height = x.shape[1]
         x = torch.reshape(x, shape=(batch * height, x.shape[2]))
@@ -172,7 +172,7 @@ def weight_share(model, x, output_size=1):
     :param output_size: output size of neural network
     :return: output of neural network
     """
-    x.to(torch.float32)
+    x.to(torch.float64)
     batch = x.shape[0]
     height = x.shape[1]
     x = torch.reshape(x, shape=(batch * height, x.shape[2]))

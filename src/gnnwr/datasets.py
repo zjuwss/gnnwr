@@ -636,17 +636,18 @@ def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_colu
     val_dataset.distances = distances[train_distance_len:train_distance_len + val_distance_len]
     test_dataset.distances = distances[train_distance_len + val_distance_len:]
     train_dataset.distances_scale_param = val_dataset.distances_scale_param = test_dataset.distances_scale_param = distance_scale_param
-    '''temporal = np.concatenate((train_dataset.temporal, val_dataset.temporal, test_dataset.temporal), axis=0)
-    temporal = temporal_scale.fit_transform(temporal.reshape(-1, temporal.shape[-1])).reshape(temporal.shape)
-    if process_fn == "minmax_scale":
-        temporal_scale_param = {"min": temporal_scale.data_min_, "max": temporal_scale.data_max_}
-    else:
-        temporal_scale_param = {"mean": temporal_scale.mean_, "var": temporal_scale.var_}
-    train_dataset.temporal = temporal[:train_distance_len]
-    val_dataset.temporal = temporal[train_distance_len:train_distance_len + val_distance_len]
-    test_dataset.temporal = temporal[train_distance_len + val_distance_len:]
-    train_dataset.temporal_scale_param = val_dataset.temporal_scale_param = test_dataset.temporal_scale_param = temporal_scale_param
-    '''
+    if temp_column is not None:
+        temporal = np.concatenate((train_dataset.temporal, val_dataset.temporal, test_dataset.temporal), axis=0)
+        temporal = temporal_scale.fit_transform(temporal.reshape(-1, temporal.shape[-1])).reshape(temporal.shape)
+        if process_fn == "minmax_scale":
+            temporal_scale_param = {"min": temporal_scale.data_min_, "max": temporal_scale.data_max_}
+        else:
+            temporal_scale_param = {"mean": temporal_scale.mean_, "var": temporal_scale.var_}
+        train_dataset.temporal = temporal[:train_distance_len]
+        val_dataset.temporal = temporal[train_distance_len:train_distance_len + val_distance_len]
+        test_dataset.temporal = temporal[train_distance_len + val_distance_len:]
+        train_dataset.temporal_scale_param = val_dataset.temporal_scale_param = test_dataset.temporal_scale_param = temporal_scale_param
+
     train_dataset.dataloader = DataLoader(
         train_dataset, batch_size=batch_size, shuffle=shuffle)
     val_dataset.dataloader = DataLoader(
@@ -863,8 +864,8 @@ def init_predict_dataset(data, train_dataset, x_column, spatial_column=None, tem
     return predict_dataset
 
 
-def load_dataset(dir, use_class=baseDataset):
+def load_dataset(directory, use_class=baseDataset):
     dataset = use_class()
-    dataset.read(dir)
+    dataset.read(directory)
     dataset.dataloader = DataLoader(dataset, batch_size=dataset.batch_size, shuffle=dataset.shuffle)
     return dataset

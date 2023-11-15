@@ -95,6 +95,7 @@ class GNNWR:
         self._validLossList = []  # record the loss in validation process
         self._epoch = 0  # current epoch
         self._bestr2 = float('-inf')  # best r2
+        self._besttrainr2 = float('-inf')  # best train r2
         self._noUpdateEpoch = 0  # number of epochs without update
         self._modelName = model_name  # model name
         self._modelSavePath = model_save_path  # model save path
@@ -147,13 +148,14 @@ class GNNWR:
                 optimizer_params = {}
             maxlr = optimizer_params.get("maxlr", 0.1)
             minlr = optimizer_params.get("minlr", 0.01)
-            upepoch = optimizer_params.get("upepoch", 100)
+            upepoch = optimizer_params.get("upepoch", 10000)
             uprate = (maxlr - minlr) / upepoch * (upepoch // 20)
-            decayepoch = optimizer_params.get("decayepoch", 200)
+            decayepoch = optimizer_params.get("decayepoch", 20000)
             decayrate = optimizer_params.get("decayrate", 0.1)
-            stop_change_epoch = optimizer_params.get("stop_change_epoch", 300)
+            stop_change_epoch = optimizer_params.get("stop_change_epoch", 30000)
+            stop_lr = optimizer_params.get("stop_lr", 0.001)
             lamda_lr = lambda epoch: (epoch // (upepoch // 20)) * uprate + minlr if epoch < upepoch else (
-                maxlr if epoch < decayepoch else maxlr * (decayrate ** (epoch - decayepoch))) if epoch < stop_change_epoch else minlr
+                maxlr if epoch < decayepoch else maxlr * (decayrate ** (epoch - decayepoch))) if epoch < stop_change_epoch else stop_lr
             self._scheduler = optim.lr_scheduler.LambdaLR(
                 self._optimizer, lr_lambda=lamda_lr)
         else:

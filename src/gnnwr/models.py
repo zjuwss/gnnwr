@@ -17,28 +17,87 @@ from .utils import OLS, DIAGNOSIS
 
 # 23.6.8_TODO: 寻找合适的优化器  考虑SGD+学习率调整  输出权重
 class GNNWR:
-    """
-    GNNWR is a model used to regress the output of a system with the input of the system. It is a combination of
-    SWNN and STNN.
+    r"""
+    GNNWR(Geographically neural network weighted regression) is a model to address spatial non-stationarity in various domains with complex geographical processes,
+    which comes from the paper `Geographically neural network weighted regression for the accurate estimation of spatial non-stationarity <https://doi.org/10.1080/13658816.2019.1707834>`__.
 
-    :param train_dataset: train dataset
-    :param valid_dataset: valid dataset
-    :param test_dataset: test dataset
-    :param dense_layers: structure of layers (can be None, which means the default structure will be used)
-    :param start_lr: initial learning rate
-    :param optimizer: optimizer types(SGD, Adam, RMSprop, Adagrad)
-    :param drop_out: drop_out ratio
-    :param batch_norm: batch normalization
-    :param activate_func: activate function , default: PRelu(0.4)
-    :param model_name: name of model
-    :param model_save_path: path to save model
-    :param write_path: path to save tensorboard logs
-    :param use_gpu: whether to use gpu
-    :param use_ols: whether to use OLS
-    :param log_path: path to save log
-    :param log_file_name: name of log file
-    :param log_level: log level
-    :param optimizer_params: parameters of optimizer and learning rate scheduler
+    Parameters
+    ----------
+    train_dataset : baseDataset
+        the dataset of training
+    valid_dataset : baseDataset
+        the dataset of validation
+    test_dataset : baseDataset
+        the dataset of testing
+    dense_layers : list
+        the dense layers of the model (default: ``None``)
+
+        Default structure is a geometric sequence of power of 2, the minimum is 2, and the maximum is the power of 2 closest to the number of neurons in the input layer.
+        
+        i.e. ``[2,4,8,16,32,64,128,256]``
+    start_lr : float
+        the start learning rate of the model (default: ``0.1``)
+    optimizer : str, optional
+        the optimizer of the model (default: ``"Adagrad"``)
+        choose from "SGD","Adam","RMSprop","Adagrad","Adadelta"
+    drop_out : float
+        the drop out rate of the model (default: ``0.2``)
+    batch_norm : bool, optional
+        whether use batch normalization (default: ``True``)
+    activate_func : torch.nn
+        the activate function of the model (default: ``nn.PReLU(init=0.4)``)
+    model_name : str
+        the name of the model (default: ``"GNNWR_" + datetime.datetime.today().strftime("%Y%m%d-%H%M%S")``)
+    model_save_path : str
+        the path of the model (default: ``"../gnnwr_models"``)
+    write_path : str
+        the path of the log (default: ``"../gnnwr_runs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")``)
+    use_gpu : bool
+        whether use gpu or not (default: ``True``)
+    use_ols : bool
+        whether use ols or not (default: ``True``)
+    log_path : str
+        the path of the log (default: ``"../gnnwr_logs/"``)
+    log_file_name : str
+        the name of the log (default: ``"gnnwr" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".log"``)
+    log_level : int
+        the level of the log (default: ``logging.INFO``)
+    optimizer_params : dict, optional
+        the params of the optimizer and the scheduler (default: ``None``)
+
+        if optimizer is SGD, the params are:
+
+            | maxlr: float, the max learning rate (default: ``0.1``)
+
+            | minlr: float, the min learning rate (default: ``0.01``)
+
+            | upepoch: int, the epoch of learning rate up (default: ``10000``)
+
+            | decayepoch: int, the epoch of learning rate decay (default: ``20000``)
+
+            | decayrate: float, the rate of learning rate decay (default: ``0.1``)
+
+            | stop_change_epoch: int, the epoch of learning rate stop change (default: ``30000``)
+
+            | stop_lr: float, the learning rate when stop change (default: ``0.001``)
+
+        if optimizer is Other, the params are:
+
+            | scheduler: str, the name of the scheduler (default: ``"CosineAnnealingWarmRestarts"``) in {``"MultiStepLR","CosineAnnealingLR","CosineAnnealingWarmRestarts"``}
+
+            | scheduler_milestones: list, the milestones of the scheduler MultiStepLR (default: ``[500,1000,2000,4000]``)
+
+            | scheduler_gamma: float, the gamma of the scheduler MultiStepLR (default: ``0.5``)
+
+            | scheduler_T_max: int, the T_max of the scheduler CosineAnnealingLR (default: ``1000``)
+
+            | scheduler_eta_min: float, the eta_min of the scheduler CosineAnnealingLR and CosineAnnealingWarmRestarts (default: ``0.01``)
+
+            | scheduler_T_0: int, the T_0 of the scheduler CosineAnnealingWarmRestarts (default: ``100``)
+
+            | scheduler_T_mult: int, the T_mult of the scheduler CosineAnnealingWarmRestarts (default: ``3``)
+
+
     """
 
     def __init__(
@@ -116,11 +175,48 @@ class GNNWR:
         self.init_optimizer(optimizer, optimizer_params)  # initialize the optimizer
 
     def init_optimizer(self, optimizer, optimizer_params=None):
-        """
-        Initialize the optimizer and set the learning rate scheduler
+        r"""
+        initialize the optimizer
 
-        :param optimizer: optimizer type name
-        :param optimizer_params: parameters of optimizer and learning rate scheduler
+        Parameters
+        ----------
+        optimizer : str
+            the optimizer of the model (default: ``"Adagrad"``)
+            choose from "SGD","Adam","RMSprop","Adagrad","Adadelta"
+        optimizer_params : dict, optional
+            the params of the optimizer and the scheduler (default: ``None``)
+
+            if optimizer is SGD, the params are:
+
+                | maxlr: float, the max learning rate (default: ``0.1``)
+
+                | minlr: float, the min learning rate (default: ``0.01``)
+
+                | upepoch: int, the epoch of learning rate up (default: ``10000``)
+
+                | decayepoch: int, the epoch of learning rate decay (default: ``20000``)
+
+                | decayrate: float, the rate of learning rate decay (default: ``0.1``)
+
+                | stop_change_epoch: int, the epoch of learning rate stop change (default: ``30000``)
+
+                | stop_lr: float, the learning rate when stop change (default: ``0.001``)
+
+            if optimizer is Other, the params are:
+
+                | scheduler: str, the name of the scheduler (default: ``"CosineAnnealingWarmRestarts"``) in {``"MultiStepLR","CosineAnnealingLR","CosineAnnealingWarmRestarts"``}
+
+                | scheduler_milestones: list, the milestones of the scheduler MultiStepLR (default: ``[500,1000,2000,4000]``)
+
+                | scheduler_gamma: float, the gamma of the scheduler MultiStepLR (default: ``0.5``)
+
+                | scheduler_T_max: int, the T_max of the scheduler CosineAnnealingLR (default: ``1000``)
+
+                | scheduler_eta_min: float, the eta_min of the scheduler CosineAnnealingLR and CosineAnnealingWarmRestarts (default: ``0.01``)
+
+                | scheduler_T_0: int, the T_0 of the scheduler CosineAnnealingWarmRestarts (default: ``100``)
+
+                | scheduler_T_mult: int, the T_mult of the scheduler CosineAnnealingWarmRestarts (default: ``3``)
         """
         # initialize the optimizer
         if optimizer == "SGD":
@@ -314,12 +410,18 @@ class GNNWR:
 
     def run(self, max_epoch=1, early_stop=-1, print_frequency=50, show_detailed_info=True):
         """
-        train and validate the model
+        train the model and validate the model
 
-        :param max_epoch: max epoch of training
-        :param early_stop: early stop epoch
-        :param print_frequency: print frequency
-        :param show_detailed_info: whether to show detailed information
+        Parameters
+        ----------
+        max_epoch : int
+            the max epoch of the training (default: ``1``)
+        early_stop : int
+            if the model has not been updated for ``early_stop`` epochs, the training will stop (default: ``-1``)
+
+            if ``early_stop`` is ``-1``, the training will not stop until the max epoch
+        print_frequency : int
+            the frequency of printing the information (default: ``50``)
         """
         self.__istrained = True
         if self._use_gpu:
@@ -392,7 +494,15 @@ class GNNWR:
         """
         predict the result of the dataset
 
-        :param dataset: Input dataset
+        Parameters
+        ----------
+        dataset : baseDataset,predictDataset
+            the dataset to be predicted
+        
+        Returns
+        -------
+        dataframe
+            the Pandas dataframe of the dataset with the predicted result
         """
         data_loader = dataset.dataloader
         if not self.__istrained:
@@ -412,9 +522,17 @@ class GNNWR:
 
     def predict_weight(self, dataset):
         """
-        predict the result of the dataset
+        predict the spatial weight of the dataset
 
-        :param dataset: Input dataset
+        Parameters
+        ----------
+        dataset : baseDataset,predictDataset
+            the dataset to be predicted
+
+        Returns
+        -------
+        dataframe
+            the Pandas dataframe of the dataset with the predicted spatial weight
         """
         data_loader = dataset.dataloader
         if not self.__istrained:
@@ -433,11 +551,17 @@ class GNNWR:
 
     def load_model(self, path, use_dict=False, map_location=None):
         """
-        load model from the path
+        load the model
 
-        :param path: the path of the model
-        :param use_dict: whether use dict to load the model
-        :param map_location: map location
+        Parameters
+        ----------
+        path : str
+            the path of the model
+        use_dict : bool
+            whether use dict to load the model (default: ``False``)
+        map_location : str
+            the location of the model (default: ``None``)
+            the location can be ``"cpu"`` or ``"cuda"``
         """
         if use_dict:
             data = torch.load(path, map_location=map_location)
@@ -454,9 +578,14 @@ class GNNWR:
         """
         convert gpu model to cpu model
 
-        :param path: the path of the model
-        :param save_path: the path of the model to be saved
-        :param use_model: whether use dict to load the model
+        Parameters
+        ----------
+        path : str
+            the path of the model
+        save_path : str
+            the path of the new model
+        use_model : bool
+            whether use dict to load the model (default: ``True``)
         """
         if use_model:
             data = torch.load(path, map_location='cpu').state_dict()
@@ -471,12 +600,17 @@ class GNNWR:
     def getLoss(self):
         """
         get network's loss
+
+        Returns
+        -------
+        list
+            the list of the loss in training process and validation process
         """
         return self._trainLossList, self._validLossList
 
     def add_graph(self):
         """
-        add graph to tensorboard
+        add the graph of the model to tensorboard
         """
         for data, coef, label, data_index in self._train_dataset.dataloader:
             if self._use_gpu:
@@ -493,9 +627,17 @@ class GNNWR:
         """
         print the result of the model, including the model structure, optimizer,the result of test dataset
 
-        :param path: the path of the model
-        :param use_dict: whether use dict to load the model
-        :param map_location:
+        Parameters
+        ----------
+        path : str
+            the path of the model(default: ``None``)
+            | if ``path`` is ``None``, the model will be loaded from ``self._modelSavePath + "/" + self._modelName + ".pkl"``
+        use_dict : bool
+            whether use dict to load the model (default: ``False``)
+            | if ``use_dict`` is ``True``, the model will be loaded from ``path`` as dict
+        map_location : str
+            the location of the model (default: ``None``)
+            the location can be ``"cpu"`` or ``"cuda"``
         """
         # load model
         if not self.__istrained:
@@ -528,7 +670,8 @@ class GNNWR:
         print("dependent variable:   |", self._train_dataset.y)
         print("\n----------------------------------------------------\n")
         print("Test Loss: ", self.__testLoss, " Test R2: ", self.__testr2)
-        print("Train R2:  {:5f}".format(self._besttrainr2), " Valid R2: ", self._bestr2)
+        if self._valid_r2 is not None and self._valid_r2 != float('-inf'):
+            print("Train R2:  {:5f}".format(self._besttrainr2), " Valid R2: ", self._bestr2)
         # OLS
         print("\nOLS:  |", self._weight)
         # Diagnostics
@@ -540,11 +683,30 @@ class GNNWR:
 
     def reg_result(self, filename=None, model_path=None, use_dict=False, only_return=False, map_location=None):
         """
-        save the result of the model, including the weight, the result of dataset
+        save the regression result of the model, including the weight of each argument, the bias, the predicted result
 
-        :param filename: the path of the result
-        :param model_path: the path of the model
-        :param use_dict: whether use dict to load the model
+        Parameters
+        ----------
+        filename : str
+            the path of the result file (default: ``None``)
+            | if ``filename`` is ``None``, the result will not be saved as file
+        model_path : str
+            the path of the model (default: ``None``)
+            | if ``model_path`` is ``None``, the model will be loaded from ``self._modelSavePath + "/" + self._modelName + ".pkl"``
+        use_dict : bool
+            whether use dict to load the model (default: ``False``)
+            | if ``use_dict`` is ``True``, the model will be loaded from ``model_path`` as dict
+        only_return : bool
+            whether only return the result (default: ``False``)
+            | if ``only_return`` is ``True``, the result will not be saved as file
+        map_location : str
+            the location of the model (default: ``None``)
+            the location can be ``"cpu"`` or ``"cuda"``
+
+        Returns
+        -------
+        dataframe
+            the Pandas dataframe of the result
         """
         if model_path is None:
             model_path = self._modelSavePath + "/" + self._modelName + ".pkl"
@@ -595,8 +757,6 @@ class GNNWR:
         if filename is not None:
             result.to_csv(filename, index=False)
         else:
-            # result.to_csv("./result.csv", index=False)
-            # raise Warning("The input write file path is not set. and the result is output to the default path.")
             warnings.warn(
                 "Warning! The input write file path is not set. Result is returned by function but not saved as file.",
                 RuntimeWarning)
@@ -605,6 +765,11 @@ class GNNWR:
     def getWeights(self):
         """
         get weight of each argument
+
+        Returns
+        -------
+        dataframe
+            the Pandas dataframe of the weight of each argument in train_dataset
         """
         result_data = self.reg_result(only_return=True)
         result_data['id'] = result_data['id'].astype(np.int64)
@@ -620,26 +785,84 @@ class GTNNWR(GNNWR):
     GTNNWR model is a model based on GNNWR and STPNN, which is a model that can be used to solve the problem of
     spatial-temporal non-stationarity.
 
-    :param train_dataset: the dataset of training
-    :param valid_dataset: the dataset of validation
-    :param test_dataset: the dataset of testing
-    :param dense_layers: the dense layers of the model
-    :param start_lr: the start learning rate of the model
-    :param optimizer: the optimizer of the model
-    :param drop_out: the drop out rate of the model
-    :param batch_norm: whether use batch normalization
-    :param activate_func: the activate function of the model (default: nn.PReLU(init=0.4))
-    :param model_name: the name of the model
-    :param model_save_path: the path of the model
-    :param write_path: the path of the log
-    :param use_gpu: whether use gpu
-    :param use_ols: whether use ols
-    :param log_path: the path of the log
-    :param log_file_name: the name of the log
-    :param log_level: the level of the log
-    :param optimizer_params: the params of the optimizer and the scheduler
-    :param STPNN_outsize: the output size of the STPNN
-    :param STNN_SPNN_params: the params of the STNN and SPNN
+    Parameters
+    ----------
+    train_dataset : baseDataset
+        the dataset for training
+    valid_dataset : baseDataset
+        the dataset for validation
+    test_dataset : baseDataset
+        the dataset for test
+    dense_layers : list
+        the dense layers of the model (default: ``None``)
+        | i.e. ``[[3],[128,64,32]]`` the first list in input is hidden layers of STPNN, the second one is hidden layers of SWNN.
+    start_lr : float
+        the start learning rate (default: ``0.1``)
+    optimizer : str, optional
+        the optimizer of the model (default: ``"Adagrad"``)
+        choose from "SGD","Adam","RMSprop","Adagrad","Adadelta"
+    drop_out : float
+        the drop out rate of the model (default: ``0.2``)
+    batch_norm : bool, optional
+        whether use batch normalization (default: ``True``)
+    activate_func : torch.nn
+        the activate function of the model (default: ``nn.PReLU(init=0.4)``)
+    model_name : str
+        the name of the model (default: ``"GNNWR_" + datetime.datetime.today().strftime("%Y%m%d-%H%M%S")``)
+    model_save_path : str
+        the path of the model (default: ``"../gnnwr_models"``)
+    write_path : str
+        the path of the log (default: ``"../gnnwr_runs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")``)
+    use_gpu : bool
+        whether use gpu or not (default: ``True``)
+    use_ols : bool
+        whether use ols or not (default: ``True``)
+    log_path : str
+        the path of the log (default: ``"../gnnwr_logs/"``)
+    log_file_name : str
+        the name of the log (default: ``"gnnwr" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".log"``)
+    log_level : int
+        the level of the log (default: ``logging.INFO``)
+    optimizer_params : dict, optional
+        the params of the optimizer and the scheduler (default: ``None``)
+
+        if optimizer is SGD, the params are:
+
+            | maxlr: float, the max learning rate (default: ``0.1``)
+
+            | minlr: float, the min learning rate (default: ``0.01``)
+
+            | upepoch: int, the epoch of learning rate up (default: ``10000``)
+
+            | decayepoch: int, the epoch of learning rate decay (default: ``20000``)
+
+            | decayrate: float, the rate of learning rate decay (default: ``0.1``)
+
+            | stop_change_epoch: int, the epoch of learning rate stop change (default: ``30000``)
+
+            | stop_lr: float, the learning rate when stop change (default: ``0.001``)
+
+        if optimizer is Other, the params are:
+
+            | scheduler: str, the name of the scheduler (default: ``"CosineAnnealingWarmRestarts"``) in {``"MultiStepLR","CosineAnnealingLR","CosineAnnealingWarmRestarts"``}
+
+            | scheduler_milestones: list, the milestones of the scheduler MultiStepLR (default: ``[500,1000,2000,4000]``)
+
+            | scheduler_gamma: float, the gamma of the scheduler MultiStepLR (default: ``0.5``)
+
+            | scheduler_T_max: int, the T_max of the scheduler CosineAnnealingLR (default: ``1000``)
+
+            | scheduler_eta_min: float, the eta_min of the scheduler CosineAnnealingLR and CosineAnnealingWarmRestarts (default: ``0.01``)
+
+            | scheduler_T_0: int, the T_0 of the scheduler CosineAnnealingWarmRestarts (default: ``100``)
+
+            | scheduler_T_mult: int, the T_mult of the scheduler CosineAnnealingWarmRestarts (default: ``3``)
+    STPNN_outsize:int
+        the output size of STPNN(default:``1``)
+    STNN_SPNN_params:dict
+        the params of STNN and SPNN(default:``None``)
+        * STPNN_batch_norm:bool
+            whether use batchnorm in STNN and SPNN or not (Default:``True``)
     """
 
     def __init__(self,

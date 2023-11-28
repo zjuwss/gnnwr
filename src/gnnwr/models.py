@@ -544,6 +544,8 @@ class GNNWR:
                 if self._use_gpu:
                     result, data, coef = result.cuda(), data.cuda(), coef.cuda()
                     ols_w = torch.tensor(self._weight).to(torch.float32).cuda()
+                else:
+                    ols_w = torch.tensor(self._weight).to(torch.float32)
                 weight = self._model(data).mul(ols_w)
                 result = torch.cat((result, weight), 0)
         result = result.cpu().detach().numpy()
@@ -861,7 +863,9 @@ class GTNNWR(GNNWR):
         the output size of STPNN(default:``1``)
     STNN_SPNN_params:dict
         the params of STNN and SPNN(default:``None``)
-        * STPNN_batch_norm:bool
+        
+        STPNN_batch_norm:bool
+            
             whether use batchnorm in STNN and SPNN or not (Default:``True``)
     """
 

@@ -10,7 +10,7 @@ from torch.utils.data import Dataset, DataLoader
 import warnings
 from scipy.spatial import distance
 
-"""
+r"""
 The package of `datasets` includes the following functions:
     1. init_dataset: initialize the dataset for training, validation and testing
     2. init_dataset_cv: initialize the dataset for cross-validation
@@ -26,14 +26,25 @@ to facilitate the use of the model.
 
 
 class baseDataset(Dataset):
-    """
+    r"""
     baseDataset is the base class of dataset, which is used to store the data and other information.
     it also provides the function of data scaling, data saving and data loading.
 
-    :param data: DataSets with x_column and y_column
-    :param x_column: independent variables column name
-    :param y_column: dependent variables column name
-    :param is_need_STNN: whether to use STNN
+    Parameters
+    ----------
+    data: pandas.DataFrame
+        dataframe
+    x_column: list
+        independent variable column name
+    y_column: list
+        dependent variable column name
+    id_column: str
+        id column name
+    is_need_STNN: bool
+        whether need STNN(default: ``False``)
+        | if ``True``, the dataset will be used to train the Model with STNN and SPNN
+        | and the GTNNWR Model will use the STNN and SPNN to calculate the distance matrix
+        | if ``False``, the dataset will not be used to train the Model with STNN and SPNN
     """
 
     def __init__(self, data=None, x_column: list = None, y_column: list = None, id_column=None, is_need_STNN=False):
@@ -89,9 +100,19 @@ class baseDataset(Dataset):
     def scale(self, scale_fn=None, scale_params=None):
         """
         scale the data by MinMaxScaler or StandardScaler
+        | the scale function will scale the independent variable data and add a column of 1 to the data
 
-        :param scale_fn: scale function
-        :param scale_params: scale parameters like MinMaxScaler or StandardScaler
+        Parameters
+        ----------
+        scale_fn: str
+            scale function name
+            | if ``minmax_scale``, use MinMaxScaler
+            | if ``standard_scale``, use StandardScaler
+        scale_params: list
+            scaler with scale parameters
+            | if ``minmax_scale``, scale_params is a list of MinMaxScaler
+            | if ``standard_scale``, scale_params is a list of StandardScaler
+
         """
         if scale_fn == "minmax_scale":
             self.scale_fn = "minmax_scale"
@@ -119,8 +140,16 @@ class baseDataset(Dataset):
         """
         scale the data with the scale function and scale parameters
 
-        :param scale_fn: scale function
-        :param scale_params: scale parameters like max and min
+        Parameters
+        ----------
+        scale_fn: str
+            scale function name
+            | if ``minmax_scale``, use MinMaxScaler
+            | if ``standard_scale``, use StandardScaler
+        scale_params: list
+            scaler with scale parameters
+            | if ``minmax_scale``, scale_params is a list of dict with ``min`` and ``max``
+            | if ``standard_scale``, scale_params is a list of dict with ``mean`` and ``var``
         """
         if scale_fn == "minmax_scale":
             self.scale_fn = "minmax_scale"
@@ -144,7 +173,7 @@ class baseDataset(Dataset):
 
     def getScaledDataframe(self):
         """
-        get the scaled dataframe
+        get the scaled dataframe and save it in ``scaledDataframe``
         """
         columns = np.concatenate((self.x, self.y), axis=0)
         scaledData = np.concatenate((self.x_data, self.y_data), axis=1)
@@ -152,9 +181,21 @@ class baseDataset(Dataset):
 
     def rescale(self, x, y):
         """
-        :param x: Input independent variable data
-        :param y: Input dependent variable data
-        :return: rescaled x and y
+        rescale the data with the scale function and scale parameters
+
+        Parameters
+        ----------
+        x: numpy.ndarray
+            independent variable data
+        y: numpy.ndarray
+            dependent variable data
+
+        Returns
+        -------
+        x: numpy.ndarray
+            rescaled independent variable data
+        y: numpy.ndarray
+            rescaled dependent variable data
         """
         if self.scale_fn == "minmax_scale":
             x = np.multiply(x, self.x_scale_info["max"] - self.x_scale_info["min"]) + self.x_scale_info["min"]

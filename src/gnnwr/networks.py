@@ -5,11 +5,19 @@ import torch.nn as nn
 
 def default_dense_layer(insize, outsize):
     """
-    generate default dense layers of Neural Network
+    generate default dense layers for neural network
 
-    :param insize: input size of Neural Network
-    :param outsize: Output size of Neural Network
-    :return: a list of dense layers
+    Parameters
+    ----------
+    insize: int
+        input size of neural network
+    outsize: int
+        output size of neural network
+
+    Returns
+    -------
+    dense_layer: list
+        a list of dense layers of neural network
     """
     dense_layer = []
     size = int(math.pow(2, int(math.log2(insize))))
@@ -21,15 +29,24 @@ def default_dense_layer(insize, outsize):
 
 class SWNN(nn.Module):
     """
-    SWNN is a simple neural network with dense layers, which is used to extract temporal and spatial features
-    from the input data.
+    SWNN is a neural network with dense layers, which is used to calculate the spatial and temporal weight of features.
+    | The each layer of SWNN is as follows:
+    | full connection layer -> batch normalization layer -> activate function -> drop out layer
 
-    :param dense_layer: a list of dense layers of Neural Network
-    :param insize: input size of Neural Network
-    :param outsize: Output size of Neural Network
-    :param drop_out: drop out rate
-    :param activate_func: activate function
-    :param batch_norm: whether use batch normalization
+    Parameters
+    ----------
+    dense_layer: list
+        a list of dense layers of Neural Network
+    insize: int
+        input size of Neural Network(must be positive)
+    outsize: int
+        Output size of Neural Network(must be positive)
+    drop_out: float
+        drop out rate(default: ``0.2``)
+    activate_func: torch.nn.functional
+        activate function(default: ``nn.PReLU(init=0.1)``)
+    batch_norm: bool
+        whether use batch normalization(default: ``True``)
     """
     def __init__(self, dense_layer=None, insize=-1, outsize=-1, drop_out=0.2, activate_func=nn.PReLU(init=0.1),
                  batch_norm=True):
@@ -79,13 +96,23 @@ class STPNN(nn.Module):
     """
     STPNN is a neural network with dense layers, which is used to calculate the spatial and temporal proximity
     of two nodes.
+    | The each layer of STPNN is as follows:
+    | full connection layer -> batch normalization layer -> activate function -> drop out layer
 
-    :param dense_layer: a list of dense layers of Neural Network
-    :param insize: input size of Neural Network
-    :param outsize: Output size of Neural Network
-    :param drop_out: drop out rate
-    :param activate_func: activate function
-    :param batch_norm: whether use batch normalization
+    Parameters
+    ----------
+    dense_layer: list
+        a list of dense layers of Neural Network
+    insize: int
+        input size of Neural Network(must be positive)
+    outsize: int
+        Output size of Neural Network(must be positive)
+    drop_out: float
+        drop out rate(default: ``0.2``)
+    activate_func: torch.nn.functional
+        activate function(default: ``nn.ReLU()``)
+    batch_norm: bool
+        whether use batch normalization(default: ``False``)
     """
     def __init__(self, dense_layer, insize, outsize, drop_out=0.2, activate_func=nn.ReLU(), batch_norm=False):
 
@@ -135,12 +162,22 @@ class STNN_SPNN(nn.Module):
     """
     STNN_SPNN is a neural network with dense layers, which is used to calculate the spatial proximity of two nodes
     and temporal proximity of two nodes at the same time.
+    | The each layer of STNN and SPNN is as follows:
+    | full connection layer -> activate function
 
-    :param STNN_insize: input size of STNN
-    :param STNN_outsize: output size of STNN
-    :param SPNN_insize: input size of SPNN
-    :param SPNN_outsize: output size of SPNN
-    :param activate_func: activate function
+    Parameters
+    ----------
+    STNN_insize: int
+        input size of STNN(must be positive)
+    STNN_outsize: int
+        Output size of STNN(must be positive)
+    SPNN_insize: int
+        input size of SPNN(must be positive)
+    SPNN_outsize: int
+        Output size of SPNN(must be positive)
+    activate_func: torch.nn.functional
+        activate function(default: ``nn.ReLU()``)
+
     """
     def __init__(self, STNN_insize:int, STNN_outsize, SPNN_insize:int, SPNN_outsize, activate_func=nn.ReLU()):
 
@@ -167,10 +204,19 @@ def weight_share(model, x, output_size=1):
     """
     weight_share is a function to calculate the output of neural network with weight sharing.
 
-    :param model: the neural network model
-    :param x: input data
-    :param output_size: output size of neural network
-    :return: output of neural network
+    Parameters
+    ----------
+    model: torch.nn.Module
+        neural network with weight sharing
+    x: torch.Tensor
+        input of neural network
+    output_size: int
+        output size of neural network
+
+    Returns
+    -------
+    output: torch.Tensor
+        output of neural network
     """
     x.to(torch.float32)
     batch = x.shape[0]

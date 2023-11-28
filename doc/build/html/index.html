@@ -19,7 +19,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="gnnwr" href="modules.html" /> 
+    <link rel="next" title="gnnwr.datasets module" href="gnnwr/datasets.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -43,7 +43,10 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="modules.html">gnnwr</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gnnwr/datasets.html">gnnwr.datasets module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gnnwr/models.html">gnnwr.models module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gnnwr/networks.html">gnnwr.networks module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gnnwr/utils.html">gnnwr.utils module</a></li>
 </ul>
 
         </div>
@@ -75,8 +78,83 @@
 <div class="toctree-wrapper compound">
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="modules.html">gnnwr</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="gnnwr.html">gnnwr package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gnnwr/datasets.html">gnnwr.datasets module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="gnnwr/datasets.html#gnnwr.datasets.BasicDistance"><code class="docutils literal notranslate"><span class="pre">BasicDistance()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="gnnwr/datasets.html#gnnwr.datasets.Manhattan_distance"><code class="docutils literal notranslate"><span class="pre">Manhattan_distance()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="gnnwr/datasets.html#gnnwr.datasets.baseDataset"><code class="docutils literal notranslate"><span class="pre">baseDataset</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/datasets.html#gnnwr.datasets.baseDataset.getScaledDataframe"><code class="docutils literal notranslate"><span class="pre">baseDataset.getScaledDataframe()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/datasets.html#gnnwr.datasets.baseDataset.read"><code class="docutils literal notranslate"><span class="pre">baseDataset.read()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/datasets.html#gnnwr.datasets.baseDataset.rescale"><code class="docutils literal notranslate"><span class="pre">baseDataset.rescale()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/datasets.html#gnnwr.datasets.baseDataset.save"><code class="docutils literal notranslate"><span class="pre">baseDataset.save()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/datasets.html#gnnwr.datasets.baseDataset.scale"><code class="docutils literal notranslate"><span class="pre">baseDataset.scale()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/datasets.html#gnnwr.datasets.baseDataset.scale2"><code class="docutils literal notranslate"><span class="pre">baseDataset.scale2()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="gnnwr/datasets.html#gnnwr.datasets.init_dataset"><code class="docutils literal notranslate"><span class="pre">init_dataset()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="gnnwr/datasets.html#gnnwr.datasets.init_dataset_cv"><code class="docutils literal notranslate"><span class="pre">init_dataset_cv()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="gnnwr/datasets.html#gnnwr.datasets.init_predict_dataset"><code class="docutils literal notranslate"><span class="pre">init_predict_dataset()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="gnnwr/datasets.html#gnnwr.datasets.load_dataset"><code class="docutils literal notranslate"><span class="pre">load_dataset()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="gnnwr/datasets.html#gnnwr.datasets.predictDataset"><code class="docutils literal notranslate"><span class="pre">predictDataset</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/datasets.html#gnnwr.datasets.predictDataset.minmax_scaler"><code class="docutils literal notranslate"><span class="pre">predictDataset.minmax_scaler()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/datasets.html#gnnwr.datasets.predictDataset.rescale"><code class="docutils literal notranslate"><span class="pre">predictDataset.rescale()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/datasets.html#gnnwr.datasets.predictDataset.standard_scaler"><code class="docutils literal notranslate"><span class="pre">predictDataset.standard_scaler()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="gnnwr/models.html">gnnwr.models module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="gnnwr/models.html#gnnwr.models.GNNWR"><code class="docutils literal notranslate"><span class="pre">GNNWR</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/models.html#gnnwr.models.GNNWR.add_graph"><code class="docutils literal notranslate"><span class="pre">GNNWR.add_graph()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/models.html#gnnwr.models.GNNWR.getLoss"><code class="docutils literal notranslate"><span class="pre">GNNWR.getLoss()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/models.html#gnnwr.models.GNNWR.getWeights"><code class="docutils literal notranslate"><span class="pre">GNNWR.getWeights()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/models.html#gnnwr.models.GNNWR.gpumodel_to_cpu"><code class="docutils literal notranslate"><span class="pre">GNNWR.gpumodel_to_cpu()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/models.html#gnnwr.models.GNNWR.init_optimizer"><code class="docutils literal notranslate"><span class="pre">GNNWR.init_optimizer()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/models.html#gnnwr.models.GNNWR.load_model"><code class="docutils literal notranslate"><span class="pre">GNNWR.load_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/models.html#gnnwr.models.GNNWR.predict"><code class="docutils literal notranslate"><span class="pre">GNNWR.predict()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/models.html#gnnwr.models.GNNWR.predict_weight"><code class="docutils literal notranslate"><span class="pre">GNNWR.predict_weight()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/models.html#gnnwr.models.GNNWR.reg_result"><code class="docutils literal notranslate"><span class="pre">GNNWR.reg_result()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/models.html#gnnwr.models.GNNWR.result"><code class="docutils literal notranslate"><span class="pre">GNNWR.result()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/models.html#gnnwr.models.GNNWR.run"><code class="docutils literal notranslate"><span class="pre">GNNWR.run()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="gnnwr/models.html#gnnwr.models.GTNNWR"><code class="docutils literal notranslate"><span class="pre">GTNNWR</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="gnnwr/networks.html">gnnwr.networks module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="gnnwr/networks.html#gnnwr.networks.STNN_SPNN"><code class="docutils literal notranslate"><span class="pre">STNN_SPNN</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/networks.html#gnnwr.networks.STNN_SPNN.forward"><code class="docutils literal notranslate"><span class="pre">STNN_SPNN.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="gnnwr/networks.html#gnnwr.networks.STPNN"><code class="docutils literal notranslate"><span class="pre">STPNN</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/networks.html#gnnwr.networks.STPNN.forward"><code class="docutils literal notranslate"><span class="pre">STPNN.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="gnnwr/networks.html#gnnwr.networks.SWNN"><code class="docutils literal notranslate"><span class="pre">SWNN</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/networks.html#gnnwr.networks.SWNN.forward"><code class="docutils literal notranslate"><span class="pre">SWNN.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="gnnwr/networks.html#gnnwr.networks.default_dense_layer"><code class="docutils literal notranslate"><span class="pre">default_dense_layer()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="gnnwr/networks.html#gnnwr.networks.weight_share"><code class="docutils literal notranslate"><span class="pre">weight_share()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="gnnwr/utils.html">gnnwr.utils module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="gnnwr/utils.html#gnnwr.utils.DIAGNOSIS"><code class="docutils literal notranslate"><span class="pre">DIAGNOSIS</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/utils.html#gnnwr.utils.DIAGNOSIS.AIC"><code class="docutils literal notranslate"><span class="pre">DIAGNOSIS.AIC()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/utils.html#gnnwr.utils.DIAGNOSIS.AICc"><code class="docutils literal notranslate"><span class="pre">DIAGNOSIS.AICc()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/utils.html#gnnwr.utils.DIAGNOSIS.Adjust_R2"><code class="docutils literal notranslate"><span class="pre">DIAGNOSIS.Adjust_R2()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/utils.html#gnnwr.utils.DIAGNOSIS.F1_GNN"><code class="docutils literal notranslate"><span class="pre">DIAGNOSIS.F1_GNN()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/utils.html#gnnwr.utils.DIAGNOSIS.R2"><code class="docutils literal notranslate"><span class="pre">DIAGNOSIS.R2()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/utils.html#gnnwr.utils.DIAGNOSIS.RMSE"><code class="docutils literal notranslate"><span class="pre">DIAGNOSIS.RMSE()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/utils.html#gnnwr.utils.DIAGNOSIS.hat"><code class="docutils literal notranslate"><span class="pre">DIAGNOSIS.hat()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="gnnwr/utils.html#gnnwr.utils.OLS"><code class="docutils literal notranslate"><span class="pre">OLS</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="gnnwr/utils.html#gnnwr.utils.Visualize"><code class="docutils literal notranslate"><span class="pre">Visualize</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/utils.html#gnnwr.utils.Visualize.display_dataset"><code class="docutils literal notranslate"><span class="pre">Visualize.display_dataset()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/utils.html#gnnwr.utils.Visualize.dot_map"><code class="docutils literal notranslate"><span class="pre">Visualize.dot_map()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="gnnwr/utils.html#gnnwr.utils.Visualize.weights_heatmap"><code class="docutils literal notranslate"><span class="pre">Visualize.weights_heatmap()</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -95,7 +173,7 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="modules.html" class="btn btn-neutral float-right" title="gnnwr" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="gnnwr/datasets.html" class="btn btn-neutral float-right" title="gnnwr.datasets module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

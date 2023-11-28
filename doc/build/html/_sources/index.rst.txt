@@ -7,10 +7,11 @@ Welcome to GNNWR's documentation!
 =================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents:
-
-   modules.rst
+   :glob:
+   
+   gnnwr/*
 
 Indices and tables
 ==================

@@ -247,7 +247,7 @@ class GNNWR:
             upepoch = optimizer_params.get("upepoch", 10000)
             uprate = (maxlr - minlr) / upepoch * (upepoch // 20)
             decayepoch = optimizer_params.get("decayepoch", 20000)
-            decayrate = optimizer_params.get("decayrate", 0.1)
+            decayrate = optimizer_params.get("decayrate", 0.95)
             stop_change_epoch = optimizer_params.get("stop_change_epoch", 30000)
             stop_lr = optimizer_params.get("stop_lr", 0.001)
             lamda_lr = lambda epoch: (epoch // (upepoch // 20)) * uprate + minlr if epoch < upepoch else (
@@ -422,6 +422,9 @@ class GNNWR:
             if ``early_stop`` is ``-1``, the training will not stop until the max epoch
         print_frequency : int
             the frequency of printing the information (default: ``50``)
+
+        show_detailed_info : bool
+            if ``True``, the detailed information will be shown (default: ``True``)
         """
         self.__istrained = True
         if self._use_gpu:
@@ -560,7 +563,7 @@ class GNNWR:
         path : str
             the path of the model
         use_dict : bool
-            whether use dict to load the model (default: ``False``)
+            whether the function use dict to load the model (default: ``False``)
         map_location : str
             the location of the model (default: ``None``)
             the location can be ``"cpu"`` or ``"cuda"``
@@ -635,7 +638,7 @@ class GNNWR:
             the path of the model(default: ``None``)
             | if ``path`` is ``None``, the model will be loaded from ``self._modelSavePath + "/" + self._modelName + ".pkl"``
         use_dict : bool
-            whether use dict to load the model (default: ``False``)
+            whether the function use dict to load the model (default: ``False``)
             | if ``use_dict`` is ``True``, the model will be loaded from ``path`` as dict
         map_location : str
             the location of the model (default: ``None``)
@@ -664,24 +667,32 @@ class GNNWR:
         logging.info("Test Loss: " + str(self.__testLoss) + "; Test R2: " + str(self.__testr2))
         # print result
         # basic information
-        print("--------------------Result Table--------------------\n")
+        print("--------------------Model Information-----------------")
         print("Model Name:           |", self._modelName)
         print("Model Structure:      |\n", self._model)
         print("Optimizer:            |\n", self._optimizer)
         print("independent variable: |", self._train_dataset.x)
         print("dependent variable:   |", self._train_dataset.y)
-        print("\n----------------------------------------------------\n")
-        print("Test Loss: ", self.__testLoss, " Test R2: ", self.__testr2)
-        if self._valid_r2 is not None and self._valid_r2 != float('-inf'):
-            print("Train R2:  {:5f}".format(self._besttrainr2), " Valid R2: ", self._bestr2)
         # OLS
-        print("\nOLS:  |", self._weight)
-        # Diagnostics
-        print("R2:   |", self.__testr2)
-        print("RMSE: | {:5f}".format(self._test_diagnosis.RMSE().data))
-        print("AIC:  | {:5f}".format(self._test_diagnosis.AIC()))
-        print("AICc: | {:5f}".format(self._test_diagnosis.AICc()))
-        print("F1:   | {:5f}".format(self._test_diagnosis.F1_GNN().data))
+        print("\nOLS weight:|", end=" ")
+        for i in range(len(self._weight)):
+            print(" {:.5f}".format(self._weight[i]), end=" ")
+        print("\n")
+        print("\n--------------------Result Information----------------")
+        print("Test Loss: | {:>25.5f}".format(self.__testLoss))
+        print("Test R2  : | {:>25.5f}".format(self.__testr2))
+        if self._valid_r2 is not None and self._valid_r2 != float('-inf'):
+            print("Train R2 : | {:>25.5f}".format(self._besttrainr2))
+            print("Valid R2 : | {:>25.5f}".format(self._valid_r2))
+        print("RMSE: | {:>30.5f}".format(self._test_diagnosis.RMSE().data))
+        print("AIC:  | {:>30.5f}".format(self._test_diagnosis.AIC()))
+        print("AICc: | {:>30.5f}".format(self._test_diagnosis.AICc()))
+        print("F1:   | {:>30.5f}".format(self._test_diagnosis.F1_Global().data))
+        print("F2:   | {:>30.5f}".format(self._test_diagnosis.F2_Global().flatten()[0].data))
+        F3_Local_dict = self._test_diagnosis.F3_Local()[0]
+        for key in F3_Local_dict:
+            width = 30-(len(key) - 4)
+            print("{}: | {:>{width}.5f}".format(key, F3_Local_dict[key].data, width=width))
 
     def reg_result(self, filename=None, model_path=None, use_dict=False, only_return=False, map_location=None):
         """

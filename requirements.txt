@@ -4,3 +4,8 @@ scikit_learn>=1.0.2
 statsmodels>=0.13.5
 torch>=1.8.1
 tqdm>=4.63.0
+
+folium~=0.14.0
+branca~=0.6.0
+scipy~=1.10.1
+scikit-learn~=1.2.2

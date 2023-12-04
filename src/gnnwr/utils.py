@@ -3,7 +3,8 @@ import statsmodels.api as sm
 import pandas as pd
 import torch
 import warnings
-import copy
+from scipy.stats import f
+from scipy.stats import t
 import folium
 from folium.plugins import HeatMap, MarkerCluster
 import branca
@@ -42,6 +43,7 @@ class DIAGNOSIS:
     """
 
     def __init__(self, weight, x_data, y_data, y_pred):
+
         self.__weight = weight
         self.__x_data = x_data
         self.__y_data = y_data
@@ -61,10 +63,13 @@ class DIAGNOSIS:
         gtweight_3d = torch.diag_embed(self.__weight)
         hatS_temp = torch.matmul(gtweight_3d,
                                  torch.matmul(torch.inverse(torch.matmul(x_data_tile_t, x_data_tile)), x_data_tile_t))
+        self.__hat_temp = hatS_temp
         hatS = torch.matmul(x_data.view(-1, 1, x_data.size(1)), hatS_temp)
         hatS = hatS.view(-1, self.__n)
         self.__hat = hatS
         self.__S = torch.trace(self.__hat)
+        self.f3_dict = None
+        self.f3_dict_2 = None
 
     def hat(self):
         """
@@ -72,16 +77,67 @@ class DIAGNOSIS:
         """
         return self.__hat
 
-    def F1_GNN(self):
+    def F1_Global(self):
         """
         :return: F1-test
         """
         k1 = self.__n - 2 * torch.trace(self.__hat) + \
              torch.trace(torch.mm(self.__hat.transpose(-2, -1), self.__hat))
+
         k2 = self.__n - self.__k - 1
         rss_olr = torch.sum(
             (torch.mean(self.__y_data) - torch.mm(self.__ols_hat, self.__y_data)) ** 2)
+        F_value = self.__ssr / k1 / (rss_olr / k2)
+        # p_value = f.sf(F_value, k1, k2)
         return self.__ssr / k1 / (rss_olr / k2)
+
+    def F2_Global(self):
+        """
+        :return: F2-test
+        """
+        # A = (I - H) - (I - S)^T*(I - S)
+        A = (torch.eye(self.__n) - self.__ols_hat) - torch.mm(
+            (torch.eye(self.__n) - self.__hat).transpose(-2, -1),
+            (torch.eye(self.__n) - self.__hat))
+        v1 = torch.trace(A)
+        # DSS = y^T*A*y
+        DSS = torch.mm(self.__y_data.transpose(-2, -1), torch.mm(A, self.__y_data))
+        k2 = self.__n - self.__k - 1
+        rss_olr = torch.sum(
+            (torch.mean(self.__y_data) - torch.mm(self.__ols_hat, self.__y_data)) ** 2)
+
+        return DSS / v1 / (rss_olr / k2)
+
+    def F3_Local(self):
+        """
+        :return: F1-test of each variable
+        """
+
+        ek_dict = {}
+        self.f3_dict = {}
+        self.f3_dict_2 = {}
+        for i in range(self.__x_data.size(1)):
+            ek_zeros = torch.zeros([self.__x_data.size(1)])
+            ek_zeros[i] = 1
+            ek_dict['ek' + str(i)] = torch.reshape(torch.reshape(torch.tile(ek_zeros.clone().detach(), [self.__n]),
+                                                                 [self.__n, -1]),
+                                                   [-1, 1, self.__x_data.size(1)])
+            hatB = torch.matmul(ek_dict['ek' + str(i)], self.__hat_temp)
+            hatB = torch.reshape(hatB, [-1, self.__n])
+
+            J_n = torch.ones([self.__n, self.__n]) / self.__n
+            L = torch.matmul(hatB.transpose(-2, -1), torch.matmul(torch.eye(self.__n) - J_n, hatB))
+
+            vk2 = 1 / self.__n * torch.matmul(self.__y_data.transpose(-2, -1), torch.matmul(L, self.__y_data))
+            trace_L = torch.trace(1 / self.__n * L)
+            f3 = torch.squeeze(vk2 / trace_L / (self.__ssr / self.__n))
+            self.f3_dict['f3_param_' + str(i)] = f3
+
+            bk = torch.matmul(hatB, self.__y_data)
+            vk2_2 = 1 / self.__n * torch.sum((bk - torch.mean(bk)) ** 2)
+            f3_2 = torch.squeeze(vk2_2 / trace_L / (self.__ssr / self.__n))
+            self.f3_dict_2['f3_param_' + str(i)] = f3_2
+        return self.f3_dict, self.f3_dict_2
 
     def AIC(self):
         """

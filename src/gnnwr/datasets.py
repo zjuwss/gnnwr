@@ -117,19 +117,19 @@ class baseDataset(Dataset):
         if scale_fn == "minmax_scale":
             self.scale_fn = "minmax_scale"
             x_scale_params = scale_params[0]
-            # y_scale_params = scale_params[1]
+            y_scale_params = scale_params[1]
             self.x_scale_info = {"min": x_scale_params.data_min_, "max": x_scale_params.data_max_}
             self.x_data = x_scale_params.transform(pd.DataFrame(self.x_data, columns=self.x))
-            # self.y_scale_info = {"min": y_scale_params.data_min_, "max": y_scale_params.data_max_}
-            # self.y_data = y_scale_params.transform(pd.DataFrame(self.y_data, columns=self.y))
+            self.y_scale_info = {"min": y_scale_params.data_min_, "max": y_scale_params.data_max_}
+            self.y_data = y_scale_params.transform(pd.DataFrame(self.y_data, columns=self.y))
         elif scale_fn == "standard_scale":
             self.scale_fn = "standard_scale"
             x_scale_params = scale_params[0]
-            # y_scale_params = scale_params[1]
+            y_scale_params = scale_params[1]
             self.x_scale_info = {"mean": x_scale_params.mean_, "var": x_scale_params.var_}
             self.x_data = x_scale_params.transform(pd.DataFrame(self.x_data, columns=self.x))
-            # self.y_scale_info = {"mean": y_scale_params.mean_, "var": y_scale_params.var_}
-            # self.y_data = y_scale_params.transform(pd.DataFrame(self.y_data, columns=self.y))
+            self.y_scale_info = {"mean": y_scale_params.mean_, "var": y_scale_params.var_}
+            self.y_data = y_scale_params.transform(pd.DataFrame(self.y_data, columns=self.y))
 
         self.getScaledDataframe()
 
@@ -154,17 +154,17 @@ class baseDataset(Dataset):
         if scale_fn == "minmax_scale":
             self.scale_fn = "minmax_scale"
             x_scale_params = scale_params[0]
-            # y_scale_params = scale_params[1]
+            y_scale_params = scale_params[1]
             # self.x_data = self.x_data * (x_scale_params["max"] - x_scale_params["min"]) + x_scale_params["min"]
             self.x_data = (self.x_data - x_scale_params["min"]) / (x_scale_params["max"] - x_scale_params["min"])
-            # self.y_data = self.y_data * (y_scale_params["max"] - y_scale_params["min"]) + y_scale_params["min"]
+            self.y_data = (self.y_data - y_scale_params["min"]) / (y_scale_params["max"] - y_scale_params["min"])
         elif scale_fn == "standard_scale":
             self.scale_fn = "standard_scale"
             x_scale_params = scale_params[0]
-            # y_scale_params = scale_params[1]
+            y_scale_params = scale_params[1]
             # self.x_data = self.x_data * np.sqrt(x_scale_params["var"]) + x_scale_params["mean"]
             self.x_data = (self.x_data - x_scale_params['mean']) / np.sqrt(x_scale_params["var"])
-            # self.y_data = self.y_data * np.sqrt(y_scale_params["var"]) + y_scale_params["mean"]
+            self.y_data = (self.y_data - y_scale_params['mean']) / np.sqrt(y_scale_params["var"])
 
         self.getScaledDataframe()
 
@@ -287,9 +287,11 @@ class predictDataset(Dataset):
     :param is_need_STNN: whether need STNN
     """
 
-    def __init__(self, data, x_column, process_fn="minmax_scale", scale_info=[], is_need_STNN=False):
+    def __init__(self, data, x_column, process_fn="minmax_scale", scale_info=None, is_need_STNN=False):
 
         # data = data.astype(np.float32)
+        if scale_info is None:
+            scale_info = []
         self.dataframe = data
         self.x = x_column
         if data is None:
@@ -368,7 +370,7 @@ class predictDataset(Dataset):
 
         return x
 
-    def minmax_scaler(self, x, min=[], max=[]):
+    def minmax_scaler(self, x, min=None, max=None):
         """
         function of minmax scaler
 
@@ -377,13 +379,17 @@ class predictDataset(Dataset):
         :param max: maximum value of each attribute
         :return: Output attribute data
         """
+        if max is None:
+            max = []
+        if min is None:
+            min = []
         if len(min) == 0:
             x = (x - x.min(axis=0)) / (x.max(axis=0) - x.min(axis=0))
         else:
             x = (x - min) / (max - min)
         return x
 
-    def standard_scaler(self, x, mean=[], std=[]):
+    def standard_scaler(self, x, mean=None, std=None):
         """
         function of standard scaler
 
@@ -392,6 +398,10 @@ class predictDataset(Dataset):
         :param std: standard deviation of each attribute
         :return: Output attribute data
         """
+        if std is None:
+            std = []
+        if mean is None:
+            mean = []
         if len(mean) == 0:
             x = (x - x.mean(axis=0)) / x.std(axis=0)
         else:
@@ -410,7 +420,7 @@ def BasicDistance(x, y):
     x = np.float32(x)
     y = np.float32(y)
     dist = distance.cdist(x, y, 'euclidean')
-    return dist  # np.float32(np.sqrt(np.sum((x[:, np.newaxis, :] - y) ** 2, axis=2)))
+    return dist
 
 
 def Manhattan_distance(x, y):
@@ -425,7 +435,7 @@ def Manhattan_distance(x, y):
 
 
 def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_column=None, temp_column=None,
-                 id_column=None, sample_seed=100, process_fn="minmax_scale", batch_size=32, shuffle=True,
+                 id_column=None, sample_seed=42, process_fn="minmax_scale", batch_size=32, shuffle=True,
                  use_class=baseDataset,
                  spatial_fun=BasicDistance, temporal_fun=Manhattan_distance, max_val_size=-1, max_test_size=-1,
                  from_for_cv=0, is_need_STNN=False, Reference=None, simple_distance=True):
@@ -439,6 +449,7 @@ def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_colu
     :param y_column: output attribute column name
     :param spatial_column: spatial attribute column name
     :param temp_column: temporal attribute column name
+    :param id_column: id column name
     :param sample_seed: random seed
     :param process_fn: data pre-process function
     :param batch_size: batch size

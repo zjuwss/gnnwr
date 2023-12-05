@@ -109,7 +109,7 @@ Air pollution, especially the measurement of PM2.5, has recently been a popular 
 
 > Chen, Y., Wu, S., Wang, Y., Zhang, F., Liu, R., & Du, Z. (2021). Satellite-based mapping of high-resolution ground-level pm2. 5 with VIIRS IP AOD in China through spatially neural network weighted regression. *Remote Sensing*, *13*(10), 1979.
 
-👉 [Modeling PM2.5 with GNNWR on Deep-time.org](https://mydde.deep-time.org/org-portal/MyDDE/project/64f94d982a7491e657efb01b)
+👉 [Modeling PM2.5 with GNNWR on Deep-time.org](https://mydde.deep-time.org/org-portal/MyDDE/project/65519461afe0567cf0d50519)
 
 #### 4.1.2 Air pollution of NO2
 

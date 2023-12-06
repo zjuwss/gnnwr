@@ -222,6 +222,8 @@ class baseDataset(Dataset):
         y_scale_info = {}
         for key, value in self.x_scale_info.items():
             x_scale_info[key] = value.tolist()
+        for key, value in self.y_scale_info.items():
+            y_scale_info[key] = value.tolist()
         with open(os.path.join(dirname, "dataset_info.json"), "w") as f:
             distance_scale_info = {}
             for key in self.distances_scale_param.keys():

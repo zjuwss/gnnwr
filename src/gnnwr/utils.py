@@ -44,10 +44,10 @@ class DIAGNOSIS:
 
     def __init__(self, weight, x_data, y_data, y_pred):
 
-        self.__weight = weight
-        self.__x_data = x_data
-        self.__y_data = y_data
-        self.__y_pred = y_pred
+        self.__weight = weight.detach().cpu()
+        self.__x_data = x_data.detach().cpu()
+        self.__y_data = y_data.detach().cpu()
+        self.__y_pred = y_pred.detach().cpu()
         self.__n = len(y_data)
         self.__k = len(x_data[0])
 

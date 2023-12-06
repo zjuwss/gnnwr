@@ -76,6 +76,7 @@ class baseDataset(Dataset):
         self.temporal = None  # temporal is the temporal distance matrix of spatio-temporal data
         self.distances_scale_params = None  # scale parameters of distances
         self.simple_distance = True
+
     def __len__(self):
         """
         :return: the number of samples
@@ -232,7 +233,7 @@ class baseDataset(Dataset):
                        "is_need_STNN": self.is_need_STNN, "scale_fn": self.scale_fn,
                        "x_scale_info": json.dumps(x_scale_info), "y_scale_info": json.dumps(y_scale_info),
                        "distance_scale_info": json.dumps(distance_scale_info),
-                       'simple_distance':self.simple_distance
+                       'simple_distance': self.simple_distance
                        }, f)
         # save the distance matrix
         np.save(os.path.join(dirname, "distances.npy"), self.distances)
@@ -667,12 +668,16 @@ def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_colu
             test_dataset.temporal = np.concatenate(
                 (test_dataset.temporal, np.transpose(test_temp_temporal, (1, 0, 2))), axis=2)
     train_dataset.simple_distance = simple_distance
+    val_dataset.simple_distance = simple_distance
+    test_dataset.simple_distance = simple_distance
     # initialize dataloader for train/val/test dataset
     # set batch_size for train_dataset as batch_size
     # set batch_size for val_dataset as max_val_size
     # set batch_size for test_dataset as max_test_size
-    if max_val_size < 0: max_val_size = len(val_dataset)
-    if max_test_size < 0: max_test_size = len(test_dataset)
+    if max_val_size < 0:
+        max_val_size = len(val_dataset)
+    if max_test_size < 0:
+        max_test_size = len(test_dataset)
     if process_fn == "minmax_scale":
         distance_scale = MinMaxScaler()
         temporal_scale = MinMaxScaler()

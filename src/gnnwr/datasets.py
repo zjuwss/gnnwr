@@ -75,7 +75,7 @@ class baseDataset(Dataset):
         self.distances = None  # distances is the distance matrix of spatial/spatio-temporal data
         self.temporal = None  # temporal is the temporal distance matrix of spatio-temporal data
         self.distances_scale_params = None  # scale parameters of distances
-
+        self.simple_distance = True
     def __len__(self):
         """
         :return: the number of samples
@@ -231,7 +231,8 @@ class baseDataset(Dataset):
             json.dump({"x": self.x, "y": self.y, "id": self.id, "batch_size": self.batch_size, "shuffle": self.shuffle,
                        "is_need_STNN": self.is_need_STNN, "scale_fn": self.scale_fn,
                        "x_scale_info": json.dumps(x_scale_info), "y_scale_info": json.dumps(y_scale_info),
-                       "distance_scale_info": json.dumps(distance_scale_info)
+                       "distance_scale_info": json.dumps(distance_scale_info),
+                       'simple_distance':self.simple_distance
                        }, f)
         # save the distance matrix
         np.save(os.path.join(dirname, "distances.npy"), self.distances)
@@ -257,15 +258,16 @@ class baseDataset(Dataset):
         self.shuffle = dataset_info["shuffle"]
         self.is_need_STNN = dataset_info["is_need_STNN"]
         self.scale_fn = dataset_info["scale_fn"]
+        self.simple_distance = dataset_info["simple_distance"]
         self.x_scale_info = json.loads(dataset_info["x_scale_info"])
-        # self.y_scale_info = json.loads(dataset_info["y_scale_info"])
+        self.y_scale_info = json.loads(dataset_info["y_scale_info"])
         self.distances_scale_param = json.loads(dataset_info["distance_scale_info"])
         x_scale_info = self.x_scale_info
-        # y_scale_info = self.y_scale_info
+        y_scale_info = self.y_scale_info
         for key, value in x_scale_info.items():
             x_scale_info[key] = np.array(value)
-        # for key, value in y_scale_info.items():
-        #     y_scale_info[key] = np.array(value)
+        for key, value in y_scale_info.items():
+            y_scale_info[key] = np.array(value)
         # read the distance matrix
         self.distances = np.load(os.path.join(dirname, "distances.npy")).astype(np.float32)
         # read dataframe

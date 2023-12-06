@@ -257,7 +257,7 @@ class GNNWR:
         else:
             if optimizer_params is None:
                 optimizer_params = {}
-            scheduler = optimizer_params.get("scheduler", "CosineAnnealingWarmRestarts")
+            scheduler = optimizer_params.get("scheduler", "MultiStepLR")
             scheduler_milestones = optimizer_params.get(
                 "scheduler_milestones", [500, 1000, 2000, 4000])
             scheduler_gamma = optimizer_params.get("scheduler_gamma", 0.5)

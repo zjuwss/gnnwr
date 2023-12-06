@@ -10,7 +10,7 @@ from folium.plugins import HeatMap, MarkerCluster
 import branca
 
 
-class OLS():
+class OLS:
     """
     OLS is the class to calculate the OLR weights of data.Get the weight by `object.params`.
 
@@ -43,34 +43,34 @@ class DIAGNOSIS:
     """
 
     def __init__(self, weight, x_data, y_data, y_pred):
+        self.__weight = weight.clone().to('cpu')
+        self.__x_data = x_data.clone().to('cpu')
+        self.__y_data = y_data.clone().to('cpu')
+        self.__y_pred = y_pred.clone().to('cpu')
 
-        self.__weight = weight.detach().cpu()
-        self.__x_data = x_data.detach().cpu()
-        self.__y_data = y_data.detach().cpu()
-        self.__y_pred = y_pred.detach().cpu()
-        self.__n = len(y_data)
-        self.__k = len(x_data[0])
+        self.__n = len(self.__y_data)
+        self.__k = len(self.__x_data[0])
 
-        self.__residual = y_data - y_pred
-        self.__ssr = torch.sum((y_pred - torch.mean(y_data)) ** 2)
+        self.__residual = self.__y_data - self.__y_pred
+        self.__ssr = torch.sum((self.__y_pred - torch.mean(self.__y_data)) ** 2)
 
         self.__hat_com = torch.mm(torch.linalg.inv(
             torch.mm(self.__x_data.transpose(-2, -1), self.__x_data)), self.__x_data.transpose(-2, -1))
         self.__ols_hat = torch.mm(self.__x_data, self.__hat_com)
-        x_data_tile = x_data.repeat(self.__n, 1)
+        x_data_tile = self.__x_data.repeat(self.__n, 1)
         x_data_tile = x_data_tile.view(self.__n, self.__n, -1)
         x_data_tile_t = x_data_tile.transpose(1, 2)
         gtweight_3d = torch.diag_embed(self.__weight)
+
         hatS_temp = torch.matmul(gtweight_3d,
                                  torch.matmul(torch.inverse(torch.matmul(x_data_tile_t, x_data_tile)), x_data_tile_t))
         self.__hat_temp = hatS_temp
-        hatS = torch.matmul(x_data.view(-1, 1, x_data.size(1)), hatS_temp)
+        hatS = torch.matmul(self.__x_data.view(-1, 1, self.__x_data.size(1)), hatS_temp)
         hatS = hatS.view(-1, self.__n)
         self.__hat = hatS
         self.__S = torch.trace(self.__hat)
         self.f3_dict = None
         self.f3_dict_2 = None
-
     def hat(self):
         """
         :return: hat matrix
@@ -210,7 +210,7 @@ class Visualize:
         # colormap = branca.colormap.linear.RdYlGn_10.scale().to_step(steps)
         if colors is None:
             colors = []
-        if y_column == None:
+        if y_column is None:
             warnings.warn("y_column is not given. Using the first y_column in dataset")
             y_column = self._y_column[0]
         if name == 'all':
@@ -276,7 +276,7 @@ class Visualize:
         else:
             colormap = branca.colormap.LinearColormap(colors=colors, vmin=dst_min, vmax=dst_max).to_step(steps)
         for idx, row in data.iterrows():
-            folium.CircleMarker(location=[row[lat_column], row[lon_column]], radius=7,
+            folium.CircleMarker(location=(row[lat_column], row[lon_column]), radius=7,
                                 color=colormap.rgb_hex_str(row[y_column]), fill=True, fill_opacity=1,
                                 popup="""
             longitude:{}

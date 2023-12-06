@@ -299,7 +299,7 @@ class predictDataset(Dataset):
     :param x_column: independent variable column name
     :param process_fn: process function name
     :param scale_info: process function parameters
-    :param is_need_STNN: whether need STNN
+    :param is_need_STNN: whether to need STNN
     """
 
     def __init__(self, data, x_column, process_fn="minmax_scale", scale_info=None, is_need_STNN=False):

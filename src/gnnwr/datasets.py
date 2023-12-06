@@ -76,6 +76,10 @@ class baseDataset(Dataset):
         self.temporal = None  # temporal is the temporal distance matrix of spatio-temporal data
         self.distances_scale_params = None  # scale parameters of distances
         self.simple_distance = True
+        self.scaledDataframe = None
+        self.batch_size = None
+        self.shuffle = None
+        self.distances_scale_param = None
 
     def __len__(self):
         """
@@ -229,9 +233,15 @@ class baseDataset(Dataset):
             distance_scale_info = {}
             for key in self.distances_scale_param.keys():
                 distance_scale_info[key] = self.distances_scale_param[key].tolist()
-            json.dump({"x": self.x, "y": self.y, "id": self.id, "batch_size": self.batch_size, "shuffle": self.shuffle,
-                       "is_need_STNN": self.is_need_STNN, "scale_fn": self.scale_fn,
-                       "x_scale_info": json.dumps(x_scale_info), "y_scale_info": json.dumps(y_scale_info),
+            json.dump({"x": self.x,
+                       "y": self.y,
+                       "id": self.id,
+                       "batch_size": self.batch_size,
+                       "shuffle": self.shuffle,
+                       "is_need_STNN": self.is_need_STNN,
+                       "scale_fn": self.scale_fn,
+                       "x_scale_info": json.dumps(x_scale_info),
+                       "y_scale_info": json.dumps(y_scale_info),
                        "distance_scale_info": json.dumps(distance_scale_info),
                        'simple_distance': self.simple_distance
                        }, f)
@@ -918,7 +928,8 @@ def init_predict_dataset(data, train_dataset, x_column, spatial_column=None, tem
                                                                     train_dataset.distances_scale_param['mean'],
                                                                     train_dataset.distances_scale_param['var'])
     # initialize dataloader for train/val/test dataset
-    if max_size < 0: max_size = len(predict_dataset)
+    if max_size < 0:
+        max_size = len(predict_dataset)
     predict_dataset.dataloader = DataLoader(
         predict_dataset, batch_size=max_size, shuffle=False)
 

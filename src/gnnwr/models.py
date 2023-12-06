@@ -575,9 +575,12 @@ class GNNWR:
             self._model = torch.load(path, map_location=map_location)
         if self._use_gpu:
             self._model = self._model.cuda()
+            self._out = self._out.cuda()
         else:
             self._model = self._model.cpu()
+            self._out = self._out.cpu()
         self.__istrained = True
+
 
     def gpumodel_to_cpu(self, path, save_path, use_model=True):
         """

@@ -257,9 +257,9 @@ class GNNWR:
         else:
             if optimizer_params is None:
                 optimizer_params = {}
-            scheduler = optimizer_params.get("scheduler", "MultiStepLR")
+            scheduler = optimizer_params.get("scheduler", "CosineAnnealingWarmRestarts")
             scheduler_milestones = optimizer_params.get(
-                "scheduler_milestones", [500, 1000, 2000, 4000])
+                "scheduler_milestones", [100, 500, 1000, 2000])
             scheduler_gamma = optimizer_params.get("scheduler_gamma", 0.5)
             scheduler_T_max = optimizer_params.get("scheduler_T_max", 1000)
             scheduler_eta_min = optimizer_params.get("scheduler_eta_min", 0.01)
@@ -519,6 +519,7 @@ class GNNWR:
                 output = self._out(self._model(data).mul(coef.to(torch.float32)))
                 output = output.view(-1).cpu().detach().numpy()
                 result = np.append(result, output)
+        result = self._train_dataset.rescale_y(result)
         dataset.dataframe['pred_result'] = result
         dataset.pred_result = result
         return dataset.dataframe
@@ -684,9 +685,9 @@ class GNNWR:
         print("\n--------------------Result Information----------------")
         print("Test Loss: | {:>25.5f}".format(self.__testLoss))
         print("Test R2  : | {:>25.5f}".format(self.__testr2))
-        if self._valid_r2 is not None and self._valid_r2 != float('-inf'):
+        if self._besttrainr2 is not None and self._besttrainr2 != float('-inf'):
             print("Train R2 : | {:>25.5f}".format(self._besttrainr2))
-            print("Valid R2 : | {:>25.5f}".format(self._valid_r2))
+            print("Valid R2 : | {:>25.5f}".format(self._bestr2))
         print("RMSE: | {:>30.5f}".format(self._test_diagnosis.RMSE().data))
         print("AIC:  | {:>30.5f}".format(self._test_diagnosis.AIC()))
         print("AICc: | {:>30.5f}".format(self._test_diagnosis.AICc()))
@@ -768,6 +769,7 @@ class GNNWR:
         columns = columns + ["Pred_" + self._train_dataset.y[0]] + self._train_dataset.id
         result = pd.DataFrame(result, columns=columns)
         result[self._train_dataset.id] = result[self._train_dataset.id].astype(np.int32)
+        result["Pred_" + self._train_dataset.y[0]] = self._train_dataset.rescale_y(result["Pred_" + self._train_dataset.y[0]]).astype(np.float32)
         if only_return:
             return result
         if filename is not None:

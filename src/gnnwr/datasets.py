@@ -211,6 +211,28 @@ class baseDataset(Dataset):
         else:
             raise ValueError("invalid process_fn")
         return x, y
+    
+    def rescale_y(self, y):
+        """
+        rescale the dependent variable data
+
+        Parameters
+        ----------
+        y: numpy.ndarray
+            dependent variable data
+
+        Returns
+        -------
+        y: numpy.ndarray
+            rescaled dependent variable data
+        """
+        if self.scale_fn == "minmax_scale":
+            y = np.multiply(y, self.y_scale_info["max"] - self.y_scale_info["min"]) + self.y_scale_info["min"]
+        elif self.scale_fn == "standard_scale":
+            y = np.multiply(y, np.sqrt(self.y_scale_info["var"])) + self.y_scale_info["mean"]
+        else:
+            raise ValueError("invalid process_fn")
+        return y
 
     def save(self, dirname):
         """

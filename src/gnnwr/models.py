@@ -519,7 +519,6 @@ class GNNWR:
                 output = self._out(self._model(data).mul(coef.to(torch.float32)))
                 output = output.view(-1).cpu().detach().numpy()
                 result = np.append(result, output)
-        result = self._train_dataset.rescale_y(result)
         dataset.dataframe['pred_result'] = result
         dataset.pred_result = result
         return dataset.dataframe
@@ -769,7 +768,7 @@ class GNNWR:
         columns = columns + ["Pred_" + self._train_dataset.y[0]] + self._train_dataset.id
         result = pd.DataFrame(result, columns=columns)
         result[self._train_dataset.id] = result[self._train_dataset.id].astype(np.int32)
-        result["Pred_" + self._train_dataset.y[0]] = self._train_dataset.rescale_y(result["Pred_" + self._train_dataset.y[0]]).astype(np.float32)
+        result["Pred_" + self._train_dataset.y[0]] = result["Pred_" + self._train_dataset.y[0]].astype(np.float32)
         if only_return:
             return result
         if filename is not None:

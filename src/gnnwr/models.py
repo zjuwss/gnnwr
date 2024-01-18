@@ -147,6 +147,7 @@ class GNNWR:
             self._out.weight = nn.Parameter(torch.tensor([self._weight]).to(
                 torch.float32), requires_grad=False)  # define the weight
         else:
+            self._weight = np.ones((1, self._outsize))
             self._out.weight = nn.Parameter(torch.tensor(np.ones((1, self._outsize))).to(
                 torch.float32), requires_grad=False)  # define the weight
         self._criterion = nn.MSELoss()  # loss function

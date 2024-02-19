@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.optim as optim
 import warnings
 from sklearn.metrics import r2_score
-from torch.utils.tensorboard import SummaryWriter  # 用于保存训练过程
+from torch.utils.tensorboard import SummaryWriter  # to save the process of the model
 from tqdm import trange
 from collections import OrderedDict
 import logging
@@ -15,7 +15,6 @@ from .networks import SWNN, STPNN, STNN_SPNN
 from .utils import OLS, DIAGNOSIS
 
 
-# 23.6.8_TODO: 寻找合适的优化器  考虑SGD+学习率调整  输出权重
 class GNNWR:
     r"""
     GNNWR(Geographically neural network coefficiented regression) is a model to address spatial non-stationarity in various domains with complex geographical processes,
@@ -526,7 +525,7 @@ class GNNWR:
 
     def predict_coef(self, dataset):
         """
-        predict the spatial coefficient of the dataset
+        predict the spatial coefficient of the independent variable
 
         Parameters
         ----------
@@ -557,7 +556,7 @@ class GNNWR:
 
     def load_model(self, path, use_dict=False, map_location=None):
         """
-        load the model
+        load the model from the path
 
         Parameters
         ----------
@@ -634,7 +633,7 @@ class GNNWR:
 
     def result(self, path=None, use_dict=False, map_location=None):
         """
-        print the result of the model, including the model structure, optimizer,the result of test dataset
+        print the result of the model, including the model name, regression fomula and the result of test dataset
 
         Parameters
         ----------
@@ -700,7 +699,7 @@ class GNNWR:
 
     def reg_result(self, filename=None, model_path=None, use_dict=False, only_return=False, map_location=None):
         """
-        save the regression result of the model, including the coefficient of each argument, the bias, the predicted result
+        save the regression result of the model, including the coefficient of each argument, the bias and the predicted result
 
         Parameters
         ----------

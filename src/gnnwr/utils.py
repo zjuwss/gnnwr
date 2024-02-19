@@ -32,7 +32,9 @@ class OLS:
 class DIAGNOSIS:
     """
     `DIAGNOSIS` is the class to calculate the diagnoses of the result of GNNWR/GTNNWR.
-
+    These diagnoses include F1-test, F2-test, F3-test, AIC, AICc, R2, Adjust_R2, RMSE (Root Mean Square Error).
+    The explanation of these diagnoses can be found in the paper 
+    `Geographically neural network weighted regression for the accurate estimation of spatial non-stationarity <https://doi.org/10.1080/13658816.2019.1707834>`.
     :param weight: output of the neural network
     :param x_data: the independent variables
     :param y_data: the dependent variables
@@ -70,7 +72,6 @@ class DIAGNOSIS:
         self.f3_dict_2 = None
     def hat(self):
         """
-        
         :return: hat matrix
         """
         return self.__hat
@@ -174,6 +175,15 @@ class DIAGNOSIS:
 
 
 class Visualize:
+    """
+    `Visualize` is the class to visualize the data and the result of GNNWR/GTNNWR.
+    It based on the `folium` package and use GaoDe map as the background. And it can display the dataset, the coefficients heatmap, and the dot map,
+    which helps to understand the spatial distribution of the data and the result of GNNWR/GTNNWR better.
+    
+    :param data: the input data
+    :param lon_lat_columns: the columns of longitude and latitude
+    :param zoom: the zoom of the map
+    """
     def __init__(self, data, lon_lat_columns=None, zoom=4):
         self.__raw_data = data
         self.__tiles = 'https://wprd01.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=en&size=1&scl=1&style=7'
@@ -205,6 +215,15 @@ class Visualize:
             raise ValueError("given data is not instance of GNNWR")
 
     def display_dataset(self, name="all", y_column=None, colors=None, steps=20, vmin=None, vmax=None):
+        """
+        Display the dataset on the map, including the train, valid, test dataset.
+        
+        :param name: the name of the dataset, including 'all', 'train', 'valid', 'test'
+        :param y_column: the column of the displayed variable
+        :param colors: the list of colors, if not given, the default color is used
+        :param steps: the steps of the colors
+        
+        """
         if colors is None:
             colors = []
         if y_column is None:
@@ -241,6 +260,15 @@ class Visualize:
         return res
 
     def coefs_heatmap(self, data_column, colors=None, steps=20, vmin=None, vmax=None):
+        """
+        Display the heatmap of the coefficients of the result of GNNWR/GTNNWR.
+
+        :param data_column: the column of the displayed variable
+        :param colors: the list of colors, if not given, the default color is used
+        :param steps: the steps of the colors
+        :param vmin: the minimum value of the displayed variable, if not given, the minimum value of the variable is used
+        :param vmax: the maximum value of the displayed variable, if not given, the maximum value of the variable is used
+        """
         if colors is None:
             colors = []
         res = folium.Map(location=[self.__center_lat, self.__center_lon], zoom_start=self.__zoom, tiles=self.__tiles,
@@ -261,6 +289,19 @@ class Visualize:
         return res
 
     def dot_map(self, data, lon_column, lat_column, y_column, zoom=4, colors=None, steps=20, vmin=None, vmax=None):
+        """
+        Display the data by dot map, the color of the dot represents the value of the variable.
+        
+        :param data: the input data
+        :param lon_column: the column of longitude
+        :param lat_column: the column of latitude
+        :param y_column: the column of the displayed variable
+        :param zoom: the zoom of the map
+        :param colors: the list of colors, if not given, the default color is used
+        :param steps: the steps of the colors
+        :param vmin: the minimum value of the displayed variable, if not given, the minimum value of the variable is used
+        :param vmax: the maximum value of the displayed variable, if not given, the maximum value of the variable is used
+        """
         if colors is None:
             colors = []
         center_lon = data[lon_column].mean()

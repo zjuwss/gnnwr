@@ -18,8 +18,8 @@ from .utils import OLS, DIAGNOSIS
 # 23.6.8_TODO: 寻找合适的优化器  考虑SGD+学习率调整  输出权重
 class GNNWR:
     r"""
-    GNNWR(Geographically neural network weighted regression) is a model to address spatial non-stationarity in various domains with complex geographical processes,
-    which comes from the paper `Geographically neural network weighted regression for the accurate estimation of spatial non-stationarity <https://doi.org/10.1080/13658816.2019.1707834>`__.
+    GNNWR(Geographically neural network coefficiented regression) is a model to address spatial non-stationarity in various domains with complex geographical processes,
+    which comes from the paper `Geographically neural network coefficiented regression for the accurate estimation of spatial non-stationarity <https://doi.org/10.1080/13658816.2019.1707834>`__.
 
     Parameters
     ----------
@@ -139,14 +139,15 @@ class GNNWR:
         self._log_level = log_level  # log level
         self.__istrained = False  # whether the model is trained
 
-        self._weight = OLS(
-            train_dataset.scaledDataframe, train_dataset.x, train_dataset.y).params  # OLS for weight
+        self._coefficient = OLS(
+            train_dataset.scaledDataframe, train_dataset.x, train_dataset.y).params  # coefficients of OLS
         self._out = nn.Linear(
-            self._outsize, 1, bias=False)  # layer to multiply weight,coefficients, and model output
+            self._outsize, 1, bias=False)  # layer to multiply OLS coefficients and model output
         if use_ols:
-            self._out.weight = nn.Parameter(torch.tensor([self._weight]).to(
+            self._out.weight = nn.Parameter(torch.tensor([self._coefficient]).to(
                 torch.float32), requires_grad=False)  # define the weight
         else:
+            self._coefficient = np.ones((1, self._outsize))
             self._out.weight = nn.Parameter(torch.tensor(np.ones((1, self._outsize))).to(
                 torch.float32), requires_grad=False)  # define the weight
         self._criterion = nn.MSELoss()  # loss function
@@ -221,7 +222,7 @@ class GNNWR:
         # initialize the optimizer
         if optimizer == "SGD":
             self._optimizer = optim.SGD(
-                self._model.parameters(), lr=1, momentum=0.9, weight_decay=1e-3)
+                self._model.parameters(), lr=1, weight_decay=1e-3)
         elif optimizer == "Adam":
             self._optimizer = optim.Adam(
                 self._model.parameters(), lr=self._start_lr, weight_decay=1e-3)
@@ -233,7 +234,7 @@ class GNNWR:
                 self._model.parameters(), lr=self._start_lr)
         elif optimizer == "Adadelta":
             self._optimizer = optim.Adadelta(
-                self._model.parameters(), lr=self._start_lr)
+                self._model.parameters(), lr=self._start_lr, weight_decay=1e-3)
         else:
             raise ValueError("Invalid Optimizer")
         self._optimizer_name = optimizer  # optimizer name
@@ -245,13 +246,13 @@ class GNNWR:
             maxlr = optimizer_params.get("maxlr", 0.1)
             minlr = optimizer_params.get("minlr", 0.01)
             upepoch = optimizer_params.get("upepoch", 10000)
-            uprate = (maxlr - minlr) / upepoch * (upepoch // 20)
+            uprate = (maxlr - minlr) / upepoch * (upepoch // 10)
             decayepoch = optimizer_params.get("decayepoch", 20000)
             decayrate = optimizer_params.get("decayrate", 0.95)
             stop_change_epoch = optimizer_params.get("stop_change_epoch", 30000)
             stop_lr = optimizer_params.get("stop_lr", 0.001)
-            lamda_lr = lambda epoch: (epoch // (upepoch // 20)) * uprate + minlr if epoch < upepoch else (
-                maxlr if epoch < decayepoch else maxlr * (decayrate ** (epoch - decayepoch))) if epoch < stop_change_epoch else stop_lr
+            lamda_lr = lambda epoch: (epoch // (upepoch // 10)) * uprate + minlr if epoch < upepoch else (
+                maxlr if epoch < decayepoch else maxlr * (decayrate ** ((epoch - decayepoch)//10))) if epoch < stop_change_epoch else stop_lr
             self._scheduler = optim.lr_scheduler.LambdaLR(
                 self._optimizer, lr_lambda=lamda_lr)
         else:
@@ -306,7 +307,7 @@ class GNNWR:
             x_true = torch.cat((x_true, coef), 0)
             y_true = torch.cat((y_true, label), 0)
             weight = self._model(data)
-            weight_all = torch.cat((weight_all, weight.mul(torch.tensor(self._weight).to(torch.float32).to(device))), 0)
+            weight_all = torch.cat((weight_all, weight.to(torch.float32)), 0)
             output = self._out(weight.mul(coef.to(torch.float32)))
             y_pred = torch.cat((y_pred, output), 0)
             loss = self._criterion(output, label)  # calculate the loss
@@ -390,8 +391,8 @@ class GNNWR:
                 y_data = torch.cat((y_data, label), 0)
                 weight = self._model(data)
                 weight_all = torch.cat(
-                    (weight_all, weight.mul(torch.tensor(self._weight).to(torch.float32).to(device))), 0)
-                output = self._out(self._model(data).mul(coef.to(torch.float32)))
+                    (weight_all, weight.to(torch.float32).to(device)), 0)
+                output = self._out(weight.mul(coef.to(torch.float32)))
                 y_pred = torch.cat((y_pred, output), 0)
                 loss = self._criterion(output, label)
 
@@ -490,7 +491,7 @@ class GNNWR:
                 print("Training stop! Model has not been improved for over {} epochs.".format(early_stop))
                 break
         self.load_model(self._modelSavePath + '/' + self._modelName + ".pkl")
-        self.result_data = self.getWeights()
+        self.result_data = self.getCoefs()
         print("Best_r2:", self._bestr2)
 
     def predict(self, dataset):
@@ -519,14 +520,13 @@ class GNNWR:
                 output = self._out(self._model(data).mul(coef.to(torch.float32)))
                 output = output.view(-1).cpu().detach().numpy()
                 result = np.append(result, output)
-        result = self._train_dataset.rescale_y(result)
         dataset.dataframe['pred_result'] = result
         dataset.pred_result = result
         return dataset.dataframe
 
-    def predict_weight(self, dataset):
+    def predict_coef(self, dataset):
         """
-        predict the spatial weight of the dataset
+        predict the spatial coefficient of the dataset
 
         Parameters
         ----------
@@ -536,7 +536,7 @@ class GNNWR:
         Returns
         -------
         dataframe
-            the Pandas dataframe of the dataset with the predicted spatial weight
+            the Pandas dataframe of the dataset with the predicted spatial coefficient
         """
         data_loader = dataset.dataloader
         if not self.__istrained:
@@ -547,11 +547,11 @@ class GNNWR:
             for data, coef in data_loader:
                 if self._use_gpu:
                     result, data, coef = result.cuda(), data.cuda(), coef.cuda()
-                    ols_w = torch.tensor(self._weight).to(torch.float32).cuda()
+                    ols_w = torch.tensor(self._coefficient).to(torch.float32).cuda()
                 else:
-                    ols_w = torch.tensor(self._weight).to(torch.float32)
-                weight = self._model(data).mul(ols_w)
-                result = torch.cat((result, weight), 0)
+                    ols_w = torch.tensor(self._coefficient).to(torch.float32)
+                coefficient = self._model(data).mul(ols_w)
+                result = torch.cat((result, coefficient), 0)
         result = result.cpu().detach().numpy()
         return result
 
@@ -673,15 +673,15 @@ class GNNWR:
         # basic information
         print("--------------------Model Information-----------------")
         print("Model Name:           |", self._modelName)
-        print("Model Structure:      |\n", self._model)
-        print("Optimizer:            |\n", self._optimizer)
         print("independent variable: |", self._train_dataset.x)
         print("dependent variable:   |", self._train_dataset.y)
         # OLS
-        print("\nOLS weight:|", end=" ")
-        for i in range(len(self._weight)):
-            print(" {:.5f}".format(self._weight[i]), end=" ")
-        print("\n")
+        print("\nOLS coefficients: ")
+        for i in range(len(self._coefficient)):
+            if i == len(self._coefficient) - 1:
+                print("Intercept: {:.5f}".format(self._coefficient[i]))
+            else:
+                print("x{}: {:.5f}".format(i, self._coefficient[i]))
         print("\n--------------------Result Information----------------")
         print("Test Loss: | {:>25.5f}".format(self.__testLoss))
         print("Test R2  : | {:>25.5f}".format(self.__testr2))
@@ -700,7 +700,7 @@ class GNNWR:
 
     def reg_result(self, filename=None, model_path=None, use_dict=False, only_return=False, map_location=None):
         """
-        save the regression result of the model, including the weight of each argument, the bias, the predicted result
+        save the regression result of the model, including the coefficient of each argument, the bias, the predicted result
 
         Parameters
         ----------
@@ -746,30 +746,30 @@ class GNNWR:
             for data, coef, label, data_index in self._train_dataset.dataloader:
                 data, coef, label, data_index = data.to(device), coef.to(device), label.to(device), data_index.to(device)
                 output = self._out(self._model(data).mul(coef.to(torch.float32)))
-                weight = self._model(data).mul(torch.tensor(self._weight).to(torch.float32).to(device))
-                output = torch.cat((weight, output, data_index), dim=1)
+                coefficient = self._model(data).mul(torch.tensor(self._coefficient).to(torch.float32).to(device))
+                output = torch.cat((coefficient, output, data_index), dim=1)
                 result = torch.cat((result, output), 0)
             for data, coef, label, data_index in self._valid_dataset.dataloader:
                 data, coef, label, data_index = data.to(device), coef.to(device), label.to(device), data_index.to(device)
                 output = self._out(self._model(data).mul(coef.to(torch.float32)))
-                weight = self._model(data).mul(torch.tensor(self._weight).to(torch.float32).to(device))
-                output = torch.cat((weight, output, data_index), dim=1)
+                coefficient = self._model(data).mul(torch.tensor(self._coefficient).to(torch.float32).to(device))
+                output = torch.cat((coefficient, output, data_index), dim=1)
                 result = torch.cat((result, output), 0)
             for data, coef, label, data_index in self._test_dataset.dataloader:
                 data, coef, label, data_index = data.to(device), coef.to(device), label.to(device), data_index.to(device)
                 output = self._out(self._model(data).mul(coef.to(torch.float32)))
-                weight = self._model(data).mul(torch.tensor(self._weight).to(torch.float32).to(device))
-                output = torch.cat((weight, output, data_index), dim=1)
+                coefficient = self._model(data).mul(torch.tensor(self._coefficient).to(torch.float32).to(device))
+                output = torch.cat((coefficient, output, data_index), dim=1)
                 result = torch.cat((result, output), 0)
         result = result.cpu().detach().numpy()
         columns = list(self._train_dataset.x)
         for i in range(len(columns)):
-            columns[i] = "weight_" + columns[i]
+            columns[i] = "coef_" + columns[i]
         columns.append("bias")
         columns = columns + ["Pred_" + self._train_dataset.y[0]] + self._train_dataset.id
         result = pd.DataFrame(result, columns=columns)
         result[self._train_dataset.id] = result[self._train_dataset.id].astype(np.int32)
-        result["Pred_" + self._train_dataset.y[0]] = self._train_dataset.rescale_y(result["Pred_" + self._train_dataset.y[0]]).astype(np.float32)
+        result["Pred_" + self._train_dataset.y[0]] = result["Pred_" + self._train_dataset.y[0]].astype(np.float32)
         if only_return:
             return result
         if filename is not None:
@@ -780,14 +780,14 @@ class GNNWR:
                 RuntimeWarning)
         return result
 
-    def getWeights(self):
+    def getCoefs(self):
         """
-        get weight of each argument
+        get the Coefficients of each argument in dataset
 
         Returns
         -------
         dataframe
-            the Pandas dataframe of the weight of each argument in train_dataset
+            the Pandas dataframe of the coefficient of each argument in dataset
         """
         result_data = self.reg_result(only_return=True)
         result_data['id'] = result_data['id'].astype(np.int64)
@@ -908,8 +908,6 @@ class GTNNWR(GNNWR):
                  STNN_SPNN_params=None,
                  ):
 
-        if optimizer_params is None:
-            optimizer_params = {'scheduler': 'MultiStepLR', 'scheduler_milestones': [100, 300, 500]}
         if dense_layers is None:
             dense_layers = [[], []]
         super(GTNNWR, self).__init__(train_dataset, valid_dataset, test_dataset, dense_layers[1], start_lr, optimizer,

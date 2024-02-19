@@ -3,16 +3,14 @@ import statsmodels.api as sm
 import pandas as pd
 import torch
 import warnings
-from scipy.stats import f
-from scipy.stats import t
 import folium
-from folium.plugins import HeatMap, MarkerCluster
+from folium.plugins import HeatMap
 import branca
 
 
 class OLS:
     """
-    OLS is the class to calculate the OLR weights of data.Get the weight by `object.params`.
+    `OLS` is the class to calculate the OLR coefficients of data.Get the coefficient by `object.params`.
 
     :param dataset: Input data
     :param xName: the independent variables' column
@@ -32,9 +30,8 @@ class OLS:
 
 
 class DIAGNOSIS:
-    # TODO 更多诊断方法
     """
-    Diagnosis is the class to calculate the diagnoses of GNNWR/GTNNWR.
+    `DIAGNOSIS` is the class to calculate the diagnoses of the result of GNNWR/GTNNWR.
 
     :param weight: output of the neural network
     :param x_data: the independent variables
@@ -52,7 +49,7 @@ class DIAGNOSIS:
         self.__k = len(self.__x_data[0])
 
         self.__residual = self.__y_data - self.__y_pred
-        self.__ssr = torch.sum((self.__y_pred - torch.mean(self.__y_data)) ** 2)
+        self.__ssr = torch.sum((self.__y_pred - self.__y_data) ** 2) # sum of squared residuals
 
         self.__hat_com = torch.mm(torch.linalg.inv(
             torch.mm(self.__x_data.transpose(-2, -1), self.__x_data)), self.__x_data.transpose(-2, -1))
@@ -73,6 +70,7 @@ class DIAGNOSIS:
         self.f3_dict_2 = None
     def hat(self):
         """
+        
         :return: hat matrix
         """
         return self.__hat
@@ -86,10 +84,10 @@ class DIAGNOSIS:
 
         k2 = self.__n - self.__k - 1
         rss_olr = torch.sum(
-            (torch.mean(self.__y_data) - torch.mm(self.__ols_hat, self.__y_data)) ** 2)
+            (self.__y_data - torch.mm(self.__ols_hat, self.__y_data)) ** 2)
         F_value = self.__ssr / k1 / (rss_olr / k2)
         # p_value = f.sf(F_value, k1, k2)
-        return self.__ssr / k1 / (rss_olr / k2)
+        return F_value
 
     def F2_Global(self):
         """
@@ -110,7 +108,7 @@ class DIAGNOSIS:
 
     def F3_Local(self):
         """
-        :return: F1-test of each variable
+        :return: F3-test of each variable
         """
 
         ek_dict = {}
@@ -207,7 +205,6 @@ class Visualize:
             raise ValueError("given data is not instance of GNNWR")
 
     def display_dataset(self, name="all", y_column=None, colors=None, steps=20, vmin=None, vmax=None):
-        # colormap = branca.colormap.linear.RdYlGn_10.scale().to_step(steps)
         if colors is None:
             colors = []
         if y_column is None:
@@ -243,7 +240,7 @@ class Visualize:
         res.add_child(colormap)
         return res
 
-    def weights_heatmap(self, data_column, colors=None, steps=20, vmin=None, vmax=None):
+    def coefs_heatmap(self, data_column, colors=None, steps=20, vmin=None, vmax=None):
         if colors is None:
             colors = []
         res = folium.Map(location=[self.__center_lat, self.__center_lon], zoom_start=self.__zoom, tiles=self.__tiles,

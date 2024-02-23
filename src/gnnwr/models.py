@@ -17,8 +17,8 @@ from .utils import OLS, DIAGNOSIS
 
 class GNNWR:
     r"""
-    GNNWR(Geographically neural network coefficiented regression) is a model to address spatial non-stationarity in various domains with complex geographical processes,
-    which comes from the paper `Geographically neural network coefficiented regression for the accurate estimation of spatial non-stationarity <https://doi.org/10.1080/13658816.2019.1707834>`__.
+    GNNWR(Geographically neural network weighted regression) is a model to address spatial non-stationarity in various domains with complex geographical processes,
+    which comes from the paper `Geographically neural network weighted regression for the accurate estimation of spatial non-stationarity <https://doi.org/10.1080/13658816.2019.1707834>`__.
 
     Parameters
     ----------

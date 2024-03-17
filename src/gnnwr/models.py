@@ -582,6 +582,7 @@ class GNNWR:
         self._modelSavePath = os.path.dirname(path)
         self._modelName = os.path.basename(path).split('/')[-1].split('.')[0]
         self.__istrained = True
+        self.result_data = self.getCoefs()
 
 
     def gpumodel_to_cpu(self, path, save_path, use_model=True):

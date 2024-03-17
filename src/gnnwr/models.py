@@ -795,6 +795,14 @@ class GNNWR:
         result_data.set_index('id', inplace=True)
         result_data = result_data.join(data)
         return result_data
+    def __str__(self) -> str:
+        print("Model Name: ", self._modelName)
+        print("Model Structure: ", self._model)
+        return ""
+    def __repr__(self) -> str:
+        print("Model Name: ", self._modelName)
+        print("Model Structure: ", self._model)
+        return ""
 
 
 class GTNNWR(GNNWR):

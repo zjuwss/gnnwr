@@ -579,6 +579,8 @@ class GNNWR:
         else:
             self._model = self._model.cpu()
             self._out = self._out.cpu()
+        self._modelSavePath = os.path.dirname(path)
+        self._modelName = os.path.basename(path).split('/')[-1].split('.')[0]
         self.__istrained = True
 
 

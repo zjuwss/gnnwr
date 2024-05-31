@@ -161,7 +161,7 @@ Housing prices are closely related to the lives of new urban residents, and they
 An optimized spatial proximity measure was integrated into GNNWR. The optimized spatial proximity fusions multiple distance measures, imporving its ability in modeling spatial-nonstationary process.
 
 <p align="center">
-<img title="OSP" src="assets/figure_OSP.JPG" alt="OSP" width=75%>
+<img title="OSP" src="assets/figure OSP.JPG" alt="OSP" width=75%>
 </p>
 
 > Ding, J., Cen, W., Wu, S., Chen, Y., Qi, J., Huang, B., & Du, Z. (2024). A neural network model to optimize the measure of spatial proximity in geographically weighted regression approach: a case study on house price in Wuhan. *International Journal of Geographical Information Science*, 1–21. https://doi.org/10.1080/13658816.2024.2343771

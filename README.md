@@ -158,6 +158,14 @@ Housing prices are closely related to the lives of new urban residents, and they
 
 > Wang, Z., Wang, Y., Wu, S., & Du, Z. (2022). House Price Valuation Model Based on Geographically Neural Network Weighted Regression: The Case Study of Shenzhen, China. *ISPRS International Journal of Geo-Information*, *11*(8), 450.
 
+An optimized spatial proximity measure was integrated into GNNWR. The optimized spatial proximity fusions multiple distance measures, imporving its ability in modeling spatial-nonstationary process.
+
+<p align="center">
+<img title="OSP" src="assets/figure_OSP.JPG" alt="OSP" width=75%>
+</p>
+
+> Ding, J., Cen, W., Wu, S., Chen, Y., Qi, J., Huang, B., & Du, Z. (2024). A neural network model to optimize the measure of spatial proximity in geographically weighted regression approach: a case study on house price in Wuhan. *International Journal of Geographical Information Science*, 1–21. https://doi.org/10.1080/13658816.2024.2343771
+
 #### 4.3.2 Land Surface Temperature
 
 Spatial downscaling is an important approach to obtain high-resolution land surface temperature (LST) for thermal environment research. A high-resolution surface temperature downscaling method based on GNNWR was developed to effectively handle the problem of surface temperature downscaling. The results show that the proposed GNNWR model achieved superior downscaling accuracy compared to widely used methods in four test areas with large differences in topography, landforms, and seasons. The findings suggest that GNNWR is a practical method for surface temperature downscaling considering its high accuracy and model performance.

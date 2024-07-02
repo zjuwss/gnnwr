@@ -68,13 +68,14 @@ class baseDataset(Dataset):
                 self.id_data = data[id_column].astype(np.int64).values
             else:
                 raise ValueError("id_column is None")
+
         self.is_need_STNN = is_need_STNN
+
         self.scale_fn = None  # scale function
         self.x_scale_info = None  # scale information of x_data
         self.y_scale_info = None  # scale information of y_data
         self.distances = None  # distances is the distance matrix of spatial/spatio-temporal data
         self.temporal = None  # temporal is the temporal distance matrix of spatio-temporal data
-        self.distances_scale_params = None  # scale parameters of distances
         self.simple_distance = True
         self.scaledDataframe = None
         self.batch_size = None
@@ -126,6 +127,7 @@ class baseDataset(Dataset):
             self.x_scale_info = {"min": x_scale_params.data_min_, "max": x_scale_params.data_max_}
             self.x_data = x_scale_params.transform(pd.DataFrame(self.x_data, columns=self.x))
             self.y_scale_info = {"min": y_scale_params.data_min_, "max": y_scale_params.data_max_}
+            self.y_data = y_scale_params.transform(pd.DataFrame(self.y_data, columns=self.y))
         elif scale_fn == "standard_scale":
             self.scale_fn = "standard_scale"
             x_scale_params = scale_params[0]
@@ -133,7 +135,7 @@ class baseDataset(Dataset):
             self.x_scale_info = {"mean": x_scale_params.mean_, "var": x_scale_params.var_}
             self.x_data = x_scale_params.transform(pd.DataFrame(self.x_data, columns=self.x))
             self.y_scale_info = {"mean": y_scale_params.mean_, "var": y_scale_params.var_}
-
+            self.y_data = y_scale_params.transform(pd.DataFrame(self.y_data, columns=self.y))
         self.getScaledDataframe()
 
         self.x_data = np.concatenate((self.x_data, np.ones(
@@ -204,7 +206,6 @@ class baseDataset(Dataset):
             raise ValueError("invalid process_fn")
         return x
 
-
     def save(self, dirname):
         """
         save the dataset
@@ -255,19 +256,23 @@ class baseDataset(Dataset):
         # read the information of dataset
         with open(os.path.join(dirname, "dataset_info.json"), "r") as f:
             dataset_info = json.load(f)
-        self.x = dataset_info["x"]
-        self.y = dataset_info["y"]
-        self.id = dataset_info["id"]
-        self.batch_size = dataset_info["batch_size"]
-        self.shuffle = dataset_info["shuffle"]
-        self.is_need_STNN = dataset_info["is_need_STNN"]
-        self.scale_fn = dataset_info["scale_fn"]
-        self.simple_distance = dataset_info["simple_distance"]
-        self.x_scale_info = json.loads(dataset_info["x_scale_info"])
-        self.y_scale_info = json.loads(dataset_info["y_scale_info"])
-        self.distances_scale_param = json.loads(dataset_info["distance_scale_info"])
+        self.x = dataset_info.get("x", None)
+        self.y = dataset_info.get("y", None)
+        self.id = dataset_info.get("id", None)
+        self.batch_size = dataset_info.get("batch_size", None)
+        self.shuffle = dataset_info.get("shuffle", None)
+        self.is_need_STNN = dataset_info.get("is_need_STNN", None)
+        self.scale_fn = dataset_info.get("scale_fn", None)
+        self.simple_distance = dataset_info.get("simple_distance", None)
+        self.x_scale_info = json.loads(dataset_info.get("x_scale_info", None))
+        self.y_scale_info = json.loads(dataset_info.get("y_scale_info", None))
+        self.distances_scale_param = json.loads(dataset_info.get("distance_scale_info", None))
         x_scale_info = self.x_scale_info
         y_scale_info = self.y_scale_info
+        if self.x_scale_info is None:
+            x_scale_info = {}
+        if self.y_scale_info is None:
+            y_scale_info = {}
         for key, value in x_scale_info.items():
             x_scale_info[key] = np.array(value)
         for key, value in y_scale_info.items():
@@ -431,7 +436,7 @@ def BasicDistance(x, y):
     return dist
 
 
-def Manhattan_distance(x, y):
+def ManhattanDistance(x, y):
     """
     Calculate the Manhattan distance between two points
 
@@ -442,11 +447,28 @@ def Manhattan_distance(x, y):
     return np.float32(np.sum(np.abs(x[:, np.newaxis, :] - y), axis=2))
 
 
-def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_column=None, temp_column=None,
-                 id_column=None, sample_seed=42, process_fn="minmax_scale", batch_size=32, shuffle=True,
-                 use_class=baseDataset,
-                 spatial_fun=BasicDistance, temporal_fun=Manhattan_distance, max_val_size=-1, max_test_size=-1,
-                 from_for_cv=0, is_need_STNN=False, Reference=None, simple_distance=True, dropna=True):
+def init_dataset(data, test_ratio,
+                 valid_ratio,
+                 x_column,
+                 y_column,
+                 spatial_column=None,
+                 temp_column=None,
+                 id_column=None,
+                 sample_seed=42,
+                 process_fn="minmax_scale",
+                 batch_size=32,
+                 shuffle=True,
+                 use_model="gnnwr",
+                 spatial_fun=BasicDistance,
+                 temporal_fun=ManhattanDistance,
+                 max_val_size=-1,
+                 max_test_size=-1,
+                 from_for_cv=0,
+                 is_need_STNN=False,
+                 Reference=None,
+                 simple_distance=True,
+                 dropna=True
+                 ):
     """
     Initialize the dataset and return the training set, validation set and test set for the model
 
@@ -464,7 +486,7 @@ def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_colu
     :param max_val_size: max valid data size in one injection
     :param max_test_size: max test data size in one injection
     :param shuffle: shuffle data
-    :param use_class: dataset class
+    :param use_model: dataset class
     :param spatial_fun: spatial distance calculate function
     :param temporal_fun: temporal distance calculate function
     :param from_for_cv: the start index of the data for cross validation
@@ -484,9 +506,11 @@ def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_colu
             "dist_column must be a column name in data")
     if dropna:
         oriLen = data.shape[0]
-        data.dropna(axis=0,how='any',inplace=True)
+        data.dropna(axis=0, how='any', inplace=True)
         if oriLen > data.shape[0]:
-            warnings.warn("Dropping {} {} with missing values. To forbid dropping, you need to set the argument dropna=False".format(oriLen - data.shape[0],'row' if oriLen - data.shape[0] == 1 else 'rows'))
+            warnings.warn(
+                "Dropping {} {} with missing values. To forbid dropping, you need to set the argument dropna=False".format(
+                    oriLen - data.shape[0], 'row' if oriLen - data.shape[0] == 1 else 'rows'))
     if id_column is None:
         id_column = ['id']
         if 'id' not in data.columns:
@@ -504,15 +528,6 @@ def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_colu
     elif process_fn == "standard_scale":
         scaler_x = StandardScaler()
         scaler_y = StandardScaler()
-    scaler_params_x = scaler_x.fit(data[x_column])
-    scaler_params_y = scaler_y.fit(data[y_column])
-    scaler_params = [scaler_params_x, scaler_params_y]
-    if process_fn == "minmax_scale":
-        print("x_min:" + str(scaler_params_x.data_min_) + ";  x_max:" + str(scaler_params_x.data_max_))
-        print("y_min:" + str(scaler_params_y.data_min_) + ";  y_max:" + str(scaler_params_y.data_max_))
-    elif process_fn == "standard_scale":
-        print("x_mean:" + str(scaler_params_x.mean_) + ";  x_var:" + str(scaler_params_x.var_))
-        print("y_mean:" + str(scaler_params_y.mean_) + ";  y_var:" + str(scaler_params_y.var_))
 
     # data split
     test_data = data[int((1 - test_ratio) * len(data)):]
@@ -522,10 +537,16 @@ def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_colu
     train_data = pandas.concat([train_data[:int(from_for_cv * valid_ratio * len(train_data))],
                                 train_data[int((1 + from_for_cv) * valid_ratio * len(train_data)):]])
 
+    scaler_params_x = scaler_x.fit(train_data[x_column])
+    scaler_params_y = scaler_y.fit(train_data[y_column])
+    scaler_params = [scaler_params_x, scaler_params_y]
     # Use the parameters of the dataset to normalize the train_dataset, val_dataset, and test_dataset
-    train_dataset = use_class(train_data, x_column, y_column, id_column, is_need_STNN)
-    val_dataset = use_class(val_data, x_column, y_column, id_column, is_need_STNN)
-    test_dataset = use_class(test_data, x_column, y_column, id_column, is_need_STNN)
+    if use_model in ["gnnwr", "gnnwr spnn", "gtnnwr", "gtnnwr stpnn"]:
+        train_dataset = baseDataset(train_data, x_column, y_column, id_column, is_need_STNN)
+        val_dataset = baseDataset(val_data, x_column, y_column, id_column, is_need_STNN)
+        test_dataset = baseDataset(test_data, x_column, y_column, id_column, is_need_STNN)
+    else:
+        raise ValueError("invalid use_model")
     train_dataset.scale(process_fn, scaler_params)
     val_dataset.scale(process_fn, scaler_params)
     test_dataset.scale(process_fn, scaler_params)
@@ -543,145 +564,42 @@ def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_colu
         reference_data = Reference
     if not isinstance(reference_data, pandas.DataFrame):
         raise ValueError("reference_data must be a pandas.DataFrame")
+
     train_dataset.reference, val_dataset.reference, test_dataset.reference = reference_data, reference_data, reference_data
     train_dataset.spatial_column = val_dataset.spatial_column = test_dataset.spatial_column = spatial_column
     train_dataset.x_column = val_dataset.x_column = test_dataset.x_column = x_column
     train_dataset.y_column = val_dataset.y_column = test_dataset.y_column = y_column
-    if not is_need_STNN:
-        if simple_distance:
-            # if not use STNN, calculate spatial/temporal distance matrix and concatenate them
-            train_dataset.distances = spatial_fun(
-                train_data[spatial_column].values, reference_data[spatial_column].values)  # 计算train距离矩阵
-            val_dataset.distances = spatial_fun(
-                val_data[spatial_column].values, reference_data[spatial_column].values)  # 计算val距离矩阵
-            test_dataset.distances = spatial_fun(
-                test_data[spatial_column].values, reference_data[spatial_column].values)  # 计算test距离矩阵
+    if use_model == "gnnwr":
+        train_dataset.distances, val_dataset.distances, test_dataset.distances = _init_gnnwr_distance(
+            reference_data[spatial_column].values, train_data[spatial_column].values, val_data[spatial_column].values,
+            test_data[spatial_column].values, spatial_fun
+        )
+    elif use_model == "gtnnwr":
+        assert temp_column is not None, "temp_column must be not None in gtnnwr"
+        train_dataset.distances, val_dataset.distances, test_dataset.distances = _init_gtnnwr_distance(
+            reference_data[spatial_column + temp_column].values, train_data[spatial_column + temp_column].values,
+            val_data[spatial_column + temp_column].values, test_data[spatial_column + temp_column].values,
+            spatial_fun,temporal_fun
+        )
+    elif use_model == "gnnwr spnn":
+        train_dataset.distances, val_dataset.distances, test_dataset.distances = _init_gnnwr_spnn_distance(
+            reference_data[spatial_column].values, train_data[spatial_column].values, val_data[spatial_column].values,
+            test_data[spatial_column].values
+        )
+    elif use_model == "gtnnwr stpnn":
+        assert temp_column is not None, "temp_column must be not None in gtnnwr"
+        train_points, val_points, test_points = _init_gtnnwr_stpnn_distance(
+            reference_data[spatial_column + temp_column].values, train_data[spatial_column + temp_column].values,
+            val_data[spatial_column + temp_column].values, test_data[spatial_column + temp_column].values
+        )
+        train_dataset.distances, train_dataset.temporal = train_points
+        val_dataset.distances, val_dataset.temporal = val_points
+        test_dataset.distances, test_dataset.temporal = test_points
 
-            if temp_column is not None:
-                # if temp_column is not None, calculate temporal distance matrix
-                train_dataset.temporal = temporal_fun(
-                    train_data[temp_column].values, reference_data[temp_column].values)
-                val_dataset.temporal = temporal_fun(
-                    val_data[temp_column].values, reference_data[temp_column].values)
-                test_dataset.temporal = temporal_fun(
-                    test_data[temp_column].values, reference_data[temp_column].values)
-
-                train_dataset.distances = np.concatenate(
-                    (train_dataset.distances[:, :, np.newaxis], train_dataset.temporal[:, :, np.newaxis]),
-                    axis=2)  # concatenate spatial and temporal distance matrix
-                val_dataset.distances = np.concatenate(
-                    (val_dataset.distances[:, :, np.newaxis], val_dataset.temporal[:, :, np.newaxis]), axis=2)
-                test_dataset.distances = np.concatenate(
-                    (test_dataset.distances[:, :, np.newaxis], test_dataset.temporal[:, :, np.newaxis]), axis=2)
-        else:
-            train_dataset.distances = np.repeat(train_data[spatial_column].values[:, np.newaxis, :],
-                                                len(reference_data),
-                                                axis=1)
-            train_temp_distance = np.repeat(reference_data[spatial_column].values[:, np.newaxis, :],
-                                            train_dataset.datasize,
-                                            axis=1)
-            train_dataset.distances = np.concatenate(
-                (train_dataset.distances, np.transpose(train_temp_distance, (1, 0, 2))), axis=2)
-
-            val_dataset.distances = np.repeat(val_data[spatial_column].values[:, np.newaxis, :], len(reference_data),
-                                              axis=1)
-            val_temp_distance = np.repeat(reference_data[spatial_column].values[:, np.newaxis, :], val_dataset.datasize,
-                                          axis=1)
-            val_dataset.distances = np.concatenate((val_dataset.distances, np.transpose(val_temp_distance, (1, 0, 2))),
-                                                   axis=2)
-
-            test_dataset.distances = np.repeat(test_data[spatial_column].values[:, np.newaxis, :], len(reference_data),
-                                               axis=1)
-            test_temp_distance = np.repeat(reference_data[spatial_column].values[:, np.newaxis, :],
-                                           test_dataset.datasize,
-                                           axis=1)
-            test_dataset.distances = np.concatenate(
-                (test_dataset.distances, np.transpose(test_temp_distance, (1, 0, 2))), axis=2)
-            # if temp_column is not None, calculate temporal point matrix
-            if temp_column is not None:
-                train_dataset.temporal = np.repeat(train_data[temp_column].values[:, np.newaxis, :],
-                                                   len(reference_data),
-                                                   axis=1)
-                train_temp_temporal = np.repeat(reference_data[temp_column].values[:, np.newaxis, :],
-                                                train_dataset.datasize,
-                                                axis=1)
-                train_dataset.temporal = np.concatenate(
-                    (train_dataset.temporal, np.transpose(train_temp_temporal, (1, 0, 2))), axis=2)
-
-                val_dataset.temporal = np.repeat(val_data[temp_column].values[:, np.newaxis, :], len(reference_data),
-                                                 axis=1)
-                val_temp_temporal = np.repeat(reference_data[temp_column].values[:, np.newaxis, :],
-                                              val_dataset.datasize,
-                                              axis=1)
-                val_dataset.temporal = np.concatenate(
-                    (val_dataset.temporal, np.transpose(val_temp_temporal, (1, 0, 2))),
-                    axis=2)
-
-                test_dataset.temporal = np.repeat(test_data[temp_column].values[:, np.newaxis, :], len(reference_data),
-                                                  axis=1)
-                test_temp_temporal = np.repeat(reference_data[temp_column].values[:, np.newaxis, :],
-                                               test_dataset.datasize,
-                                               axis=1)
-                test_dataset.temporal = np.concatenate(
-                    (test_dataset.temporal, np.transpose(test_temp_temporal, (1, 0, 2))), axis=2)
-            train_dataset.distances = np.concatenate(
-                (train_dataset.distances, train_dataset.temporal), axis=2)
-            val_dataset.distances = np.concatenate(
-                (val_dataset.distances, val_dataset.temporal), axis=2)
-            test_dataset.distances = np.concatenate(
-                (test_dataset.distances, test_dataset.temporal), axis=2)
-    else:
-        # if use STNN, calculate spatial/temporal point matrix
-        train_dataset.distances = np.repeat(train_data[spatial_column].values[:, np.newaxis, :], len(reference_data),
-                                            axis=1)
-        train_temp_distance = np.repeat(reference_data[spatial_column].values[:, np.newaxis, :], train_dataset.datasize,
-                                        axis=1)
-        train_dataset.distances = np.concatenate(
-            (train_dataset.distances, np.transpose(train_temp_distance, (1, 0, 2))), axis=2)
-
-        val_dataset.distances = np.repeat(val_data[spatial_column].values[:, np.newaxis, :], len(reference_data),
-                                          axis=1)
-        val_temp_distance = np.repeat(reference_data[spatial_column].values[:, np.newaxis, :], val_dataset.datasize,
-                                      axis=1)
-        val_dataset.distances = np.concatenate((val_dataset.distances, np.transpose(val_temp_distance, (1, 0, 2))),
-                                               axis=2)
-
-        test_dataset.distances = np.repeat(test_data[spatial_column].values[:, np.newaxis, :], len(reference_data),
-                                           axis=1)
-        test_temp_distance = np.repeat(reference_data[spatial_column].values[:, np.newaxis, :], test_dataset.datasize,
-                                       axis=1)
-        test_dataset.distances = np.concatenate(
-            (test_dataset.distances, np.transpose(test_temp_distance, (1, 0, 2))), axis=2)
-        # if temp_column is not None, calculate temporal point matrix
-        if temp_column is not None:
-            train_dataset.temporal = np.repeat(train_data[temp_column].values[:, np.newaxis, :], len(reference_data),
-                                               axis=1)
-            train_temp_temporal = np.repeat(reference_data[temp_column].values[:, np.newaxis, :],
-                                            train_dataset.datasize,
-                                            axis=1)
-            train_dataset.temporal = np.concatenate(
-                (train_dataset.temporal, np.transpose(train_temp_temporal, (1, 0, 2))), axis=2)
-
-            val_dataset.temporal = np.repeat(val_data[temp_column].values[:, np.newaxis, :], len(reference_data),
-                                             axis=1)
-            val_temp_temporal = np.repeat(reference_data[temp_column].values[:, np.newaxis, :], val_dataset.datasize,
-                                          axis=1)
-            val_dataset.temporal = np.concatenate((val_dataset.temporal, np.transpose(val_temp_temporal, (1, 0, 2))),
-                                                  axis=2)
-
-            test_dataset.temporal = np.repeat(test_data[temp_column].values[:, np.newaxis, :], len(reference_data),
-                                              axis=1)
-            test_temp_temporal = np.repeat(reference_data[temp_column].values[:, np.newaxis, :], test_dataset.datasize,
-                                           axis=1)
-            test_dataset.temporal = np.concatenate(
-                (test_dataset.temporal, np.transpose(test_temp_temporal, (1, 0, 2))), axis=2)
     train_dataset.simple_distance = simple_distance
     val_dataset.simple_distance = simple_distance
     test_dataset.simple_distance = simple_distance
-    # initialize dataloader for train/val/test dataset
-    # set batch_size for train_dataset as batch_size
-    # set batch_size for val_dataset as max_val_size
-    # set batch_size for test_dataset as max_test_size
+
     if max_val_size < 0:
         max_val_size = len(val_dataset)
     if max_test_size < 0:
@@ -716,7 +634,10 @@ def init_dataset(data, test_ratio, valid_ratio, x_column, y_column, spatial_colu
         val_dataset.temporal = temporal[train_distance_len:train_distance_len + val_distance_len]
         test_dataset.temporal = temporal[train_distance_len + val_distance_len:]
         train_dataset.temporal_scale_param = val_dataset.temporal_scale_param = test_dataset.temporal_scale_param = temporal_scale_param
-
+    # initialize dataloader for train/val/test dataset
+    # set batch_size for train_dataset as batch_size
+    # set batch_size for val_dataset as max_val_size
+    # set batch_size for test_dataset as max_test_size
     train_dataset.dataloader = DataLoader(
         train_dataset, batch_size=batch_size, shuffle=shuffle)
     val_dataset.dataloader = DataLoader(
@@ -733,7 +654,7 @@ def init_dataset_cv(data, test_ratio, k_fold, x_column, y_column, spatial_column
                     id_column=None,
                     sample_seed=100,
                     process_fn="minmax_scale", batch_size=32, shuffle=True, use_class=baseDataset,
-                    spatial_fun=BasicDistance, temporal_fun=Manhattan_distance, max_val_size=-1, max_test_size=-1,
+                    spatial_fun=BasicDistance, temporal_fun=ManhattanDistance, max_val_size=-1, max_test_size=-1,
                     is_need_STNN=False, Reference=None, simple_distance=True):
     """
     initialize dataset for cross validation
@@ -777,46 +698,9 @@ def init_dataset_cv(data, test_ratio, k_fold, x_column, y_column, spatial_column
     return cv_data_set, test_dataset
 
 
-# TODO Not finished
-# def init_dataset_with_dist_frame(data, train_ratio, valid_ratio, x_column, y_column, id_column, dist_frame=None,
-#                                  process_fn="minmax_scale", batch_size=32, shuffle=True, use_class=baseDataset):
-#     train_data, val_data, test_data = np.split(data.sample(frac=1),
-#                                                [int(train_ratio * len(data)),
-#                                                 int((train_ratio + valid_ratio) * len(data))])
-#
-#     # 初始化train_dataset,val_dataset,test_dataset
-#     train_dataset = use_class(train_data, x_column, y_column, process_fn)
-#     val_dataset = use_class(val_data, x_column, y_column, process_fn)
-#     test_dataset = use_class(test_data, x_column, y_column, process_fn)
-#
-#     dist_frame.columns = ['id1', 'id2', 'dis']
-#     dist_frame = dist_frame.set_index(['id1', 'id2'])[
-#         'dis'].unstack().reset_index().drop('id1', axis=1)
-#
-#     train_ids = train_data[id_column[0]].tolist()
-#     val_ids = val_data[id_column[0]].tolist()
-#     test_ids = test_data[id_column[0]].tolist()
-#
-#     train_dataset.distances = np.float32(
-#         dist_frame[dist_frame.index.isin(train_ids)][train_ids].values)
-#     val_dataset.distances = np.float32(
-#         dist_frame[dist_frame.index.isin(val_ids)][train_ids].values)
-#     test_dataset.distances = np.float32(
-#         dist_frame[dist_frame.index.isin(test_ids)][train_ids].values)
-#
-#     train_dataset.dataloader = DataLoader(
-#         train_dataset, batch_size=batch_size, shuffle=shuffle)
-#     val_dataset.dataloader = DataLoader(
-#         val_dataset, batch_size=batch_size, shuffle=shuffle)
-#     test_dataset.dataloader = DataLoader(
-#         test_dataset, batch_size=batch_size, shuffle=shuffle)
-#
-#     return train_dataset, val_dataset, test_dataset
-
-
 def init_predict_dataset(data, train_dataset, x_column, spatial_column=None, temp_column=None,
                          process_fn="minmax_scale", scale_sync=True, use_class=predictDataset,
-                         spatial_fun=BasicDistance, temporal_fun=Manhattan_distance, max_size=-1, is_need_STNN=False):
+                         spatial_fun=BasicDistance, temporal_fun=ManhattanDistance, max_size=-1, is_need_STNN=False):
     """
     initialize predict dataset
 
@@ -939,3 +823,124 @@ def load_dataset(directory, use_class=baseDataset):
     dataset.read(directory)
     dataset.dataloader = DataLoader(dataset, batch_size=dataset.batch_size, shuffle=dataset.shuffle)
     return dataset
+
+
+def _init_gnnwr_distance(refer_data, train_data, val_data, test_data, spatial_fun=BasicDistance):
+    """
+    :param refer_data:
+    :param train_data:
+    :param val_data:
+    :param test_data:
+    :return:
+    """
+
+    train_distance = spatial_fun(train_data, refer_data)
+    val_distance = spatial_fun(val_data, refer_data)
+    test_distance = spatial_fun(test_data, refer_data)
+    return train_distance, val_distance, test_distance
+
+
+def _init_gtnnwr_distance(refer_data,
+                          train_data,
+                          val_data,
+                          test_data,
+                          spatial_fun=BasicDistance,
+                          temporal_fun=ManhattanDistance):
+    """
+    :param refer_data:
+    :param train_data:
+    :param val_data:
+    :param test_data:
+    :return:
+    """
+    refer_s_distance, refer_t_distance = refer_data[0], refer_data[1]
+    train_s_distance, train_t_distance = train_data[0], train_data[1]
+    val_s_distance, val_t_distance = val_data[0], val_data[1]
+    test_s_distance, test_t_distance = test_data[0], test_data[1]
+
+    train_s_distance = spatial_fun(train_s_distance, refer_s_distance)
+    val_s_distance = spatial_fun(val_s_distance, refer_s_distance)
+    test_s_distance = spatial_fun(test_s_distance, refer_s_distance)
+    train_t_distance = temporal_fun(train_t_distance, refer_t_distance)
+    val_t_distance = temporal_fun(val_t_distance, refer_t_distance)
+    test_t_distance = temporal_fun(test_t_distance, refer_t_distance)
+    train_distance = np.concatenate((train_s_distance[:, :, np.newaxis], train_t_distance[:, :, np.newaxis]), axis=2)
+    val_distance = np.concatenate((val_s_distance[:, :, np.newaxis], val_t_distance[:, :, np.newaxis]), axis=2)
+    test_distance = np.concatenate((test_s_distance[:, :, np.newaxis], test_t_distance[:, :, np.newaxis]), axis=2)
+    return train_distance, val_distance, test_distance
+
+def _init_gnnwr_spnn_distance(
+        refer_data,
+        train_data,
+        val_data,
+        test_data):
+    """
+    :param refer_data:
+    :param train_data:
+    :param val_data:
+    :param test_data:
+    :return:
+    """
+    # calculate point matrix
+    matrix_length = len(refer_data)
+    train_length,val_length,test_length = len(train_data),len(val_data),len(test_data)
+    train_point_matrix = np.repeat(train_data[:, np.newaxis, :], matrix_length, axis=1)
+    refer_point_train_matrix = np.repeat(refer_data[:,np.newaxis,:], train_length, axis=1)
+    train_point_matrix = np.concatenate(
+            (train_point_matrix, np.transpose(refer_point_train_matrix, (1, 0, 2))), axis=2)
+    val_point_matrix = np.repeat(val_data[:, np.newaxis, :], matrix_length, axis=1)
+    refer_point_val_matrix = np.repeat(refer_data[:,np.newaxis,:], val_length, axis=1)
+    val_point_matrix = np.concatenate(
+            (val_point_matrix, np.transpose(refer_point_val_matrix, (1, 0, 2))), axis=2)
+    test_point_matrix = np.repeat(test_data[:, np.newaxis, :], matrix_length, axis=1)
+    refer_point_test_matrix = np.repeat(refer_data[:,np.newaxis,:], test_length, axis=1)
+    test_point_matrix = np.concatenate(
+            (test_point_matrix, np.transpose(refer_point_test_matrix, (1, 0, 2))), axis=2)
+    return train_point_matrix, val_point_matrix, test_point_matrix
+
+def _init_gtnnwr_stpnn_distance(
+        refer_data,
+        train_data,
+        val_data,
+        test_data):
+    """
+    :param refer_data:
+    :param train_data:
+    :param val_data:
+    :param test_data:
+    :return:
+    """
+    refer_s_point, refer_t_point = refer_data[0], refer_data[1]
+    train_s_point, train_t_point = train_data[0], train_data[1]
+    val_s_point, val_t_point = val_data[0], val_data[1]
+    test_s_point, test_t_point = test_data[0], test_data[1]
+
+    # calculate point matrix
+    matrix_length = len(refer_s_point)
+    train_length,val_length,test_length = len(train_s_point),len(val_s_point),len(test_s_point)
+    train_s_point_matrix = np.repeat(train_s_point[:, np.newaxis, :], matrix_length, axis=1)
+    refer_s_point_train_matrix = np.repeat(refer_s_point[:,np.newaxis,:], train_length, axis=1)
+    train_s_point_matrix = np.concatenate(
+            (train_s_point_matrix, np.transpose(refer_s_point_train_matrix, (1, 0, 2))), axis=2)
+    val_s_point_matrix = np.repeat(val_s_point[:, np.newaxis, :], matrix_length, axis=1)
+    refer_s_point_val_matrix = np.repeat(refer_s_point[:,np.newaxis,:], val_length, axis=1)
+    val_s_point_matrix = np.concatenate(
+            (val_s_point_matrix, np.transpose(refer_s_point_val_matrix, (1, 0, 2))), axis=2)
+    test_s_point_matrix = np.repeat(test_s_point[:, np.newaxis, :], matrix_length, axis=1)
+    refer_s_point_test_matrix = np.repeat(refer_s_point[:,np.newaxis,:], test_length, axis=1)
+    test_s_point_matrix = np.concatenate(
+            (test_s_point_matrix, np.transpose(refer_s_point_test_matrix, (1, 0, 2))), axis=2)
+
+    train_t_point_matrix = np.repeat(train_t_point[:, np.newaxis, :], matrix_length, axis=1)
+    refer_t_point_train_matrix = np.repeat(refer_t_point[:,np.newaxis,:], train_length, axis=1)
+    train_t_point_matrix = np.concatenate(
+            (train_t_point_matrix, np.transpose(refer_t_point_train_matrix, (1, 0, 2))), axis=2)
+    val_t_point_matrix = np.repeat(val_t_point[:, np.newaxis, :], matrix_length, axis=1)
+    refer_t_point_val_matrix = np.repeat(refer_t_point[:,np.newaxis,:], val_length, axis=1)
+    val_t_point_matrix = np.concatenate(
+            (val_t_point_matrix, np.transpose(refer_t_point_val_matrix, (1, 0, 2))), axis=2)
+    test_t_point_matrix = np.repeat(test_t_point[:, np.newaxis, :], matrix_length, axis=1)
+    refer_t_point_test_matrix = np.repeat(refer_t_point[:,np.newaxis,:], test_length, axis=1)
+    test_t_point_matrix = np.concatenate(
+            (test_t_point_matrix, np.transpose(refer_t_point_test_matrix, (1, 0, 2))), axis=2)
+    return (train_s_point_matrix, train_t_point_matrix), (val_s_point_matrix, val_t_point_matrix), (test_s_point_matrix, test_t_point_matrix)

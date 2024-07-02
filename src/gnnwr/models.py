@@ -13,6 +13,7 @@ from collections import OrderedDict
 import logging
 from .networks import SWNN, STPNN, STNN_SPNN
 from .utils import OLS, DIAGNOSIS
+from .datasets import baseDataset, predictDataset
 
 
 class GNNWR:
@@ -32,7 +33,7 @@ class GNNWR:
         the dense layers of the model (default: ``None``)
 
         Default structure is a geometric sequence of power of 2, the minimum is 2, and the maximum is the power of 2 closest to the number of neurons in the input layer.
-        
+
         i.e. ``[2,4,8,16,32,64,128,256]``
     start_lr : float
         the start learning rate of the model (default: ``0.1``)
@@ -137,9 +138,10 @@ class GNNWR:
         self._log_file_name = log_file_name  # log file
         self._log_level = log_level  # log level
         self.__istrained = False  # whether the model is trained
-
+        # TODO: use OLS in scaled data ot original data
         self._coefficient = OLS(
             train_dataset.scaledDataframe, train_dataset.x, train_dataset.y).params  # coefficients of OLS
+
         self._out = nn.Linear(
             self._outsize, 1, bias=False)  # layer to multiply OLS coefficients and model output
         if use_ols:
@@ -149,6 +151,7 @@ class GNNWR:
             self._coefficient = np.ones((1, self._outsize))
             self._out.weight = nn.Parameter(torch.tensor(np.ones((1, self._outsize))).to(
                 torch.float32), requires_grad=False)  # define the weight
+
         self._criterion = nn.MSELoss()  # loss function
         self._trainLossList = []  # record the loss in training process
         self._validLossList = []  # record the loss in validation process
@@ -156,12 +159,14 @@ class GNNWR:
         self._bestr2 = float('-inf')  # best r2
         self._besttrainr2 = float('-inf')  # best train r2
         self._noUpdateEpoch = 0  # number of epochs without update
+        # Model information
         self._modelName = model_name  # model name
         self._modelSavePath = model_save_path  # model save path
         self._train_diagnosis = None  # diagnosis of training
         self._test_diagnosis = None  # diagnosis of test
         self._valid_r2 = None  # r2 of validation
         self.result_data = None
+
         self._use_gpu = use_gpu
         if self._use_gpu:
             if torch.cuda.is_available():
@@ -169,6 +174,7 @@ class GNNWR:
                 os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(map(str, devices))
             else:
                 self._use_gpu = False
+
         self._optimizer = None
         self._scheduler = None
         self._optimizer_name = None
@@ -221,9 +227,12 @@ class GNNWR:
         # initialize the optimizer
         if optimizer == "SGD":
             self._optimizer = optim.SGD(
-                self._model.parameters(), lr=1, weight_decay=1e-3)
+                self._model.parameters(), lr=self._start_lr, weight_decay=1e-3)
         elif optimizer == "Adam":
             self._optimizer = optim.Adam(
+                self._model.parameters(), lr=self._start_lr, weight_decay=1e-3)
+        elif optimizer == "AdamW":
+            self._optimizer = optim.AdamW(
                 self._model.parameters(), lr=self._start_lr, weight_decay=1e-3)
         elif optimizer == "RMSprop":
             self._optimizer = optim.RMSprop(
@@ -239,43 +248,44 @@ class GNNWR:
         self._optimizer_name = optimizer  # optimizer name
 
         # lr scheduler
-        if self._optimizer_name == "SGD":
-            if optimizer_params is None:
-                optimizer_params = {}
+        if optimizer_params is None:
+            optimizer_params = {}
+        scheduler = optimizer_params.get("scheduler", "Constant")
+        scheduler_milestones = optimizer_params.get(
+            "scheduler_milestones", [100, 500, 1000, 2000])
+        scheduler_gamma = optimizer_params.get("scheduler_gamma", 0.5)
+        scheduler_T_max = optimizer_params.get("scheduler_T_max", 1000)
+        scheduler_eta_min = optimizer_params.get("scheduler_eta_min", 0.01)
+        scheduler_T_0 = optimizer_params.get("scheduler_T_0", 100)
+        scheduler_T_mult = optimizer_params.get("scheduler_T_mult", 3)
+        if scheduler == "MultiStepLR":
+            self._scheduler = optim.lr_scheduler.MultiStepLR(
+                self._optimizer, milestones=scheduler_milestones, gamma=scheduler_gamma)
+        elif scheduler == "CosineAnnealingLR":
+            self._scheduler = optim.lr_scheduler.CosineAnnealingLR(
+                self._optimizer, T_max=scheduler_T_max, eta_min=scheduler_eta_min)
+        elif scheduler == "CosineAnnealingWarmRestarts":
+            self._scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+                self._optimizer, T_0=scheduler_T_0, T_mult=scheduler_T_mult, eta_min=scheduler_eta_min)
+        elif scheduler == "Special":
             maxlr = optimizer_params.get("maxlr", 0.1)
             minlr = optimizer_params.get("minlr", 0.01)
             upepoch = optimizer_params.get("upepoch", 10000)
-            uprate = (maxlr - minlr) / upepoch * (upepoch // 10)
+            uprate = (maxlr - minlr) / upepoch
             decayepoch = optimizer_params.get("decayepoch", 20000)
             decayrate = optimizer_params.get("decayrate", 0.95)
             stop_change_epoch = optimizer_params.get("stop_change_epoch", 30000)
             stop_lr = optimizer_params.get("stop_lr", 0.001)
-            lamda_lr = lambda epoch: (epoch // (upepoch // 10)) * uprate + minlr if epoch < upepoch else (
-                maxlr if epoch < decayepoch else maxlr * (decayrate ** ((epoch - decayepoch)//10))) if epoch < stop_change_epoch else stop_lr
+            lambda_lr = lambda epoch: epoch * uprate + minlr if epoch < upepoch else (
+                maxlr if epoch < decayepoch else maxlr * (
+                            decayrate ** ((epoch - decayepoch) // 200))) if epoch < stop_change_epoch else stop_lr
             self._scheduler = optim.lr_scheduler.LambdaLR(
-                self._optimizer, lr_lambda=lamda_lr)
+                self._optimizer, lr_lambda=lambda_lr)
+        elif scheduler == "Constant":
+            self._scheduler = optim.lr_scheduler.LambdaLR(
+                self._optimizer, lr_lambda=lambda epoch: 1)
         else:
-            if optimizer_params is None:
-                optimizer_params = {}
-            scheduler = optimizer_params.get("scheduler", "CosineAnnealingWarmRestarts")
-            scheduler_milestones = optimizer_params.get(
-                "scheduler_milestones", [100, 500, 1000, 2000])
-            scheduler_gamma = optimizer_params.get("scheduler_gamma", 0.5)
-            scheduler_T_max = optimizer_params.get("scheduler_T_max", 1000)
-            scheduler_eta_min = optimizer_params.get("scheduler_eta_min", 0.01)
-            scheduler_T_0 = optimizer_params.get("scheduler_T_0", 100)
-            scheduler_T_mult = optimizer_params.get("scheduler_T_mult", 3)
-            if scheduler == "MultiStepLR":
-                self._scheduler = optim.lr_scheduler.MultiStepLR(
-                    self._optimizer, milestones=scheduler_milestones, gamma=scheduler_gamma)
-            elif scheduler == "CosineAnnealingLR":
-                self._scheduler = optim.lr_scheduler.CosineAnnealingLR(
-                    self._optimizer, T_max=scheduler_T_max, eta_min=scheduler_eta_min)
-            elif scheduler == "CosineAnnealingWarmRestarts":
-                self._scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
-                    self._optimizer, T_0=scheduler_T_0, T_mult=scheduler_T_mult, eta_min=scheduler_eta_min)
-            else:
-                raise ValueError("Invalid Scheduler")
+            raise ValueError("Invalid Scheduler")
 
     def __train(self):
         """
@@ -352,8 +362,10 @@ class GNNWR:
             try:
                 r2 = r2_score(label_list, out_list)  # calculate the R square
             except:
-                print(label_list)
-                print(out_list)
+                if np.isnan(out_list).sum() > 0:
+                    raise ValueError("The output contains nan value")
+                else:
+                    raise ValueError("The Unexpected Error")
             self._valid_r2 = r2
             if r2 > self._bestr2:
                 # if the R square is better than the best R square,record the R square and save the model
@@ -501,24 +513,28 @@ class GNNWR:
         ----------
         dataset : baseDataset,predictDataset
             the dataset to be predicted
-        
+
         Returns
         -------
         dataframe
             the Pandas dataframe of the dataset with the predicted result
         """
-        data_loader = dataset.dataloader
+        data = dataset.x_data
+        coef = dataset.distances
         if not self.__istrained:
             print("WARNING! The model hasn't been trained or loaded!")
         self._model.eval()
-        result = np.array([])
         with torch.no_grad():
-            for data, coef in data_loader:
-                if self._use_gpu:
-                    data, coef = data.cuda(), coef.cuda()
-                output = self._out(self._model(data).mul(coef.to(torch.float32)))
-                output = output.view(-1).cpu().detach().numpy()
-                result = np.append(result, output)
+            data = torch.tensor(data).to(torch.float32)
+            coef = torch.tensor(coef).to(torch.float32)
+            if self._use_gpu:
+                data, coef = data.cuda(), coef.cuda()
+                ols_w = torch.tensor(self._coefficient).to(torch.float32).cuda()
+            else:
+                ols_w = torch.tensor(self._coefficient).to(torch.float32).cpu()
+            weight = self._model(data)
+            coefficient = weight.mul(ols_w)
+            result = self._out(coefficient.mul(coef)).cpu().detach().numpy()
         dataset.dataframe['pred_result'] = result
         dataset.pred_result = result
         return dataset.dataframe
@@ -583,7 +599,6 @@ class GNNWR:
         self._modelName = os.path.basename(path).split('/')[-1].split('.')[0]
         self.__istrained = True
         self.result_data = self.getCoefs()
-
 
     def gpumodel_to_cpu(self, path, save_path, use_model=True):
         """
@@ -697,7 +712,7 @@ class GNNWR:
         print("F2:   | {:>30.5f}".format(self._test_diagnosis.F2_Global().flatten()[0].data))
         F3_Local_dict = self._test_diagnosis.F3_Local()[0]
         for key in F3_Local_dict:
-            width = 30-(len(key) - 4)
+            width = 30 - (len(key) - 4)
             print("{}: | {:>{width}.5f}".format(key, F3_Local_dict[key].data, width=width))
 
     def reg_result(self, filename=None, model_path=None, use_dict=False, only_return=False, map_location=None):
@@ -746,19 +761,22 @@ class GNNWR:
         result = torch.tensor([]).to(torch.float32).to(device)
         with torch.no_grad():
             for data, coef, label, data_index in self._train_dataset.dataloader:
-                data, coef, label, data_index = data.to(device), coef.to(device), label.to(device), data_index.to(device)
+                data, coef, label, data_index = data.to(device), coef.to(device), label.to(device), data_index.to(
+                    device)
                 output = self._out(self._model(data).mul(coef.to(torch.float32)))
                 coefficient = self._model(data).mul(torch.tensor(self._coefficient).to(torch.float32).to(device))
                 output = torch.cat((coefficient, output, data_index), dim=1)
                 result = torch.cat((result, output), 0)
             for data, coef, label, data_index in self._valid_dataset.dataloader:
-                data, coef, label, data_index = data.to(device), coef.to(device), label.to(device), data_index.to(device)
+                data, coef, label, data_index = data.to(device), coef.to(device), label.to(device), data_index.to(
+                    device)
                 output = self._out(self._model(data).mul(coef.to(torch.float32)))
                 coefficient = self._model(data).mul(torch.tensor(self._coefficient).to(torch.float32).to(device))
                 output = torch.cat((coefficient, output, data_index), dim=1)
                 result = torch.cat((result, output), 0)
             for data, coef, label, data_index in self._test_dataset.dataloader:
-                data, coef, label, data_index = data.to(device), coef.to(device), label.to(device), data_index.to(device)
+                data, coef, label, data_index = data.to(device), coef.to(device), label.to(device), data_index.to(
+                    device)
                 output = self._out(self._model(data).mul(coef.to(torch.float32)))
                 coefficient = self._model(data).mul(torch.tensor(self._coefficient).to(torch.float32).to(device))
                 output = torch.cat((coefficient, output, data_index), dim=1)
@@ -798,10 +816,12 @@ class GNNWR:
         result_data.set_index('id', inplace=True)
         result_data = result_data.join(data)
         return result_data
+
     def __str__(self) -> str:
         print("Model Name: ", self._modelName)
         print("Model Structure: ", self._model)
         return ""
+
     def __repr__(self) -> str:
         print("Model Name: ", self._modelName)
         print("Model Structure: ", self._model)
@@ -889,9 +909,9 @@ class GTNNWR(GNNWR):
         the output size of STPNN(default:``1``)
     STNN_SPNN_params:dict
         the params of STNN and SPNN(default:``None``)
-        
+
         STPNN_batch_norm:bool
-            
+
             whether use batchnorm in STNN and SPNN or not (Default:``True``)
     """
 

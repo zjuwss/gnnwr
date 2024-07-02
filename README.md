@@ -3,7 +3,7 @@
 ![PyPI - License](https://img.shields.io/pypi/l/gnnwr)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/gnnwr)
 [![PyPI - Version](https://img.shields.io/pypi/v/gnnwr)](https://pypi.org/project/gnnwr/)
-![PyPI - Downloads](https://img.shields.io/pypi/dm/gnnwr)
+[![Downloads](https://static.pepy.tech/badge/gnnwr)](https://pepy.tech/project/gnnwr)
 
 
 A PyTorch implementation of the spatiotemporal intelligent regression (STIR) models and the repository contains:
@@ -158,6 +158,14 @@ Housing prices are closely related to the lives of new urban residents, and they
 
 > Wang, Z., Wang, Y., Wu, S., & Du, Z. (2022). House Price Valuation Model Based on Geographically Neural Network Weighted Regression: The Case Study of Shenzhen, China. *ISPRS International Journal of Geo-Information*, *11*(8), 450.
 
+An optimized spatial proximity measure was integrated into GNNWR. The optimized spatial proximity fusions multiple distance measures, imporving its ability in modeling spatial-nonstationary process.
+
+<p align="center">
+<img title="OSP" src="assets/figure OSP.JPG" alt="OSP" width=75%>
+</p>
+
+> Ding, J., Cen, W., Wu, S., Chen, Y., Qi, J., Huang, B., & Du, Z. (2024). A neural network model to optimize the measure of spatial proximity in geographically weighted regression approach: a case study on house price in Wuhan. *International Journal of Geographical Information Science*, 1–21.
+
 #### 4.3.2 Land Surface Temperature
 
 Spatial downscaling is an important approach to obtain high-resolution land surface temperature (LST) for thermal environment research. A high-resolution surface temperature downscaling method based on GNNWR was developed to effectively handle the problem of surface temperature downscaling. The results show that the proposed GNNWR model achieved superior downscaling accuracy compared to widely used methods in four test areas with large differences in topography, landforms, and seasons. The findings suggest that GNNWR is a practical method for surface temperature downscaling considering its high accuracy and model performance.
@@ -167,6 +175,18 @@ Spatial downscaling is an important approach to obtain high-resolution land surf
 </p>
 
 > Liang, M., Zhang, L., Wu, S., Zhu, Y., Dai, Z., Wang, Y., ... & Du, Z. (2023). A High-Resolution Land Surface Temperature Downscaling Method Based on Geographically Weighted Neural Network Regression. *Remote Sensing*, *15*(7), 1740.
+
+### 4.4 Geology
+
+#### 4.4.1 mineral prospectivity
+
+In the field of mineral forecasting, accurate prediction of mineral resources is essential to meet the energy needs of modern society. A geographically neural network-weighted logistic regression is used for mineral prospect mapping. The model combines spatial patterns and neural networks with Shapley's additive theory of interpretation, which effectively handles the anisotropy of variables and nonlinear relationships between variables to achieve accurate predictions and provide explanations of mineralization in a complex spatial environment.
+
+<p align="center">
+<img title="mineral prospectivity" src="assets/figure_mine.jpg" alt="mineral prospectivity" width=75%>
+</p>
+
+> Wang, L., Yang, J., Wu, S., Hu, L., Ge, Y., & Du, Z. (2024). Enhancing mineral prospectivity mapping with geospatial artificial intelligence: A geographically neural network-weighted logistic regression approach. *International Journal of Applied Earth Observation and Geoinformation*, 128, 103746.
 
 **!!Further, these spatiotemporal intelligent regression models can be applied to other spatiotemporal modeling problems and socioeconomic phenomena.**
 
@@ -186,6 +206,8 @@ Spatial downscaling is an important approach to obtain high-resolution land surf
 5. Liu, C., Wu, S., Dai, Z., Wang, Y., Du, Z., Liu, X., & Qiu, C. (2023). High-Resolution Daily Spatiotemporal Distribution and Evaluation of Ground-Level Nitrogen Dioxide Concentration in the Beijing–Tianjin–Hebei Region Based on TROPOMI Data. *Remote Sensing*, *15*(15), 3878.
 6. Wang, Z., Wang, Y., Wu, S., & Du, Z. (2022). House Price Valuation Model Based on Geographically Neural Network Weighted Regression: The Case Study of Shenzhen, China. *ISPRS International Journal of Geo-Information*, *11*(8), 450.
 7. Wu, S., Du, Z., Wang, Y., Lin, T., Zhang, F., & Liu, R. (2020). Modeling spatially anisotropic nonstationary processes in coastal environments based on a directional geographically neural network weighted regression. *Science of the Total Environment*, *709*, 136097.
+8. Wang, L., Yang, J., Wu, S., Hu, L., Ge, Y., & Du, Z. (2024). Enhancing mineral prospectivity mapping with geospatial artificial intelligence: A geographically neural network-weighted logistic regression approach. *International Journal of Applied Earth Observation and Geoinformation*, 128, 103746.
+9. Ding, J., Cen, W., Wu, S., Chen, Y., Qi, J., Huang, B., & Du, Z. (2024). A neural network model to optimize the measure of spatial proximity in geographically weighted regression approach: a case study on house price in Wuhan. *International Journal of Geographical Information Science*, 1–21. 
 
 
 ## 6 Contributing

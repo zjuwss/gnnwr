@@ -8,7 +8,7 @@ import torch.optim as optim
 import warnings
 from sklearn.metrics import r2_score
 from torch.utils.tensorboard import SummaryWriter  # to save the process of the model
-from tqdm import trange
+from tqdm import tqdm
 from collections import OrderedDict
 import logging
 from .networks import SWNN, STPNN, STNN_SPNN
@@ -227,7 +227,7 @@ class GNNWR:
         # initialize the optimizer
         if optimizer == "SGD":
             self._optimizer = optim.SGD(
-                self._model.parameters(), lr=self._start_lr, weight_decay=1e-3)
+                self._model.parameters(), lr=self._start_lr)
         elif optimizer == "Adam":
             self._optimizer = optim.Adam(
                 self._model.parameters(), lr=self._start_lr, weight_decay=1e-3)
@@ -278,7 +278,7 @@ class GNNWR:
             stop_lr = optimizer_params.get("stop_lr", 0.001)
             lambda_lr = lambda epoch: epoch * uprate + minlr if epoch < upepoch else (
                 maxlr if epoch < decayepoch else maxlr * (
-                            decayrate ** ((epoch - decayepoch) // 200))) if epoch < stop_change_epoch else stop_lr
+                        decayrate ** ((epoch - decayepoch) // 200))) if epoch < stop_change_epoch else stop_lr
             self._scheduler = optim.lr_scheduler.LambdaLR(
                 self._optimizer, lr_lambda=lambda_lr)
         elif scheduler == "Constant":
@@ -420,7 +420,7 @@ class GNNWR:
             self.__testr2 = r2_score(label_list, out_list)
             self._test_diagnosis = DIAGNOSIS(weight_all, x_data, y_data, y_pred)
 
-    def run(self, max_epoch=1, early_stop=-1, print_frequency=50, show_detailed_info=True):
+    def run(self, max_epoch=1, early_stop=-1):
         """
         train the model and validate the model
 
@@ -449,61 +449,49 @@ class GNNWR:
         file_str = self._log_path + self._log_file_name
         logging.basicConfig(format='%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s',
                             filename=file_str, level=logging.INFO)
-        for epoch in trange(0, max_epoch):
-            self._epoch = epoch
-            # train the network
-            # record the information of the training process
-            self.__train()
-            # validate the network
-            # record the information of the validation process
-            self.__valid()
-            # out put log every {print_frequency} epoch:
-            if (epoch + 1) % print_frequency == 0:
-                if show_detailed_info:
-                    print("\nEpoch: ", epoch + 1)
-                    print("learning rate: ", self._optimizer.param_groups[0]['lr'])
-                    print("Train Loss: ", self._trainLossList[-1])
-                    print("Train R2: {:.5f}".format(self._train_diagnosis.R2().data))
-                    print("Train RMSE: {:.5f}".format(self._train_diagnosis.RMSE().data))
-                    print("Train AIC: {:.5f}".format(self._train_diagnosis.AIC()))
-                    print("Train AICc: {:.5f}".format(self._train_diagnosis.AICc()))
-                    print("Valid Loss: ", self._validLossList[-1])
-                    print("Valid R2: {:.5f}".format(self._valid_r2), "\n")
-                    print("Best R2: {:.5f}".format(self._bestr2), "\n")
-                else:
-                    print("\nEpoch: ", epoch + 1)
-                    print(
-                        "Train R2: {:.5f}  Valid R2: {:.5f}  Best R2: {:.5f}\n".format(self._train_diagnosis.R2().data,
-                                                                                       self._valid_r2, self._bestr2))
-            self._scheduler.step()  # update the learning rate
-            # tensorboard
-            self._writer.add_scalar('Training/Learning Rate', self._optimizer.param_groups[0]['lr'], self._epoch)
-            self._writer.add_scalar('Training/Loss', self._trainLossList[-1], self._epoch)
-            self._writer.add_scalar('Training/R2', self._train_diagnosis.R2().data, self._epoch)
-            self._writer.add_scalar('Training/RMSE', self._train_diagnosis.RMSE().data, self._epoch)
-            self._writer.add_scalar('Training/AIC', self._train_diagnosis.AIC(), self._epoch)
-            self._writer.add_scalar('Training/AICc', self._train_diagnosis.AICc(), self._epoch)
-            self._writer.add_scalar('Validation/Loss', self._validLossList[-1], self._epoch)
-            self._writer.add_scalar('Validation/R2', self._valid_r2, self._epoch)
-            self._writer.add_scalar('Validation/Best R2', self._bestr2, self._epoch)
+        with tqdm(range(max_epoch)) as pbar:
+            for epoch in pbar:
+                self._epoch = epoch
+                # train the network
+                # record the information of the training process
+                self.__train()
+                # validate the network
+                # record the information of the validation process
+                self.__valid()
+                # out put the information
+                pbar.set_postfix({'Train Loss': "{:5f}".format(self._trainLossList[-1]), 'Train R2': "{:5f}".format(self._train_diagnosis.R2().data.cpu().numpy()),
+                                  'Train AIC': self._train_diagnosis.AIC(),'Valid Loss': self._validLossList[-1],
+                                  'Valid R2': self._valid_r2, 'Best Valid R2': self._bestr2,
+                                  'Learning Rate': self._optimizer.param_groups[0]['lr']})
 
-            # log output
-            log_str = "Epoch: " + str(epoch + 1) + \
-                      "; Train Loss: " + str(self._trainLossList[-1]) + \
-                      "; Train R2: {:5f}".format(self._train_diagnosis.R2().data) + \
-                      "; Train RMSE: {:5f}".format(self._train_diagnosis.RMSE().data) + \
-                      "; Train AIC: {:5f}".format(self._train_diagnosis.AIC()) + \
-                      "; Train AICc: {:5f}".format(self._train_diagnosis.AICc()) + \
-                      "; Valid Loss: " + str(self._validLossList[-1]) + \
-                      "; Valid R2: " + str(self._valid_r2) + \
-                      "; Learning Rate: " + str(self._optimizer.param_groups[0]['lr'])
-            logging.info(log_str)
-            if 0 < early_stop < self._noUpdateEpoch:  # stop when the model has not been updated for long time
-                print("Training stop! Model has not been improved for over {} epochs.".format(early_stop))
-                break
+                self._scheduler.step()  # update the learning rate
+                # tensorboard
+                self._writer.add_scalar('Training/Learning Rate', self._optimizer.param_groups[0]['lr'], self._epoch)
+                self._writer.add_scalar('Training/Loss', self._trainLossList[-1], self._epoch)
+                self._writer.add_scalar('Training/R2', self._train_diagnosis.R2().data, self._epoch)
+                self._writer.add_scalar('Training/RMSE', self._train_diagnosis.RMSE().data, self._epoch)
+                self._writer.add_scalar('Training/AIC', self._train_diagnosis.AIC(), self._epoch)
+                self._writer.add_scalar('Training/AICc', self._train_diagnosis.AICc(), self._epoch)
+                self._writer.add_scalar('Validation/Loss', self._validLossList[-1], self._epoch)
+                self._writer.add_scalar('Validation/R2', self._valid_r2, self._epoch)
+                self._writer.add_scalar('Validation/Best R2', self._bestr2, self._epoch)
+
+                # log output
+                log_str = "Epoch: " + str(epoch + 1) + \
+                          "; Train Loss: " + str(self._trainLossList[-1]) + \
+                          "; Train R2: {:5f}".format(self._train_diagnosis.R2().data) + \
+                          "; Train RMSE: {:5f}".format(self._train_diagnosis.RMSE().data) + \
+                          "; Train AIC: {:5f}".format(self._train_diagnosis.AIC()) + \
+                          "; Train AICc: {:5f}".format(self._train_diagnosis.AICc()) + \
+                          "; Valid Loss: " + str(self._validLossList[-1]) + \
+                          "; Valid R2: " + str(self._valid_r2) + \
+                          "; Learning Rate: " + str(self._optimizer.param_groups[0]['lr'])
+                logging.info(log_str)
+                if 0 < early_stop < self._noUpdateEpoch:  # stop when the model has not been updated for long time
+                    print("Training stop! Model has not been improved for over {} epochs.".format(early_stop))
+                    break
         self.load_model(self._modelSavePath + '/' + self._modelName + ".pkl")
         self.result_data = self.getCoefs()
-        print("Best_r2:", self._bestr2)
 
     def predict(self, dataset):
         """
@@ -519,8 +507,8 @@ class GNNWR:
         dataframe
             the Pandas dataframe of the dataset with the predicted result
         """
-        data = dataset.x_data
-        coef = dataset.distances
+        data = dataset.distances
+        coef = dataset.x_data
         if not self.__istrained:
             print("WARNING! The model hasn't been trained or loaded!")
         self._model.eval()
@@ -529,13 +517,10 @@ class GNNWR:
             coef = torch.tensor(coef).to(torch.float32)
             if self._use_gpu:
                 data, coef = data.cuda(), coef.cuda()
-                ols_w = torch.tensor(self._coefficient).to(torch.float32).cuda()
-            else:
-                ols_w = torch.tensor(self._coefficient).to(torch.float32).cpu()
             weight = self._model(data)
-            coefficient = weight.mul(ols_w)
-            result = self._out(coefficient.mul(coef)).cpu().detach().numpy()
+            result = self._out(weight.mul(coef)).cpu().detach().numpy()
         dataset.dataframe['pred_result'] = result
+        dataset.dataframe['denormalized_pred_result'] = dataset.rescale(result)
         dataset.pred_result = result
         return dataset.dataframe
 

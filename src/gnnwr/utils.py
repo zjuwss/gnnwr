@@ -24,7 +24,7 @@ class OLS:
         self.__formula = yName[0] + '~' + '+'.join(xName)
         self.__fit = sm.formula.ols(self.__formula, dataset).fit()
         self.params = list(self.__fit.params.to_dict().values())
-        intercept = self.__fit.params[0]
+        intercept = self.__fit.params.iloc[0]
         self.params = self.params[1:]
         self.params.append(intercept)
 

@@ -138,7 +138,7 @@ class GNNWR:
         self._log_file_name = log_file_name  # log file
         self._log_level = log_level  # log level
         self.__istrained = False  # whether the model is trained
-        # TODO: use OLS in scaled data ot original data
+
         self._coefficient = OLS(
             train_dataset.scaledDataframe, train_dataset.x, train_dataset.y).params  # coefficients of OLS
 
@@ -316,10 +316,11 @@ class GNNWR:
             x_true = torch.cat((x_true, coef), 0)
             y_true = torch.cat((y_true, label), 0)
             weight = self._model(data)
+
             weight_all = torch.cat((weight_all, weight.to(torch.float32)), 0)
             output = self._out(weight.mul(coef.to(torch.float32)))
             y_pred = torch.cat((y_pred, output), 0)
-            loss = self._criterion(output, label)  # calculate the loss
+            loss = self._criterion(output, label) # calculate the loss
             loss.backward()  # back propagation
             self._optimizer.step()  # update the parameters
             if isinstance(data, list):
@@ -419,8 +420,9 @@ class GNNWR:
             self.__testLoss = test_loss
             self.__testr2 = r2_score(label_list, out_list)
             self._test_diagnosis = DIAGNOSIS(weight_all, x_data, y_data, y_pred)
+            return self._test_diagnosis.R2().data
 
-    def run(self, max_epoch=1, early_stop=-1):
+    def run(self, max_epoch=1, early_stop=-1,**kwargs):
         """
         train the model and validate the model
 
@@ -438,6 +440,12 @@ class GNNWR:
         show_detailed_info : bool
             if ``True``, the detailed information will be shown (default: ``True``)
         """
+        if kwargs.get("print_frequency") is not None:
+            warnings.warn("The parameter print_frequency is deprecated, the information will be shown in tqdm")
+        if kwargs.get("show_detailed_info") is not None:
+            warnings.warn("The parameter show_detailed_info is deprecated, the information will be shown in tqdm")
+        # model selection method
+        model_selection = kwargs.get("model_selection", "val")
         self.__istrained = True
         if self._use_gpu:
             self._model = nn.DataParallel(module=self._model)  # parallel computing
@@ -490,7 +498,11 @@ class GNNWR:
                 if 0 < early_stop < self._noUpdateEpoch:  # stop when the model has not been updated for long time
                     print("Training stop! Model has not been improved for over {} epochs.".format(early_stop))
                     break
-        self.load_model(self._modelSavePath + '/' + self._modelName + ".pkl")
+        torch.save(self._model, self._modelSavePath + '/' + self._modelName + "_last.pkl")
+        if model_selection == "val":
+            self.load_model(self._modelSavePath + '/' + self._modelName + ".pkl")
+        elif model_selection == "last":
+            self.load_model(self._modelSavePath + '/' + self._modelName + "_last.pkl")
         self.result_data = self.getCoefs()
 
     def predict(self, dataset):
@@ -507,6 +519,7 @@ class GNNWR:
         dataframe
             the Pandas dataframe of the dataset with the predicted result
         """
+        
         data = dataset.distances
         coef = dataset.x_data
         if not self.__istrained:
@@ -520,7 +533,7 @@ class GNNWR:
             weight = self._model(data)
             result = self._out(weight.mul(coef)).cpu().detach().numpy()
         dataset.dataframe['pred_result'] = result
-        dataset.dataframe['denormalized_pred_result'] = dataset.rescale(result)
+        _,dataset.dataframe['denormalized_pred_result'] = dataset.rescale(None,result)
         dataset.pred_result = result
         return dataset.dataframe
 
@@ -581,7 +594,8 @@ class GNNWR:
             self._model = self._model.cpu()
             self._out = self._out.cpu()
         self._modelSavePath = os.path.dirname(path)
-        self._modelName = os.path.basename(path).split('/')[-1].split('.')[0]
+        if self._modelName is None:
+            self._modelName = os.path.basename(path).split('/')[-1].split('.')[0]
         self.__istrained = True
         self.result_data = self.getCoefs()
 
@@ -729,6 +743,7 @@ class GNNWR:
         """
         if model_path is None:
             model_path = self._modelSavePath + "/" + self._modelName + ".pkl"
+            
         if use_dict:
             data = torch.load(model_path, map_location=map_location)
             self._model.load_state_dict(data)

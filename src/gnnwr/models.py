@@ -225,24 +225,25 @@ class GNNWR:
                 | scheduler_T_mult: int, the T_mult of the scheduler CosineAnnealingWarmRestarts (default: ``3``)
         """
         # initialize the optimizer
+        weigth_decay = optimizer_params.get("weight_decay", 1e-3)
         if optimizer == "SGD":
             self._optimizer = optim.SGD(
-                self._model.parameters(), lr=self._start_lr)
+                self._model.parameters(), lr=self._start_lr, weight_decay=weigth_decay)
         elif optimizer == "Adam":
             self._optimizer = optim.Adam(
-                self._model.parameters(), lr=self._start_lr, weight_decay=1e-3)
+                self._model.parameters(), lr=self._start_lr, weight_decay=weigth_decay)
         elif optimizer == "AdamW":
             self._optimizer = optim.AdamW(
-                self._model.parameters(), lr=self._start_lr, weight_decay=1e-3)
+                self._model.parameters(), lr=self._start_lr, weight_decay=weigth_decay)
         elif optimizer == "RMSprop":
             self._optimizer = optim.RMSprop(
-                self._model.parameters(), lr=self._start_lr)
+                self._model.parameters(), lr=self._start_lr, weight_decay=weigth_decay)
         elif optimizer == "Adagrad":
             self._optimizer = optim.Adagrad(
-                self._model.parameters(), lr=self._start_lr)
+                self._model.parameters(), lr=self._start_lr, weight_decay=weigth_decay)
         elif optimizer == "Adadelta":
             self._optimizer = optim.Adadelta(
-                self._model.parameters(), lr=self._start_lr, weight_decay=1e-3)
+                self._model.parameters(), lr=self._start_lr, weight_decay=weigth_decay)
         else:
             raise ValueError("Invalid Optimizer")
         self._optimizer_name = optimizer  # optimizer name
@@ -594,8 +595,7 @@ class GNNWR:
             self._model = self._model.cpu()
             self._out = self._out.cpu()
         self._modelSavePath = os.path.dirname(path)
-        if self._modelName is None:
-            self._modelName = os.path.basename(path).split('/')[-1].split('.')[0]
+        self._modelName = os.path.basename(path).split('/')[-1].split('.')[0]
         self.__istrained = True
         self.result_data = self.getCoefs()
 

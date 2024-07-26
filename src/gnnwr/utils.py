@@ -42,10 +42,12 @@ class DIAGNOSIS:
     """
 
     def __init__(self, weight, x_data, y_data, y_pred):
-        self.__weight = weight.clone().to('cpu')
-        self.__x_data = x_data.clone().to('cpu')
-        self.__y_data = y_data.clone().to('cpu')
-        self.__y_pred = y_pred.clone().to('cpu')
+        self._device = torch.device('cuda') if weight.is_cuda else torch.device('cpu')
+
+        self.__weight = weight.clone()
+        self.__x_data = x_data.clone()
+        self.__y_data = y_data.clone()
+        self.__y_pred = y_pred.clone()
 
         self.__n = len(self.__y_data)
         self.__k = len(self.__x_data[0])
@@ -70,6 +72,9 @@ class DIAGNOSIS:
         self.__S = torch.trace(self.__hat)
         self.f3_dict = None
         self.f3_dict_2 = None
+
+        self._eye_I = torch.eye(self.__n, device=self._device)
+        self._ones_J = torch.ones(self.__n, device=self._device)
     def hat(self):
         """
         :return: hat matrix
@@ -95,9 +100,9 @@ class DIAGNOSIS:
         :return: F2-test
         """
         # A = (I - H) - (I - S)^T*(I - S)
-        A = (torch.eye(self.__n) - self.__ols_hat) - torch.mm(
-            (torch.eye(self.__n) - self.__hat).transpose(-2, -1),
-            (torch.eye(self.__n) - self.__hat))
+        A = (self._eye_I - self.__ols_hat) - torch.mm(
+            (self._eye_I  - self.__hat).transpose(-2, -1),
+            (self._eye_I  - self.__hat))
         v1 = torch.trace(A)
         # DSS = y^T*A*y
         DSS = torch.mm(self.__y_data.transpose(-2, -1), torch.mm(A, self.__y_data))
@@ -116,7 +121,7 @@ class DIAGNOSIS:
         self.f3_dict = {}
         self.f3_dict_2 = {}
         for i in range(self.__x_data.size(1)):
-            ek_zeros = torch.zeros([self.__x_data.size(1)])
+            ek_zeros = torch.zeros([self.__x_data.size(1)],device=self._device)
             ek_zeros[i] = 1
             ek_dict['ek' + str(i)] = torch.reshape(torch.reshape(torch.tile(ek_zeros.clone().detach(), [self.__n]),
                                                                  [self.__n, -1]),
@@ -124,8 +129,7 @@ class DIAGNOSIS:
             hatB = torch.matmul(ek_dict['ek' + str(i)], self.__hat_temp)
             hatB = torch.reshape(hatB, [-1, self.__n])
 
-            J_n = torch.ones([self.__n, self.__n]) / self.__n
-            L = torch.matmul(hatB.transpose(-2, -1), torch.matmul(torch.eye(self.__n) - J_n, hatB))
+            L = torch.matmul(hatB.transpose(-2, -1), torch.matmul(self._eye_I - self._ones_J, hatB))
 
             vk2 = 1 / self.__n * torch.matmul(self.__y_data.transpose(-2, -1), torch.matmul(L, self.__y_data))
             trace_L = torch.trace(1 / self.__n * L)

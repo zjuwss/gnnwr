@@ -179,6 +179,7 @@ class GNNWR:
         self._scheduler = None
         self._optimizer_name = None
         self.init_optimizer(optimizer, optimizer_params)  # initialize the optimizer
+        self._device = torch.device('cuda') if self._use_gpu else torch.device('cpu')
 
     def init_optimizer(self, optimizer, optimizer_params=None):
         r"""
@@ -295,16 +296,13 @@ class GNNWR:
         self._model.train()  # set the model to train mode
         train_loss = 0  # initialize the loss
         data_loader = self._train_dataset.dataloader  # get the data loader
-        weight_all = torch.tensor([]).to(torch.float32)
-        x_true = torch.tensor([]).to(torch.float32)
-        y_true = torch.tensor([]).to(torch.float32)
-        y_pred = torch.tensor([]).to(torch.float32)
+        weight_all = torch.tensor([],dtype=torch.float32,device=self._device)
+        x_true = torch.tensor([],dtype=torch.float32,device=self._device)
+        y_true = torch.tensor([],dtype=torch.float32,device=self._device)
+        y_pred = torch.tensor([],dtype=torch.float32,device=self._device)
         for index, (data, coef, label, data_index) in enumerate(data_loader):
             # move the data to gpu
-            device = torch.device('cuda') if self._use_gpu else torch.device('cpu')
-            data, coef, label = data.to(device), coef.to(device), label.to(device)
-            weight_all, x_true, y_true, y_pred = weight_all.to(device), x_true.to(device), y_true.to(device), y_pred.to(
-                device)
+            data, coef, label = data.to(self._device), coef.to(self._device), label.to(self._device)
 
             self._optimizer.zero_grad()  # zero the gradient
             if self._optimizer_name == "Adagrad":
@@ -312,14 +310,14 @@ class GNNWR:
                 for state in self._optimizer.state.values():
                     for k, v in state.items():
                         if isinstance(v, torch.Tensor):
-                            state[k] = v.to(device)
+                            state[k] = v.to(self._device)
 
             x_true = torch.cat((x_true, coef), 0)
             y_true = torch.cat((y_true, label), 0)
             weight = self._model(data)
 
             weight_all = torch.cat((weight_all, weight.to(torch.float32)), 0)
-            output = self._out(weight.mul(coef.to(torch.float32)))
+            output = self._out(weight.mul(coef))
             y_pred = torch.cat((y_pred, output), 0)
             loss = self._criterion(output, label) # calculate the loss
             loss.backward()  # back propagation
@@ -339,22 +337,20 @@ class GNNWR:
         """
         self._model.eval()  # set the model to validation mode
         val_loss = 0  # initialize the loss
-        label_list = np.array([])  # label list
-        out_list = np.array([])  # output list
+        label_list = torch.tensor([],dtype=torch.float32,device=self._device)
+        out_list = torch.tensor([],dtype=torch.float32,device=self._device)
+
         data_loader = self._valid_dataset.dataloader  # get the data loader
 
         with torch.no_grad():  # disable gradient calculation
             for data, coef, label, data_index in data_loader:
-                device = torch.device('cuda') if self._use_gpu else torch.device('cpu')
-                data, coef, label = data.to(device), coef.to(device), label.to(device)
+                data, coef, label = data.to(self._device), coef.to(self._device), label.to(self._device)
                 # weight = self._model(data)
                 output = self._out(self._model(
                     data).mul(coef.to(torch.float32)))
                 loss = self._criterion(output, label)  # calculate the loss
-                out_list = np.append(
-                    out_list, output.view(-1).cpu().detach().numpy())  # add the output to the list
-                label_list = np.append(
-                    label_list, label.view(-1).cpu().numpy())  # add the label to the list
+                out_list = torch.cat((out_list, output.view(-1)))
+                label_list = torch.cat((label_list, label.view(-1)))
                 if isinstance(data, list):
                     val_loss += loss.item() * data[0].size(0)
                 else:
@@ -362,7 +358,7 @@ class GNNWR:
             val_loss /= len(self._valid_dataset)  # calculate the average loss
             self._validLossList.append(val_loss)  # record the loss
             try:
-                r2 = r2_score(label_list, out_list)  # calculate the R square
+                r2 =1 - torch.sum((out_list - label_list) ** 2) / torch.sum((label_list - torch.mean(label_list)) ** 2)
             except:
                 if np.isnan(out_list).sum() > 0:
                     raise ValueError("The output contains nan value")
@@ -386,40 +382,34 @@ class GNNWR:
         """
         self._model.eval()
         test_loss = 0
-        label_list = np.array([])
-        out_list = np.array([])
+        out_list = torch.tensor([],dtype=torch.float32,device=self._device)
+        label_list = torch.tensor([],dtype=torch.float32,device=self._device)
         data_loader = self._test_dataset.dataloader
-        x_data = torch.tensor([]).to(torch.float32)
-        y_data = torch.tensor([]).to(torch.float32)
-        y_pred = torch.tensor([]).to(torch.float32)
-        weight_all = torch.tensor([]).to(torch.float32)
+        x_data = torch.tensor([],dtype=torch.float32,device=self._device)
+        y_data = torch.tensor([],dtype=torch.float32,device=self._device)
+        y_pred = torch.tensor([],dtype=torch.float32,device=self._device)
+        weight_all = torch.tensor([],dtype=torch.float32,device=self._device)
         with torch.no_grad():
             for data, coef, label, data_index in data_loader:
-                device = torch.device('cuda') if self._use_gpu else torch.device('cpu')
-                data, coef, label = data.to(device), coef.to(device), label.to(device)
-                x_data, y_data, y_pred, weight_all = x_data.to(device), y_data.to(device), y_pred.to(
-                    device), weight_all.to(device)
-                # data,label = data.view(data.shape[0],-1),label.view(data.shape[0],-1)
+                data, coef, label = data.to(self._device), coef.to(self._device), label.to(self._device)
                 x_data = torch.cat((x_data, coef), 0)
                 y_data = torch.cat((y_data, label), 0)
                 weight = self._model(data)
-                weight_all = torch.cat(
-                    (weight_all, weight.to(torch.float32).to(device)), 0)
+                weight_all = torch.cat((weight_all, weight.to(torch.float32)), 0)
                 output = self._out(weight.mul(coef.to(torch.float32)))
                 y_pred = torch.cat((y_pred, output), 0)
                 loss = self._criterion(output, label)
 
-                out_list = np.append(
-                    out_list, output.view(-1).cpu().detach().numpy())  # add the output to the list
-                label_list = np.append(
-                    label_list, label.view(-1).cpu().numpy())  # add the label to the list
+                out_list = torch.cat((out_list, output.view(-1)))
+                label_list = torch.cat((label_list, label.view(-1)))
+
                 if isinstance(data, list):
                     test_loss += loss.item() * data[0].size(0)
                 else:
                     test_loss += loss.item() * data.size(0)  # accumulate the loss
             test_loss /= len(self._test_dataset)
             self.__testLoss = test_loss
-            self.__testr2 = r2_score(label_list, out_list)
+            self.__testr2 = 1 - torch.sum((out_list - label_list) ** 2) / torch.sum((label_list - torch.mean(label_list)) ** 2)
             self._test_diagnosis = DIAGNOSIS(weight_all, x_data, y_data, y_pred)
             return self._test_diagnosis.R2().data
 

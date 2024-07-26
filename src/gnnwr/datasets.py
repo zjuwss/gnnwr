@@ -758,7 +758,7 @@ def init_predict_dataset(data, train_dataset, x_column, spatial_column=None, tem
     if train_dataset.scale_fn == "minmax_scale":
         process_params = [[train_dataset.x_scale_info['min'], train_dataset.x_scale_info['max']]]
     elif train_dataset.scale_fn == "standard_scale":
-        process_params = [[train_dataset.x_scale_info['mean'], train_dataset.x_scale_info['std']]]
+        process_params = [[train_dataset.x_scale_info['mean'], train_dataset.x_scale_info['var']]]
     else:
         raise ValueError("scale_fn must be minmax_scale or standard_scale")
     if scale_sync:

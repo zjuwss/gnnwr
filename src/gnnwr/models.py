@@ -124,6 +124,10 @@ class GNNWR:
         self._train_dataset = train_dataset  # train dataset
         self._valid_dataset = valid_dataset  # valid dataset
         self._test_dataset = test_dataset  # test dataset
+
+        self._model_x_scale_info = train_dataset.x_scale_info
+        self._model_y_scale_info = train_dataset.y_scale_info
+
         self._dense_layers = dense_layers  # structure of layers
         self._start_lr = start_lr  # initial learning rate
         self._insize = train_dataset.datasize  # size of input layer
@@ -460,7 +464,7 @@ class GNNWR:
                 # out put the information
                 pbar.set_postfix({'Train Loss': "{:5f}".format(self._trainLossList[-1]), 'Train R2': "{:5f}".format(self._train_diagnosis.R2().data.cpu().numpy()),
                                   'Train AIC': self._train_diagnosis.AIC(),'Valid Loss': self._validLossList[-1],
-                                  'Valid R2': self._valid_r2, 'Best Valid R2': self._bestr2,
+                                  'Valid R2': self._valid_r2.item(), 'Best Valid R2': self._bestr2.item(),
                                   'Learning Rate': self._optimizer.param_groups[0]['lr']})
 
                 self._scheduler.step()  # update the learning rate
@@ -511,18 +515,24 @@ class GNNWR:
             the Pandas dataframe of the dataset with the predicted result
         """
         
-        data = dataset.distances
-        coef = dataset.x_data
+        data_loader = dataset.dataloader
+        dataset.y_scale_info = self._model_y_scale_info
         if not self.__istrained:
             print("WARNING! The model hasn't been trained or loaded!")
         self._model.eval()
+        result = torch.tensor([]).to(torch.float32)
         with torch.no_grad():
-            data = torch.tensor(data).to(torch.float32)
-            coef = torch.tensor(coef).to(torch.float32)
-            if self._use_gpu:
-                data, coef = data.cuda(), coef.cuda()
-            weight = self._model(data)
-            result = self._out(weight.mul(coef)).cpu().detach().numpy()
+            for batch in data_loader:
+                data = batch[0]
+                coef = batch[1]
+                if self._use_gpu:
+                    result, data, coef = result.cuda(), data.cuda(), coef.cuda()
+                    ols_w = torch.tensor(self._coefficient).to(torch.float32).cuda()
+                else:
+                    ols_w = torch.tensor(self._coefficient).to(torch.float32)
+                weight = self._model(data)
+                result = torch.cat((result, self._out(weight.mul(coef))), 0)
+        result = result.cpu().detach().numpy()
         dataset.dataframe['pred_result'] = result
         _,dataset.dataframe['denormalized_pred_result'] = dataset.rescale(None,result)
         dataset.pred_result = result
@@ -548,7 +558,9 @@ class GNNWR:
         self._model.eval()
         result = torch.tensor([]).to(torch.float32)
         with torch.no_grad():
-            for data, coef in data_loader:
+            for batch in data_loader:
+                data = batch[0]
+                coef = batch[1]
                 if self._use_gpu:
                     result, data, coef = result.cuda(), data.cuda(), coef.cuda()
                     ols_w = torch.tensor(self._coefficient).to(torch.float32).cuda()

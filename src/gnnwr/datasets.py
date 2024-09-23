@@ -99,49 +99,13 @@ class baseDataset(Dataset):
                 torch.tensor(self.x_data[index], dtype=torch.float), \
                 torch.tensor(self.y_data[index], dtype=torch.float), \
                 torch.tensor(self.id_data[index], dtype=torch.float)
-        return torch.tensor(self.distances[index], dtype=torch.float), torch.tensor(self.x_data[index],
-                                                                                    dtype=torch.float), torch.tensor(
-            self.y_data[index], dtype=torch.float), torch.tensor(self.id_data[index], dtype=torch.float)
+        return torch.tensor(self.distances[index], dtype=torch.float), \
+                torch.tensor(self.x_data[index],dtype=torch.float), \
+                torch.tensor(self.y_data[index], dtype=torch.float), \
+                torch.tensor(self.id_data[index], dtype=torch.float)
 
-    def scale(self, scale_fn=None, scale_params=None):
-        """
-        scale the data by MinMaxScaler or StandardScaler
-        | the scale function will scale the independent variable data and add a column of 1 to the data
 
-        Parameters
-        ----------
-        scale_fn: str
-            scale function name
-            | if ``minmax_scale``, use MinMaxScaler
-            | if ``standard_scale``, use StandardScaler
-        scale_params: list
-            scaler with scale parameters
-            | if ``minmax_scale``, scale_params is a list of MinMaxScaler
-            | if ``standard_scale``, scale_params is a list of StandardScaler
-
-        """
-        if scale_fn == "minmax_scale":
-            self.scale_fn = "minmax_scale"
-            x_scale_params = scale_params[0]
-            y_scale_params = scale_params[1]
-            self.x_scale_info = {"min": x_scale_params.data_min_, "max": x_scale_params.data_max_}
-            self.x_data = x_scale_params.transform(pd.DataFrame(self.x_data, columns=self.x))
-            self.y_scale_info = {"min": y_scale_params.data_min_, "max": y_scale_params.data_max_}
-            self.y_data = y_scale_params.transform(pd.DataFrame(self.y_data, columns=self.y))
-        elif scale_fn == "standard_scale":
-            self.scale_fn = "standard_scale"
-            x_scale_params = scale_params[0]
-            y_scale_params = scale_params[1]
-            self.x_scale_info = {"mean": x_scale_params.mean_, "var": x_scale_params.var_}
-            self.x_data = x_scale_params.transform(pd.DataFrame(self.x_data, columns=self.x))
-            self.y_scale_info = {"mean": y_scale_params.mean_, "var": y_scale_params.var_}
-            self.y_data = y_scale_params.transform(pd.DataFrame(self.y_data, columns=self.y))
-        self.getScaledDataframe()
-
-        self.x_data = np.concatenate((self.x_data, np.ones(
-            (self.datasize, 1))), axis=1)
-
-    def scale2(self, scale_fn, scale_params):
+    def scale(self, scale_fn, scale_params):
         """
         scale the data with the scale function and scale parameters
 
@@ -160,6 +124,7 @@ class baseDataset(Dataset):
             self.scale_fn = "minmax_scale"
             x_scale_params = scale_params[0]
             y_scale_params = scale_params[1]
+            self.x_scale_info,self.y_scale_info = x_scale_params, y_scale_params
             if x_scale_params is not None:
                 self.x_data = (self.x_data - x_scale_params["min"]) / (x_scale_params["max"] - x_scale_params["min"])
             if y_scale_params is not None:
@@ -168,12 +133,13 @@ class baseDataset(Dataset):
             self.scale_fn = "standard_scale"
             x_scale_params = scale_params[0]
             y_scale_params = scale_params[1]
+            self.x_scale_info,self.y_scale_info = x_scale_params, y_scale_params
             if x_scale_params is not None:
                 self.x_data = (self.x_data - x_scale_params['mean']) / np.sqrt(x_scale_params["var"])
             if y_scale_params is not None:
                 self.y_data = (self.y_data - y_scale_params['mean']) / np.sqrt(y_scale_params["var"])
 
-        self.getScaledDataframe()
+        self.getScaledDataframe() # Calculate ScaledDataframe
 
         self.x_data = np.concatenate((self.x_data, np.ones(
             (self.datasize, 1))), axis=1)
@@ -205,15 +171,23 @@ class baseDataset(Dataset):
             rescaled dependent variable data
         """
         if self.scale_fn == "minmax_scale":
-            if x is not None:
+            if x is not None and self.x_scale_info is not None:
                 x = np.multiply(x, self.x_scale_info["max"] - self.x_scale_info["min"]) + self.x_scale_info["min"]
-            if y is not None:
+            elif self.x_scale_info is None:
+                raise ValueError("Invalid x scale info")
+            if y is not None and self.y_scale_info is not None:
                 y = np.multiply(y, self.y_scale_info["max"] - self.y_scale_info["min"]) + self.y_scale_info["min"]
+            elif self.y_scale_info is None:
+                raise ValueError("Invalid y scale info")
         elif self.scale_fn == "standard_scale":
-            if x is not None:
+            if x is not None and self.x_scale_info is not None:
                 x = np.multiply(x, np.sqrt(self.x_scale_info["var"])) + self.x_scale_info["mean"]
-            if y is not None:
+            elif self.x_scale_info is None:
+                raise ValueError("Invalid x scale info")
+            if y is not None and self.y_scale_info is not None:
                 y = np.multiply(y, np.sqrt(self.y_scale_info["var"])) + self.y_scale_info["mean"]
+            elif self.y_scale_info is None:
+                raise ValueError("Invalid y scale info")
         else:
             raise ValueError("invalid process_fn")
         return x, y
@@ -299,7 +273,8 @@ class baseDataset(Dataset):
         self.y_data = self.dataframe[self.y].astype(np.float32).values
         self.id_data = self.dataframe[self.id].astype(np.int64).values
         self.coefsize = len(self.x) + 1
-        self.scale2(self.scale_fn, [self.x_scale_info, self.y_scale_info])
+        self.scale(self.scale_fn, [self.x_scale_info, self.y_scale_info])
+
 
 
 class predictDataset(Dataset):
@@ -329,40 +304,37 @@ class predictDataset(Dataset):
             self.x_data = data[x_column].astype(np.float32).values  # x_data is independent variables data
             self.datasize = self.x_data.shape[0]  # datasize is the number of samples
             self.coefsize = len(x_column) + 1  # coefsize is the number of coefficients
+        
         self.is_need_STNN = is_need_STNN
         self.process_fn = process_fn
+
         if len(scale_info):
-            self.scale_info_x = scale_info[0]  # scale information of x_data
+            self.x_scale_info = scale_info[0]  # scale information of x_data
+            self.y_scale_info = scale_info[1]
             self.use_scale_info = True
         else:
+            self.x_scale_info, self.y_scale_info = None, None
             self.use_scale_info = False
+        
         # 数据预处理
+        self.scale_fn = process_fn
         if process_fn == "minmax_scale":
-            self.scale_fn = "minmax_scale"
-            # stander = MinMaxScaler()
-            # self.x_data = stander.fit_transform(self.x_data)
             if self.use_scale_info:
-                self.x_data = self.minmax_scaler(self.x_data, self.scale_info_x[0], self.scale_info_x[1])
+                self.x_data = self.minmax_scaler(self.x_data, self.x_scale_info["min"], self.x_scale_info["max"])
             else:
                 self.x_data = self.minmax_scaler(self.x_data)
         elif process_fn == "standard_scale":
-            self.scale_fn = "standard_scale"
-            # stander = StandardScaler()
-            # self.x_data = stander.fit_transform(self.x_data)
             if self.use_scale_info:
-                self.x_data = self.standard_scaler(self.x_data, self.scale_info_x[0], self.scale_info_x[1])
+                self.x_data = self.standard_scaler(self.x_data, self.x_scale_info["mean"], np.sqrt(self.x_scale_info["var"]))
             else:
                 self.x_data = self.standard_scaler(self.x_data)
-
         else:
             raise ValueError("invalid process_fn")
 
-        self.x_data = np.concatenate((self.x_data, np.ones(
-            (self.datasize, 1))), axis=1)
+        self.x_data = np.concatenate((self.x_data, np.ones((self.datasize, 1))), axis=1)
 
         self.distances = None
         self.temporal = None
-        self.scale_info_y = None
 
     def __len__(self):
         """
@@ -377,10 +349,10 @@ class predictDataset(Dataset):
         """
         if self.is_need_STNN:
             return torch.cat((torch.tensor(self.distances[index], dtype=torch.float),
-                              torch.tensor(self.temporal[index], dtype=torch.float)), dim=-1), torch.tensor(
-                self.x_data[index], dtype=torch.float)
-        return torch.tensor(self.distances[index], dtype=torch.float), torch.tensor(self.x_data[index],
-                                                                                    dtype=torch.float)
+                              torch.tensor(self.temporal[index], dtype=torch.float)), dim=-1), \
+                    torch.tensor(self.x_data[index], dtype=torch.float)
+        return torch.tensor(self.distances[index], dtype=torch.float), \
+                torch.tensor(self.x_data[index], dtype=torch.float)
 
     def rescale(self, x, y):
         """
@@ -390,15 +362,24 @@ class predictDataset(Dataset):
         :return: rescaled attribute data
         """
         if self.scale_fn == "minmax_scale":
-            if x is not None:
-                x = x * (self.scale_info_x[1] - self.scale_info_x[0]) + self.scale_info_x[0]
-            elif y is not None and  self.scale_info_y is not None:
-                y = y * (self.scale_info_y["max"] - self.scale_info_y["min"]) + self.scale_info_y["min"]
+            if x is not None and self.x_scale_info is not None:
+                x = x * (self.x_scale_info["max"] - self.x_scale_info["min"]) + self.x_scale_info["min"]
+            elif self.x_scale_info is None:
+                raise ValueError("Invalid x scale info")
+            if y is not None and  self.y_scale_info is not None:
+                y = y * (self.y_scale_info["max"] - self.y_scale_info["min"]) + self.y_scale_info["min"]
+            elif self.y_scale_info is None:
+                raise ValueError("Invalid y scale info")
+    
         elif self.scale_fn == "standard_scale":
-            if x is not None:
-                x = x * np.sqrt(self.scale_info_x[1]) + self.scale_info_x[0]
-            elif y is not None and self.scale_info_y is not None:
-                y = y * np.sqrt(self.scale_info_y["var"]) + self.scale_info_y["mean"]
+            if x is not None and self.x_scale_info is not None:
+                x = x * np.sqrt(self.x_scale_info["var"]) + self.x_scale_info["mean"]
+            elif self.x_scale_info is None:
+                raise ValueError("Invalid x scale info")
+            if y is not None and self.y_scale_info is not None:
+                y = y * np.sqrt(self.y_scale_info["var"]) + self.y_scale_info["mean"]
+            elif self.y_scale_info is None:
+                raise ValueError("Invalid y scale info")
         else:
             raise ValueError("invalid process_fn")
 
@@ -468,7 +449,8 @@ def ManhattanDistance(x, y):
     return np.float32(np.sum(np.abs(x[:, np.newaxis, :] - y), axis=2))
 
 
-def init_dataset(data, test_ratio,
+def init_dataset(data, 
+                 test_ratio,
                  valid_ratio,
                  x_column,
                  y_column,
@@ -560,7 +542,15 @@ def init_dataset(data, test_ratio,
 
     scaler_params_x = scaler_x.fit(train_data[x_column])
     scaler_params_y = scaler_y.fit(train_data[y_column])
-    scaler_params = [scaler_params_x, scaler_params_y]
+    # convert Scaler to Scale Params
+    if process_fn == "minmax_scale":
+        def cvtparams(Scaler):
+            return {"max":Scaler.data_max_,"min":Scaler.data_min_}
+        scaler_params = [cvtparams(scaler_params_x), cvtparams(scaler_params_y)]
+    elif process_fn == "standard_scale":
+        def cvtparams(Scaler):
+            return {"mean":Scaler.mean_,"var":Scaler.var_}
+        scaler_params = [cvtparams(scaler_params_x), cvtparams(scaler_params_y)]
     # Use the parameters of the dataset to normalize the train_dataset, val_dataset, and test_dataset
     if use_model in ["gnnwr", "gnnwr spnn", "gtnnwr", "gtnnwr stpnn"]:
         train_dataset = baseDataset(train_data, x_column, y_column, id_column, is_need_STNN)
@@ -609,6 +599,7 @@ def init_dataset(data, test_ratio,
             reference_data[spatial_column].values, train_data[spatial_column].values, val_data[spatial_column].values,
             test_data[spatial_column].values
         )
+        train_dataset.is_need_STNN, val_dataset.is_need_STNN, test_dataset.is_need_STNN = True, True, True
     elif use_model == "gtnnwr stpnn":
         assert temp_column is not None, "temp_column must be not None in gtnnwr"
         train_points, val_points, test_points = _init_gtnnwr_stpnn_distance(
@@ -618,15 +609,13 @@ def init_dataset(data, test_ratio,
         train_dataset.distances, train_dataset.temporal = train_points
         val_dataset.distances, val_dataset.temporal = val_points
         test_dataset.distances, test_dataset.temporal = test_points
+        train_dataset.is_need_STNN, val_dataset.is_need_STNN, test_dataset.is_need_STNN = True, True, True
 
     train_dataset.simple_distance = simple_distance
     val_dataset.simple_distance = simple_distance
     test_dataset.simple_distance = simple_distance
 
-    if max_val_size < 0:
-        max_val_size = len(val_dataset)
-    if max_test_size < 0:
-        max_test_size = len(test_dataset)
+
     if process_fn == "minmax_scale":
         distance_scale = MinMaxScaler()
         temporal_scale = MinMaxScaler()
@@ -666,6 +655,10 @@ def init_dataset(data, test_ratio,
     # set batch_size for test_dataset as max_test_size
     train_dataset.dataloader = DataLoader(
         train_dataset, batch_size=batch_size, shuffle=shuffle)
+    if max_val_size < 0:
+        max_val_size = len(val_dataset)
+    if max_test_size < 0:
+        max_test_size = len(test_dataset)
     val_dataset.dataloader = DataLoader(
         val_dataset, batch_size=max_val_size, shuffle=shuffle)
     test_dataset.dataloader = DataLoader(
@@ -724,9 +717,19 @@ def init_dataset_cv(data, test_ratio, k_fold, x_column, y_column, spatial_column
     return cv_data_set, test_dataset
 
 
-def init_predict_dataset(data, train_dataset, x_column, spatial_column=None, temp_column=None,
-                         process_fn="minmax_scale", scale_sync=True, use_class=predictDataset,
-                         spatial_fun=BasicDistance, temporal_fun=ManhattanDistance, max_size=-1, is_need_STNN=False):
+def init_predict_dataset(data, 
+                         train_dataset, 
+                         x_column, 
+                         spatial_column=None, 
+                         temp_column=None,
+                         process_fn="minmax_scale", 
+                         scale_sync=True, 
+                         use_model="gnnwr",
+                         use_class=predictDataset,
+                         spatial_fun=BasicDistance, 
+                         temporal_fun=ManhattanDistance, 
+                         batch_size=-1, 
+                         is_need_STNN=False):
     """
     initialize predict dataset
 
@@ -737,7 +740,7 @@ def init_predict_dataset(data, train_dataset, x_column, spatial_column=None, tem
     :param temp_column: temporal distance column name
     :param process_fn: data process function
     :param scale_sync: scale sync or not
-    :param max_size: max size of predict dataset
+    :param batch_size: max size of predict dataset
     :param use_class: dataset class
     :param spatial_fun: spatial distance calculate function
     :param temporal_fun: temporal distance calculate function
@@ -755,92 +758,58 @@ def init_predict_dataset(data, train_dataset, x_column, spatial_column=None, tem
             "dist_column must be a column name in data")
 
     # initialize the predict_dataset
-    if train_dataset.scale_fn == "minmax_scale":
-        process_params = [[train_dataset.x_scale_info['min'], train_dataset.x_scale_info['max']]]
-    elif train_dataset.scale_fn == "standard_scale":
-        process_params = [[train_dataset.x_scale_info['mean'], train_dataset.x_scale_info['var']]]
-    else:
-        raise ValueError("scale_fn must be minmax_scale or standard_scale")
     if scale_sync:
-        predict_dataset = use_class(data=data, x_column=x_column, process_fn=process_fn, scale_info=process_params,
+        predict_dataset = use_class(data=data, 
+                                    x_column=x_column, 
+                                    process_fn=process_fn, 
+                                    scale_info=[train_dataset.x_scale_info, train_dataset.y_scale_info],
                                     is_need_STNN=is_need_STNN)
     else:
         predict_dataset = use_class(data=data, x_column=x_column, process_fn=process_fn, is_need_STNN=is_need_STNN)
 
-    # get the y scale information
-    predict_dataset.scale_info_y = train_dataset.y_scale_info
-    # train_data = train_dataset.dataframe
+    # calculate distance
+    predict_data = predict_dataset.dataframe
     reference_data = train_dataset.reference
 
-    if not is_need_STNN:
-        # if not use STNN, calculate spatial/temporal distance matrix and concatenate them
-        if train_dataset.simple_distance:
-            predict_dataset.distances = spatial_fun(
-                data[spatial_column].values, reference_data[spatial_column].values)
+    if use_model == "gnnwr":
+        predict_dataset.distances = _init_gnnwr_distance_pred(
+            reference_data[spatial_column].values, predict_data[spatial_column].values,spatial_fun
+        )
+    elif use_model == "gtnnwr":
+        assert temp_column is not None, "temp_column must be not None in gtnnwr"
+        predict_dataset.distances = _init_gtnnwr_distance_pred(
+            [reference_data[spatial_column].values,reference_data[temp_column].values],
+            [predict_data[spatial_column].values, predict_data[temp_column].values],
+            spatial_fun, temporal_fun
+        )
+    elif use_model == "gnnwr spnn":
+        predict_dataset.distances = _init_gnnwr_spnn_distance_pred(
+            reference_data[spatial_column].values, predict_data[spatial_column].values
+        )
+        predict_dataset.is_need_STNN = True
+    elif use_model == "gtnnwr stpnn":
+        assert temp_column is not None, "temp_column must be not None in gtnnwr"
+        pred_points = _init_gtnnwr_stpnn_distance_pred(
+            reference_data[spatial_column + temp_column].values, predict_data[spatial_column + temp_column].values,
+        )
+        predict_dataset.distances, predict_dataset.temporal = pred_points
+        predict_dataset.is_need_STNN = True
 
-            if temp_column is not None:
-                # if temp_column is not None, calculate temporal distance matrix
-                predict_dataset.temporal = temporal_fun(
-                    data[temp_column].values, reference_data[temp_column].values)
+    # distance preprocess
+    distance_shape = predict_dataset.distances.shape
 
-                predict_dataset.distances = np.concatenate(
-                    (predict_dataset.distances[:, :, np.newaxis], predict_dataset.temporal[:, :, np.newaxis]),
-                    axis=2)  # concatenate spatial and temporal distance matrix
-        else:
-            predict_dataset.distances = np.repeat(data[spatial_column].values[:, np.newaxis, :],
-                                                  len(reference_data),
-                                                  axis=1)
-            predict_temp_distance = np.repeat(reference_data[spatial_column].values[:, np.newaxis, :],
-                                              predict_dataset.datasize,
-                                              axis=1)
-            predict_dataset.distances = np.concatenate(
-                (predict_dataset.distances, np.transpose(predict_temp_distance, (1, 0, 2))), axis=2)
-
-            if temp_column is not None:
-                predict_dataset.temporal = np.repeat(data[temp_column].values[:, np.newaxis, :],
-                                                     len(reference_data),
-                                                     axis=1)
-                predict_temp_temporal = np.repeat(reference_data[temp_column].values[:, np.newaxis, :],
-                                                  predict_dataset.datasize,
-                                                  axis=1)
-                predict_dataset.temporal = np.concatenate(
-                    (predict_dataset.temporal, np.transpose(predict_temp_temporal, (1, 0, 2))), axis=2)
-            predict_dataset.distances = np.concatenate(
-                (predict_dataset.distances, predict_dataset.temporal), axis=2)
-
-    else:
-        # if use STNN, calculate spatial/temporal point matrix
-        # spatial distances matrix
-        predict_dataset.distances = np.repeat(data[spatial_column].values[:, np.newaxis, :], len(reference_data),
-                                              axis=1)
-        predict_temp_distance = np.repeat(reference_data[spatial_column].values[:, np.newaxis, :],
-                                          predict_dataset.datasize,
-                                          axis=1)
-        predict_dataset.distances = np.concatenate(
-            (predict_dataset.distances, np.transpose(predict_temp_distance, (1, 0, 2))), axis=2)
-
-        # temporal distances matrix
-        if temp_column is not None:
-            predict_dataset.temporal = np.repeat(data[temp_column].values[:, np.newaxis, :], len(reference_data),
-                                                 axis=1)
-            predict_temp_temporal = np.repeat(reference_data[temp_column].values[:, np.newaxis, :],
-                                              predict_dataset.datasize,
-                                              axis=1)
-            predict_dataset.temporal = np.concatenate(
-                (predict_dataset.temporal, np.transpose(predict_temp_temporal, (1, 0, 2))), axis=2)
     if process_fn == "minmax_scale":
-        predict_dataset.distances = predict_dataset.minmax_scaler(predict_dataset.distances,
+        predict_dataset.distances = predict_dataset.minmax_scaler(predict_dataset.distances.view(-1,distance_shape[-1]),
                                                                   train_dataset.distances_scale_param['min'],
-                                                                  train_dataset.distances_scale_param['max'])
+                                                                  train_dataset.distances_scale_param['max']).reshape(distance_shape)
     else:
-        predict_dataset.distances = predict_dataset.standard_scaler(predict_dataset.distances,
+        predict_dataset.distances = predict_dataset.standard_scaler(predict_dataset.distances.view(-1,distance_shape[-1]),
                                                                     train_dataset.distances_scale_param['mean'],
-                                                                    train_dataset.distances_scale_param['var'])
+                                                                    train_dataset.distances_scale_param['var']).reshape(distance_shape)
     # initialize dataloader for train/val/test dataset
-    if max_size < 0:
-        max_size = len(predict_dataset)
-    predict_dataset.dataloader = DataLoader(
-        predict_dataset, batch_size=max_size, shuffle=False)
+    if batch_size < 0:
+        batch_size = len(predict_dataset)
+    predict_dataset.dataloader = DataLoader(predict_dataset, batch_size=batch_size, shuffle=False)
 
     return predict_dataset
 
@@ -866,6 +835,16 @@ def _init_gnnwr_distance(refer_data, train_data, val_data, test_data, spatial_fu
     test_distance = spatial_fun(test_data, refer_data)
     return train_distance, val_distance, test_distance
 
+def _init_gnnwr_distance_pred(refer_data, pred_data, spatial_fun=BasicDistance):
+    """
+    :param refer_data:
+    :param train_data:
+    :param val_data:
+    :param test_data:
+    :return:
+    """
+    pred_distance = spatial_fun(pred_data, refer_data)
+    return pred_distance
 
 def _init_gtnnwr_distance(refer_data,
                           train_data,
@@ -896,6 +875,26 @@ def _init_gtnnwr_distance(refer_data,
     test_distance = np.concatenate((test_s_distance[:, :, np.newaxis], test_t_distance[:, :, np.newaxis]), axis=2)
     return train_distance, val_distance, test_distance
 
+def _init_gtnnwr_distance_pred(refer_data,
+                            pred_data,
+                            spatial_fun=BasicDistance,
+                            temporal_fun=ManhattanDistance):
+    """
+    :param refer_data:
+    :param train_data:
+    :param val_data:
+    :param test_data:
+    :return:
+    """
+    refer_s_distance, refer_t_distance = refer_data[0], refer_data[1]
+    pred_s_distance, pred_t_distance = pred_data[0], pred_data[1]
+
+    pred_s_distance = spatial_fun(pred_s_distance, refer_s_distance)
+    pred_t_distance = temporal_fun(pred_t_distance, refer_t_distance)
+
+    pred_distance = np.concatenate((pred_s_distance[:, :, np.newaxis], pred_t_distance[:, :, np.newaxis]), axis=2)
+    return pred_distance
+
 def _init_gnnwr_spnn_distance(
         refer_data,
         train_data,
@@ -924,6 +923,25 @@ def _init_gnnwr_spnn_distance(
     test_point_matrix = np.concatenate(
             (test_point_matrix, np.transpose(refer_point_test_matrix, (1, 0, 2))), axis=2)
     return train_point_matrix, val_point_matrix, test_point_matrix
+
+def _init_gnnwr_spnn_distance_pred(
+        refer_data,
+        pred_data):
+    """
+    :param refer_data:
+    :param train_data:
+    :param val_data:
+    :param test_data:
+    :return:
+    """
+    # calculate point matrix
+    matrix_length = len(refer_data)
+    pred_length = len(pred_data)
+    pred_point_matrix = np.repeat(pred_data[:, np.newaxis, :], matrix_length, axis=1)
+    refer_point_pred_matrix = np.repeat(refer_data[:,np.newaxis,:], pred_length, axis=1)
+    pred_point_matrix = np.concatenate(
+            (pred_point_matrix, np.transpose(refer_point_pred_matrix, (1, 0, 2))), axis=2)
+    return pred_point_matrix
 
 def _init_gtnnwr_stpnn_distance(
         refer_data,
@@ -971,3 +989,29 @@ def _init_gtnnwr_stpnn_distance(
     test_t_point_matrix = np.concatenate(
             (test_t_point_matrix, np.transpose(refer_t_point_test_matrix, (1, 0, 2))), axis=2)
     return (train_s_point_matrix, train_t_point_matrix), (val_s_point_matrix, val_t_point_matrix), (test_s_point_matrix, test_t_point_matrix)
+
+def _init_gtnnwr_stpnn_distance_pred(
+        refer_data,
+        pred_data):
+    """
+    :param refer_data:
+    :param pred_data:
+    :return:
+    """
+    refer_s_point, refer_t_point = refer_data[0], refer_data[1]
+    pred_s_point, pred_t_point = pred_data[0], pred_data[1]
+
+    # calculate point matrix
+    matrix_length = len(refer_s_point)
+    pred_length,val_length,test_length = len(pred_s_point),len(val_s_point),len(test_s_point)
+    pred_s_point_matrix = np.repeat(pred_s_point[:, np.newaxis, :], matrix_length, axis=1)
+    refer_s_point_pred_matrix = np.repeat(refer_s_point[:,np.newaxis,:], pred_length, axis=1)
+    pred_s_point_matrix = np.concatenate(
+            (pred_s_point_matrix, np.transpose(refer_s_point_pred_matrix, (1, 0, 2))), axis=2)
+
+
+    pred_t_point_matrix = np.repeat(pred_t_point[:, np.newaxis, :], matrix_length, axis=1)
+    refer_t_point_pred_matrix = np.repeat(refer_t_point[:,np.newaxis,:], pred_length, axis=1)
+    pred_t_point_matrix = np.concatenate(
+            (pred_t_point_matrix, np.transpose(refer_t_point_pred_matrix, (1, 0, 2))), axis=2)
+    return (pred_s_point_matrix, pred_t_point_matrix)

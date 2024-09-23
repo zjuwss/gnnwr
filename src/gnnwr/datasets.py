@@ -1003,7 +1003,7 @@ def _init_gtnnwr_stpnn_distance_pred(
 
     # calculate point matrix
     matrix_length = len(refer_s_point)
-    pred_length,val_length,test_length = len(pred_s_point),len(val_s_point),len(test_s_point)
+    pred_length = len(pred_s_point)
     pred_s_point_matrix = np.repeat(pred_s_point[:, np.newaxis, :], matrix_length, axis=1)
     refer_s_point_pred_matrix = np.repeat(refer_s_point[:,np.newaxis,:], pred_length, axis=1)
     pred_s_point_matrix = np.concatenate(

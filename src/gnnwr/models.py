@@ -230,7 +230,10 @@ class GNNWR:
                 | scheduler_T_mult: int, the T_mult of the scheduler CosineAnnealingWarmRestarts (default: ``3``)
         """
         # initialize the optimizer
+        if optimizer_params is None:
+            optimizer_params = {}
         weigth_decay = optimizer_params.get("weight_decay", 1e-3)
+        
         if optimizer == "SGD":
             self._optimizer = optim.SGD(
                 self._model.parameters(), lr=self._start_lr, weight_decay=weigth_decay)
@@ -254,8 +257,7 @@ class GNNWR:
         self._optimizer_name = optimizer  # optimizer name
 
         # lr scheduler
-        if optimizer_params is None:
-            optimizer_params = {}
+        
         scheduler = optimizer_params.get("scheduler", "Constant")
         scheduler_milestones = optimizer_params.get(
             "scheduler_milestones", [100, 500, 1000, 2000])

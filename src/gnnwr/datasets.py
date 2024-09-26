@@ -799,11 +799,11 @@ def init_predict_dataset(data,
     distance_shape = predict_dataset.distances.shape
 
     if process_fn == "minmax_scale":
-        predict_dataset.distances = predict_dataset.minmax_scaler(predict_dataset.distances.view(-1,distance_shape[-1]),
+        predict_dataset.distances = predict_dataset.minmax_scaler(predict_dataset.distances.reshape(-1,distance_shape[-1]),
                                                                   train_dataset.distances_scale_param['min'],
                                                                   train_dataset.distances_scale_param['max']).reshape(distance_shape)
     else:
-        predict_dataset.distances = predict_dataset.standard_scaler(predict_dataset.distances.view(-1,distance_shape[-1]),
+        predict_dataset.distances = predict_dataset.standard_scaler(predict_dataset.distances.reshape(-1,distance_shape[-1]),
                                                                     train_dataset.distances_scale_param['mean'],
                                                                     train_dataset.distances_scale_param['var']).reshape(distance_shape)
     # initialize dataloader for train/val/test dataset

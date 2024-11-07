@@ -472,32 +472,66 @@ def init_dataset(data,
                  simple_distance=True,
                  dropna=True
                  ):
-    """
-    Initialize the dataset and return the training set, validation set and test set for the model
+    r"""
+    Initialize the dataset and return the training set, validation set, and test set for the model.
 
-    :param data: dataset
-    :param test_ratio: test data ratio
-    :param valid_ratio: valid data ratio
-    :param x_column: input attribute column name
-    :param y_column: output attribute column name
-    :param spatial_column: spatial attribute column name
-    :param temp_column: temporal attribute column name
-    :param id_column: id column name
-    :param sample_seed: random seed
-    :param process_fn: data pre-process function
-    :param batch_size: batch size
-    :param max_val_size: max valid data size in one injection
-    :param max_test_size: max test data size in one injection
-    :param shuffle: shuffle data
-    :param use_model: dataset class
-    :param spatial_fun: spatial distance calculate function
-    :param temporal_fun: temporal distance calculate function
-    :param from_for_cv: the start index of the data for cross validation
-    :param is_need_STNN: whether to use STNN
-    :param Reference: reference points to calculate the distance
-    :param simple_distance: whether to use simple distance function to calculate the distance
-    :return: train dataset, valid dataset, test dataset
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        The dataset to be initialized.
+    test_ratio : float
+        The ratio of test data.
+    valid_ratio : float
+        The ratio of validation data.
+    x_column : list
+        The name of the input attribute column.
+    y_column : list
+        The name of the output attribute column.
+    spatial_column : list
+        The name of the spatial attribute column.
+    temp_column : list
+        The name of the temporal attribute column.
+    id_column : list
+        The name of the ID column.
+    sample_seed : int
+        The random seed for sampling.
+    process_fn : callable
+        The data pre-processing function.
+    batch_size : int
+        The size of the batch.
+    shuffle : bool
+        Whether to shuffle the data.
+    use_model : str
+        The model to be used, e.g., "gnnwr", "gnnwr spnn", "gtnnwr", "gtnnwr stpnn".
+    spatial_fun : callable
+        The function for calculating spatial distance.
+    temporal_fun : callable
+        The function for calculating temporal distance.
+    max_val_size : int
+        The maximum size of the validation data in one injection.
+    max_test_size : int
+        The maximum size of the test data in one injection.
+    from_for_cv : int
+        The start index of the data for cross-validation.
+    is_need_STNN : bool
+        A flag indicating whether to use STNN.
+    Reference : Union[str, pandas.DataFrame]
+        Reference points for calculating the distance. It can be a string ["train", "train_val"] or a pandas DataFrame.
+    simple_distance : bool
+        A flag indicating whether to use a simple distance function for calculation.
+    dropna : bool
+        A flag indicating whether to drop NaN values.
+
+    Returns
+    -------
+    train_dataset : baseDataset
+        The training dataset.
+    valid_dataset : baseDataset
+        The validation dataset.
+    test_dataset : baseDataset
+        The test dataset.
     """
+
     if spatial_fun is None:
         # if dist_fun is None, raise error
         raise ValueError(
@@ -557,6 +591,7 @@ def init_dataset(data,
         val_dataset = baseDataset(val_data, x_column, y_column, id_column, is_need_STNN)
         test_dataset = baseDataset(test_data, x_column, y_column, id_column, is_need_STNN)
     else:
+        # Other dataset will be added soon
         raise ValueError("invalid use_model")
     train_dataset.scale(process_fn, scaler_params)
     val_dataset.scale(process_fn, scaler_params)
@@ -610,6 +645,7 @@ def init_dataset(data,
         val_dataset.distances, val_dataset.temporal = val_points
         test_dataset.distances, test_dataset.temporal = test_points
         train_dataset.is_need_STNN, val_dataset.is_need_STNN, test_dataset.is_need_STNN = True, True, True
+    # Other calculation methods can be added here.
 
     train_dataset.simple_distance = simple_distance
     val_dataset.simple_distance = simple_distance
@@ -820,15 +856,27 @@ def load_dataset(directory, use_class=baseDataset):
     dataset.dataloader = DataLoader(dataset, batch_size=dataset.batch_size, shuffle=dataset.shuffle)
     return dataset
 
-
+# To make the distance calculation clearer, each method is separated into independent functions here.
+# TODO: fix comment
 def _init_gnnwr_distance(refer_data, train_data, val_data, test_data, spatial_fun=BasicDistance):
+    r"""
+    Parameters
+    ----------
+    refer_data : numpy.nDarray
+        Reference points for calculating the distance.
+    train_data : object
+        The data subset used for training the model.
+    val_data : object
+        The data subset used for validating the model during training.
+    test_data : object
+        The data subset used for testing the model after training.
+
+    Returns
+    -------
+    None
+        This function does not return any value, it may perform operations on the provided data subsets.
     """
-    :param refer_data:
-    :param train_data:
-    :param val_data:
-    :param test_data:
-    :return:
-    """
+
 
     train_distance = spatial_fun(train_data, refer_data)
     val_distance = spatial_fun(val_data, refer_data)

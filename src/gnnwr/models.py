@@ -63,40 +63,40 @@ class GNNWR:
     log_level : int
         the level of the log (default: ``logging.INFO``)
     optimizer_params : dict, optional
-        the params of the optimizer and the scheduler (default: ``None``)
+        - **scheduler** \: *str*
+            
+            The type of learning rate scheduler to use. Valid options include ``Special``,
+            ``Constant``, and ``MultiStepLR``.
+        - **maxlr** \: *float*
+            
+            The maximum learning rate for the scheduler, for ``Special``.
+        - **minlr** \: *float*
+            
+            The minimum learning rate for the scheduler, for ``Special``.
+        - **upepoch** \: *int*
+            
+            The number of epochs until the maximum learning rate is reached, for ``Special``.
+        - **decayepoch** \: *int*
+            
+            The epoch at which learning rate decay starts, for ``Special``.
+        - **decayrate** \: *float*
+            
+            The rate at which the learning rate decays, for ``Special``.
+        - **stop_change_epoch** \: *int*
 
-        if optimizer is SGD, the params are:
+            The epoch at which to stop adjusting the learning rate, for ``Special``.
+        - **stop_lr** \: *float*
 
-            | maxlr: float, the max learning rate (default: ``0.1``)
+            The learning rate to stop at after the specified epoch, for ``Special``.
+        - **scheduler_milestones** \: *list*
 
-            | minlr: float, the min learning rate (default: ``0.01``)
+            The epochs at which to decay the learning rate for a ``MultiStepLR`` scheduler.
+        - **scheduler_gamma** \: *float*
 
-            | upepoch: int, the epoch of learning rate up (default: ``10000``)
+            The factor by which the learning rate is reduced for a ``MultiStepLR`` scheduler.
+        - **weight_decay** \: *float*
 
-            | decayepoch: int, the epoch of learning rate decay (default: ``20000``)
-
-            | decayrate: float, the rate of learning rate decay (default: ``0.1``)
-
-            | stop_change_epoch: int, the epoch of learning rate stop change (default: ``30000``)
-
-            | stop_lr: float, the learning rate when stop change (default: ``0.001``)
-
-        if optimizer is Other, the params are:
-
-            | scheduler: str, the name of the scheduler (default: ``"CosineAnnealingWarmRestarts"``) in {``"MultiStepLR","CosineAnnealingLR","CosineAnnealingWarmRestarts"``}
-
-            | scheduler_milestones: list, the milestones of the scheduler MultiStepLR (default: ``[500,1000,2000,4000]``)
-
-            | scheduler_gamma: float, the gamma of the scheduler MultiStepLR (default: ``0.5``)
-
-            | scheduler_T_max: int, the T_max of the scheduler CosineAnnealingLR (default: ``1000``)
-
-            | scheduler_eta_min: float, the eta_min of the scheduler CosineAnnealingLR and CosineAnnealingWarmRestarts (default: ``0.01``)
-
-            | scheduler_T_0: int, the T_0 of the scheduler CosineAnnealingWarmRestarts (default: ``100``)
-
-            | scheduler_T_mult: int, the T_mult of the scheduler CosineAnnealingWarmRestarts (default: ``3``)
-
+            The weight decay factor for the optimizer.
 
     """
 
@@ -187,47 +187,58 @@ class GNNWR:
 
     def init_optimizer(self, optimizer, optimizer_params=None):
         r"""
-        initialize the optimizer
+        Initialize the optimizer.
+
+        This method sets up the optimizer and the learning rate scheduler with the given parameters.
 
         Parameters
         ----------
         optimizer : str
-            the optimizer of the model (default: ``"Adagrad"``)
-            choose from "SGD","Adam","RMSprop","Adagrad","Adadelta"
+            The name of the optimizer to use. This should be one of the supported optimizers.
         optimizer_params : dict, optional
-            the params of the optimizer and the scheduler (default: ``None``)
+            A dictionary containing parameters for the optimizer and scheduler. If not provided,
+            default values will be used. The dictionary can contain the following keys:
 
-            if optimizer is SGD, the params are:
+            - **scheduler** \: *str*
+            
+            The type of learning rate scheduler to use. Valid options include ``Special``,
+            ``Constant``, and ``MultiStepLR``.
+            - **maxlr** \: *float*
+                
+                The maximum learning rate for the scheduler, for ``Special``.
+            - **minlr** \: *float*
+                
+                The minimum learning rate for the scheduler, for ``Special``.
+            - **upepoch** \: *int*
+                
+                The number of epochs until the maximum learning rate is reached, for ``Special``.
+            - **decayepoch** \: *int*
+                
+                The epoch at which learning rate decay starts, for ``Special``.
+            - **decayrate** \: *float*
+                
+                The rate at which the learning rate decays, for ``Special``.
+            - **stop_change_epoch** \: *int*
 
-                | maxlr: float, the max learning rate (default: ``0.1``)
+                The epoch at which to stop adjusting the learning rate, for ``Special``.
+            - **stop_lr** \: *float*
 
-                | minlr: float, the min learning rate (default: ``0.01``)
+                The learning rate to stop at after the specified epoch, for ``Special``.
+            - **scheduler_milestones** \: *list*
 
-                | upepoch: int, the epoch of learning rate up (default: ``10000``)
+                The epochs at which to decay the learning rate for a ``MultiStepLR`` scheduler.
+            - **scheduler_gamma** \: *float*
 
-                | decayepoch: int, the epoch of learning rate decay (default: ``20000``)
+                The factor by which the learning rate is reduced for a ``MultiStepLR`` scheduler.
+            - **weight_decay** \: *float*
 
-                | decayrate: float, the rate of learning rate decay (default: ``0.1``)
+                The weight decay factor for the optimizer.
 
-                | stop_change_epoch: int, the epoch of learning rate stop change (default: ``30000``)
+        Raises
+        ------
+        ValueError
+            If an unsupported optimizer or scheduler is specified.
 
-                | stop_lr: float, the learning rate when stop change (default: ``0.001``)
-
-            if optimizer is Other, the params are:
-
-                | scheduler: str, the name of the scheduler (default: ``"CosineAnnealingWarmRestarts"``) in {``"MultiStepLR","CosineAnnealingLR","CosineAnnealingWarmRestarts"``}
-
-                | scheduler_milestones: list, the milestones of the scheduler MultiStepLR (default: ``[500,1000,2000,4000]``)
-
-                | scheduler_gamma: float, the gamma of the scheduler MultiStepLR (default: ``0.5``)
-
-                | scheduler_T_max: int, the T_max of the scheduler CosineAnnealingLR (default: ``1000``)
-
-                | scheduler_eta_min: float, the eta_min of the scheduler CosineAnnealingLR and CosineAnnealingWarmRestarts (default: ``0.01``)
-
-                | scheduler_T_0: int, the T_0 of the scheduler CosineAnnealingWarmRestarts (default: ``100``)
-
-                | scheduler_T_mult: int, the T_mult of the scheduler CosineAnnealingWarmRestarts (default: ``3``)
         """
         # initialize the optimizer
         if optimizer_params is None:

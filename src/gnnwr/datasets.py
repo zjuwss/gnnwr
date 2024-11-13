@@ -120,20 +120,24 @@ class baseDataset(Dataset):
             | if ``minmax_scale``, scale_params is a list of dict with ``min`` and ``max``
             | if ``standard_scale``, scale_params is a list of dict with ``mean`` and ``var``
         """
+        x_scale_params = scale_params[0]
+        y_scale_params = scale_params[1]        
+        
+        if not x_scale_params:
+            x_scale_params = None
+        if not y_scale_params:
+            y_scale_params = None
+
+        self.x_scale_info,self.y_scale_info = x_scale_params, y_scale_params
+            
         if scale_fn == "minmax_scale":
             self.scale_fn = "minmax_scale"
-            x_scale_params = scale_params[0]
-            y_scale_params = scale_params[1]
-            self.x_scale_info,self.y_scale_info = x_scale_params, y_scale_params
             if x_scale_params is not None:
                 self.x_data = (self.x_data - x_scale_params["min"]) / (x_scale_params["max"] - x_scale_params["min"])
             if y_scale_params is not None:
                 self.y_data = (self.y_data - y_scale_params["min"]) / (y_scale_params["max"] - y_scale_params["min"])
         elif scale_fn == "standard_scale":
             self.scale_fn = "standard_scale"
-            x_scale_params = scale_params[0]
-            y_scale_params = scale_params[1]
-            self.x_scale_info,self.y_scale_info = x_scale_params, y_scale_params
             if x_scale_params is not None:
                 self.x_data = (self.x_data - x_scale_params['mean']) / np.sqrt(x_scale_params["var"])
             if y_scale_params is not None:
@@ -206,10 +210,12 @@ class baseDataset(Dataset):
             os.makedirs(dirname)
         x_scale_info = {}
         y_scale_info = {}
-        for key, value in self.x_scale_info.items():
-            x_scale_info[key] = value.tolist()
-        for key, value in self.y_scale_info.items():
-            y_scale_info[key] = value.tolist()
+        if self.x_scale_info is not None:
+            for key, value in self.x_scale_info.items():
+                x_scale_info[key] = value.tolist()
+        if self.y_scale_info is not None:
+            for key, value in self.y_scale_info.items():
+                y_scale_info[key] = value.tolist()
         with open(os.path.join(dirname, "dataset_info.json"), "w") as f:
             distance_scale_info = {}
             for key in self.distances_scale_param.keys():
@@ -256,14 +262,12 @@ class baseDataset(Dataset):
         self.distances_scale_param = json.loads(dataset_info.get("distance_scale_info", None))
         x_scale_info = self.x_scale_info
         y_scale_info = self.y_scale_info
-        if self.x_scale_info is None:
-            x_scale_info = {}
-        if self.y_scale_info is None:
-            y_scale_info = {}
-        for key, value in x_scale_info.items():
-            x_scale_info[key] = np.array(value)
-        for key, value in y_scale_info.items():
-            y_scale_info[key] = np.array(value)
+        if self.x_scale_info is not None:
+            for key, value in x_scale_info.items():
+                self.x_scale_info[key] = np.array(value)
+        if self.y_scale_info is not None:
+            for key, value in y_scale_info.items():
+                self.y_scale_info[key] = np.array(value)
         # read the distance matrix
         self.distances = np.load(os.path.join(dirname, "distances.npy")).astype(np.float32)
         # read dataframe
@@ -459,6 +463,7 @@ def init_dataset(data,
                  id_column=None,
                  sample_seed=42,
                  process_fn="minmax_scale",
+                 process_var = ["x"],
                  batch_size=32,
                  shuffle=True,
                  use_model="gnnwr",
@@ -576,15 +581,21 @@ def init_dataset(data,
 
     scaler_params_x = scaler_x.fit(train_data[x_column])
     scaler_params_y = scaler_y.fit(train_data[y_column])
+    
+    scaler_params = [None, None]
     # convert Scaler to Scale Params
     if process_fn == "minmax_scale":
         def cvtparams(Scaler):
             return {"max":Scaler.data_max_,"min":Scaler.data_min_}
-        scaler_params = [cvtparams(scaler_params_x), cvtparams(scaler_params_y)]
     elif process_fn == "standard_scale":
         def cvtparams(Scaler):
             return {"mean":Scaler.mean_,"var":Scaler.var_}
-        scaler_params = [cvtparams(scaler_params_x), cvtparams(scaler_params_y)]
+    
+    if "x" in process_var:
+        scaler_params[0] = cvtparams(scaler_params_x)
+    if "y" in process_var:
+        scaler_params[1] = cvtparams(scaler_params_y)
+    
     # Use the parameters of the dataset to normalize the train_dataset, val_dataset, and test_dataset
     if use_model in ["gnnwr", "gnnwr spnn", "gtnnwr", "gtnnwr stpnn"]:
         train_dataset = baseDataset(train_data, x_column, y_column, id_column, is_need_STNN)

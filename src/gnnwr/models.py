@@ -547,7 +547,10 @@ class GNNWR:
                 result = torch.cat((result, self._out(weight.mul(coef))), 0)
         result = result.cpu().detach().numpy()
         dataset.dataframe['pred_result'] = result
-        _,dataset.dataframe['denormalized_pred_result'] = dataset.rescale(None,result)
+        if dataset.y_scale_info:
+            _,dataset.dataframe['denormalized_pred_result'] = dataset.rescale(None,result)
+        else:
+            dataset.dataframe['denormalized_pred_result'] = result
         dataset.pred_result = result
         return dataset.dataframe
 

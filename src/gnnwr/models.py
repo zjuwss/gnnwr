@@ -116,7 +116,7 @@ class GNNWR:
             write_path="../gnnwr_runs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),
             use_gpu: bool = True,
             use_ols: bool = True,
-            log_path="../gnnwr_logs/",
+            log_path="../gnnwr_logs",
             log_file_name="gnnwr" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".log",
             log_level=logging.INFO,
             optimizer_params=None
@@ -451,7 +451,7 @@ class GNNWR:
         # create file
         if not os.path.exists(self._log_path):
             os.mkdir(self._log_path)
-        file_str = self._log_path + self._log_file_name
+        file_str = self._log_path +'/'+ self._log_file_name
         logging.basicConfig(format='%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s',
                             filename=file_str, level=logging.INFO)
         with tqdm(range(max_epoch)) as pbar:

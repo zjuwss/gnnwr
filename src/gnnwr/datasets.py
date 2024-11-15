@@ -115,10 +115,12 @@ class baseDataset(Dataset):
             scale function name
             | if ``minmax_scale``, use MinMaxScaler
             | if ``standard_scale``, use StandardScaler
+            | if ``non``, no Scale
         scale_params: list
             scaler with scale parameters
             | if ``minmax_scale``, scale_params is a list of dict with ``min`` and ``max``
             | if ``standard_scale``, scale_params is a list of dict with ``mean`` and ``var``
+            | if ``non``, None
         """
         if scale_fn == "minmax_scale":
             self.scale_fn = "minmax_scale"
@@ -188,6 +190,8 @@ class baseDataset(Dataset):
                 y = np.multiply(y, np.sqrt(self.y_scale_info["var"])) + self.y_scale_info["mean"]
             elif self.y_scale_info is None:
                 raise ValueError("Invalid y scale info")
+        elif self.scale_fn == "none":
+            pass
         else:
             raise ValueError("invalid process_fn")
         return x, y
@@ -457,7 +461,9 @@ def init_dataset(data,
                  spatial_column=None,
                  temp_column=None,
                  id_column=None,
+                 sample_data=True,
                  sample_seed=42,
+                 scale_variables=True,
                  process_fn="minmax_scale",
                  batch_size=32,
                  shuffle=True,
@@ -483,7 +489,9 @@ def init_dataset(data,
     :param spatial_column: spatial attribute column name
     :param temp_column: temporal attribute column name
     :param id_column: id column name
+    :param sample_data: whether to sample data
     :param sample_seed: random seed
+    :param scale_variables: whether to scale the regression variables, the distance matrix will always be scaled with process_fn
     :param process_fn: data pre-process function
     :param batch_size: batch size
     :param max_val_size: max valid data size in one injection
@@ -496,6 +504,7 @@ def init_dataset(data,
     :param is_need_STNN: whether to use STNN
     :param Reference: reference points to calculate the distance
     :param simple_distance: whether to use simple distance function to calculate the distance
+    :param dropna: whether to drop records with missing value
     :return: train dataset, valid dataset, test dataset
     """
     if spatial_fun is None:
@@ -521,17 +530,9 @@ def init_dataset(data,
         else:
             warnings.warn("id_column is None and use default id column in data", RuntimeWarning)
     np.random.seed(sample_seed)
-    data = data.sample(frac=1)  # shuffle data
-    scaler_x = None
-    scaler_y = None
-    # data pre-process
-    if process_fn == "minmax_scale":
-        scaler_x = MinMaxScaler()
-        scaler_y = MinMaxScaler()
-    elif process_fn == "standard_scale":
-        scaler_x = StandardScaler()
-        scaler_y = StandardScaler()
 
+    if sample_data:
+        data = data.sample(frac=1)
     # data split
     test_data = data[int((1 - test_ratio) * len(data)):]
     train_data = data[:int((1 - test_ratio) * len(data))]
@@ -540,27 +541,42 @@ def init_dataset(data,
     train_data = pandas.concat([train_data[:int(from_for_cv * valid_ratio * len(train_data))],
                                 train_data[int((1 + from_for_cv) * valid_ratio * len(train_data)):]])
 
-    scaler_params_x = scaler_x.fit(train_data[x_column])
-    scaler_params_y = scaler_y.fit(train_data[y_column])
-    # convert Scaler to Scale Params
-    if process_fn == "minmax_scale":
-        def cvtparams(Scaler):
-            return {"max":Scaler.data_max_,"min":Scaler.data_min_}
-        scaler_params = [cvtparams(scaler_params_x), cvtparams(scaler_params_y)]
-    elif process_fn == "standard_scale":
-        def cvtparams(Scaler):
-            return {"mean":Scaler.mean_,"var":Scaler.var_}
-        scaler_params = [cvtparams(scaler_params_x), cvtparams(scaler_params_y)]
-    # Use the parameters of the dataset to normalize the train_dataset, val_dataset, and test_dataset
     if use_model in ["gnnwr", "gnnwr spnn", "gtnnwr", "gtnnwr stpnn"]:
         train_dataset = baseDataset(train_data, x_column, y_column, id_column, is_need_STNN)
         val_dataset = baseDataset(val_data, x_column, y_column, id_column, is_need_STNN)
         test_dataset = baseDataset(test_data, x_column, y_column, id_column, is_need_STNN)
     else:
         raise ValueError("invalid use_model")
-    train_dataset.scale(process_fn, scaler_params)
-    val_dataset.scale(process_fn, scaler_params)
-    test_dataset.scale(process_fn, scaler_params)
+
+    if scale_variables:
+        scaler_x = None
+        scaler_y = None
+        # data pre-process
+        if process_fn == "minmax_scale":
+            scaler_x = MinMaxScaler()
+            scaler_y = MinMaxScaler()
+        elif process_fn == "standard_scale":
+            scaler_x = StandardScaler()
+            scaler_y = StandardScaler()
+        scaler_params_x = scaler_x.fit(train_data[x_column])
+        scaler_params_y = scaler_y.fit(train_data[y_column])
+        # convert Scaler to Scale Params
+        if process_fn == "minmax_scale":
+            def cvtparams(Scaler):
+                return {"max":Scaler.data_max_,"min":Scaler.data_min_}
+            scaler_params = [cvtparams(scaler_params_x), cvtparams(scaler_params_y)]
+        elif process_fn == "standard_scale":
+            def cvtparams(Scaler):
+                return {"mean":Scaler.mean_,"var":Scaler.var_}
+            scaler_params = [cvtparams(scaler_params_x), cvtparams(scaler_params_y)]
+        # Use the parameters of the dataset to normalize the train_dataset, val_dataset, and test_dataset
+        train_dataset.scale(process_fn, scaler_params)
+        val_dataset.scale(process_fn, scaler_params)
+        test_dataset.scale(process_fn, scaler_params)
+    else:
+        train_dataset.scale("none", "none")
+        val_dataset.scale("none", "none")
+        test_dataset.scale("none", "none")
 
     if Reference is None:
         reference_data = train_data
@@ -625,7 +641,6 @@ def init_dataset(data,
     # scale distance matrix
     distances = train_dataset.distances
     distances = distance_scale.fit_transform(distances.reshape(-1, distances.shape[-1])).reshape(distances.shape)
-
     train_dataset.distances = distance_scale.transform(train_dataset.distances.reshape(-1, train_dataset.distances.shape[-1])).reshape(train_dataset.distances.shape)
     val_dataset.distances = distance_scale.transform(val_dataset.distances.reshape(-1, val_dataset.distances.shape[-1])).reshape(val_dataset.distances.shape)
     test_dataset.distances = distance_scale.transform(test_dataset.distances.reshape(-1, test_dataset.distances.shape[-1])).reshape(test_dataset.distances.shape)

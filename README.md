@@ -12,6 +12,9 @@ A PyTorch implementation of the spatiotemporal intelligent regression (STIR) mod
 2. Tutorial notebooks of how to use these model
 3. Released Python wheels
 
+How to cite:  
+> Yin, Z., Ding, J., Liu, Y., Wang, R., Wang, Y., Chen, Y., Qi, J., Wu, S., and Du, Z.: GNNWR: an open-source package of spatiotemporal intelligent regression methods for modeling spatial and temporal nonstationarity, Geosci. Model Dev., 17, 8455–8468, https://doi.org/10.5194/gmd-17-8455-2024, 2024. 
+
 ## Table of Contents
 
 - [Introduction](#1-Introduction)

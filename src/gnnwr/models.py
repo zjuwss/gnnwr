@@ -821,9 +821,11 @@ class GNNWR:
         result["Pred_" + self._train_dataset.y[0]] = result["Pred_" + self._train_dataset.y[0]].astype(np.float32)
 
         # set dataset belong to postprocess
-        result["dataset_belong"] = 'test'
-        result.loc[:train_data_size,"dataset_belong"] = 'train'
-        result.loc[train_data_size:valid_data_size,"dataset_belong"] = 'valid'
+        result['dataset_belong'] = np.concatenate([
+            np.full(train_data_size, 'train'),
+            np.full(valid_data_size, 'valid'),
+            np.full(len(result) - train_data_size - valid_data_size, 'test')
+        ])
 
         # denormalize pred result
         if self._train_dataset.y_scale_info:

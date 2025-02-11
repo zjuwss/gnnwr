@@ -146,7 +146,7 @@ class DIAGNOSIS:
         """
         :return: AIC
         """
-        return self.__n * (math.log(self.__ssr / self.__n * 2 * math.pi, math.e)) + self.__n + self.__k
+        return self.__n * (math.log(self.__ssr / self.__n * 2 * math.pi, math.e)) + self.__n + self.__S
 
     def AICc(self):
         """

@@ -17,7 +17,7 @@ How to cite:
 
 > Wu, S., Wang, Z., Du, Z., Huang, B., Zhang, F., & Liu, R. (2021). Geographically and temporally neural network weighted regression for modeling spatiotemporal non-stationary relationships. International Journal of Geographical Information Science , 35(3), 582-608.
 
-> Yin, Z., Ding, J., Liu, Y., Wang, R., Wang, Y., Chen, Y., Qi, J., Wu, S., and Du, Z.: GNNWR: an open-source package of spatiotemporal intelligent regression methods for modeling spatial and temporal nonstationarity, Geosci. Model Dev., 17, 8455–8468, https://doi.org/10.5194/gmd-17-8455-2024, 2024. 
+> Yin, Z., Ding, J., Liu, Y., Wang, R., Wang, Y., Chen, Y., Qi, J., Wu, S., and Du, Z. (2024). GNNWR: an open-source package of spatiotemporal intelligent regression methods for modeling spatial and temporal nonstationarity. Geoscientific Model Development, 17 (22), 8455–8468.
 
 ## Table of Contents
 

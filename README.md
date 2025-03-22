@@ -13,6 +13,10 @@ A PyTorch implementation of the spatiotemporal intelligent regression (STIR) mod
 3. Released Python wheels
 
 How to cite:  
+> Du, Z., Wang, Z., Wu, S., Zhang, F., & Liu, R. (2020). Geographically neural network weighted regression for the accurate estimation of spatial non-stationarity. International Journal of Geographical Information Science, 34(7), 1353-1377.
+
+> Wu, S., Wang, Z., Du, Z., Huang, B., Zhang, F., & Liu, R. (2021). Geographically and temporally neural network weighted regression for modeling spatiotemporal non-stationary relationships. International Journal of Geographical Information Science , 35(3), 582-608.
+
 > Yin, Z., Ding, J., Liu, Y., Wang, R., Wang, Y., Chen, Y., Qi, J., Wu, S., and Du, Z.: GNNWR: an open-source package of spatiotemporal intelligent regression methods for modeling spatial and temporal nonstationarity, Geosci. Model Dev., 17, 8455–8468, https://doi.org/10.5194/gmd-17-8455-2024, 2024. 
 
 ## Table of Contents

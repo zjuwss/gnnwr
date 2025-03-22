@@ -715,6 +715,272 @@ def init_dataset(data,
     test_dataset.batch_size, test_dataset.shuffle = max_test_size, shuffle
     return train_dataset, val_dataset, test_dataset
 
+def init_dataset_usedata(train_data, 
+                    val_data,
+                    test_data,
+                    x_column,
+                    y_column,
+                    spatial_column=None,
+                    temp_column=None,
+                    id_column=None,
+                    process_fn="minmax_scale",
+                    process_var = ["x"],
+                    batch_size=32,
+                    shuffle=True,
+                    use_model="gnnwr",
+                    spatial_fun=BasicDistance,
+                    temporal_fun=ManhattanDistance,
+                    max_val_size=-1,
+                    max_test_size=-1,
+                    is_need_STNN=False,
+                    Reference=None,
+                    simple_distance=True,
+                    dropna=True
+                    ):
+    r"""
+    Initialize the dataset and return the training set, validation set, and test set for the model.
+
+    Parameters
+    ----------
+    train_data : pandas.DataFrame
+        The dataset to be initialized.
+    valid_data : pandas.DataFrame
+        The dataset to be initialized.
+    test_data : pandas.DataFrame
+        The dataset to be initialized.
+    x_column : list
+        The name of the input attribute column.
+    y_column : list
+        The name of the output attribute column.
+    spatial_column : list
+        The name of the spatial attribute column.
+    temp_column : list
+        The name of the temporal attribute column.
+    id_column : list
+        The name of the ID column.
+    sample_seed : int
+        The random seed for sampling.
+    process_fn : callable
+        The data pre-processing function.
+    batch_size : int
+        The size of the batch.
+    shuffle : bool
+        Whether to shuffle the data.
+    use_model : str
+        The model to be used, e.g., "gnnwr", "gnnwr spnn", "gtnnwr", "gtnnwr stpnn".
+    spatial_fun : callable
+        The function for calculating spatial distance.
+    temporal_fun : callable
+        The function for calculating temporal distance.
+    max_val_size : int
+        The maximum size of the validation data in one injection.
+    max_test_size : int
+        The maximum size of the test data in one injection.
+    from_for_cv : int
+        The start index of the data for cross-validation.
+    is_need_STNN : bool
+        A flag indicating whether to use STNN.
+    Reference : Union[str, pandas.DataFrame]
+        Reference points for calculating the distance. It can be a string ["train", "train_val"] or a pandas DataFrame.
+    simple_distance : bool
+        A flag indicating whether to use a simple distance function for calculation.
+    dropna : bool
+        A flag indicating whether to drop NaN values.
+
+    Returns
+    -------
+    train_dataset : baseDataset
+        The training dataset.
+    valid_dataset : baseDataset
+        The validation dataset.
+    test_dataset : baseDataset
+        The test dataset.
+    """
+
+    if spatial_fun is None:
+        # if dist_fun is None, raise error
+        raise ValueError(
+            "dist_fun must be a function that can process the data")
+
+    if spatial_column is None:
+        # if dist_column is None, raise error
+        raise ValueError(
+            "dist_column must be a column name in data")
+    
+    data = pd.concat((train_data, val_data, test_data))
+
+    data["__belong__"] = np.concatenate((
+        np.full(len(train_data),"train"),
+        np.full(len(val_data),"val"),
+        np.full(len(test_data),"test"),
+    )
+    )
+
+    if dropna:
+        oriLen = data.shape[0]
+        data.dropna(axis=0, how='any', inplace=True)
+        if oriLen > data.shape[0]:
+            warnings.warn(
+                "Dropping {} {} with missing values. To forbid dropping, you need to set the argument dropna=False".format(
+                    oriLen - data.shape[0], 'row' if oriLen - data.shape[0] == 1 else 'rows'))
+    if id_column is None:
+        id_column = ['id']
+        if 'id' not in data.columns:
+            data['id'] = np.arange(len(data))
+        else:
+            warnings.warn("id_column is None and use default id column in data", RuntimeWarning)
+    
+    train_data = data[:len(train_data)]
+    val_data = data[len(train_data):len(train_data)+len(val_data)]
+    test_data = data[len(train_data)+len(val_data):]
+    
+
+    scaler_x = None
+    scaler_y = None
+    # data pre-process
+    if process_fn == "minmax_scale":
+        scaler_x = MinMaxScaler()
+        scaler_y = MinMaxScaler()
+    elif process_fn == "standard_scale":
+        scaler_x = StandardScaler()
+        scaler_y = StandardScaler()
+
+
+    scaler_params_x = scaler_x.fit(train_data[x_column])
+    scaler_params_y = scaler_y.fit(train_data[y_column])
+    
+    scaler_params = [None, None]
+    # convert Scaler to Scale Params
+    if process_fn == "minmax_scale":
+        def cvtparams(Scaler):
+            return {"max":Scaler.data_max_,"min":Scaler.data_min_}
+    elif process_fn == "standard_scale":
+        def cvtparams(Scaler):
+            return {"mean":Scaler.mean_,"var":Scaler.var_}
+    
+    if "x" in process_var:
+        scaler_params[0] = cvtparams(scaler_params_x)
+    if "y" in process_var:
+        scaler_params[1] = cvtparams(scaler_params_y)
+    
+    # Use the parameters of the dataset to normalize the train_dataset, val_dataset, and test_dataset
+    if use_model in ["gnnwr", "gnnwr spnn", "gtnnwr", "gtnnwr stpnn"]:
+        train_dataset = baseDataset(train_data, x_column, y_column, id_column, is_need_STNN)
+        val_dataset = baseDataset(val_data, x_column, y_column, id_column, is_need_STNN)
+        test_dataset = baseDataset(test_data, x_column, y_column, id_column, is_need_STNN)
+    else:
+        # Other dataset will be added soon
+        raise ValueError("invalid use_model")
+    train_dataset.scale(process_fn, scaler_params)
+    val_dataset.scale(process_fn, scaler_params)
+    test_dataset.scale(process_fn, scaler_params)
+
+    if Reference is None:
+        reference_data = train_data
+    elif isinstance(Reference, str):
+        if Reference == "train":
+            reference_data = train_data
+        elif Reference == "train_val":
+            reference_data = pandas.concat([train_data, val_data])
+        else:
+            raise ValueError("Reference str must be 'train' or 'train_val'")
+    else:
+        reference_data = Reference
+    if not isinstance(reference_data, pandas.DataFrame):
+        raise ValueError("reference_data must be a pandas.DataFrame")
+
+    train_dataset.reference, val_dataset.reference, test_dataset.reference = reference_data, reference_data, reference_data
+    train_dataset.spatial_column = val_dataset.spatial_column = test_dataset.spatial_column = spatial_column
+    train_dataset.x_column = val_dataset.x_column = test_dataset.x_column = x_column
+    train_dataset.y_column = val_dataset.y_column = test_dataset.y_column = y_column
+    if use_model == "gnnwr":
+        train_dataset.distances, val_dataset.distances, test_dataset.distances = _init_gnnwr_distance(
+            reference_data[spatial_column].values, train_data[spatial_column].values, val_data[spatial_column].values,
+            test_data[spatial_column].values, spatial_fun
+        )
+    elif use_model == "gtnnwr":
+        assert temp_column is not None, "temp_column must be not None in gtnnwr"
+        train_dataset.distances, val_dataset.distances, test_dataset.distances = _init_gtnnwr_distance(
+            [reference_data[spatial_column].values,reference_data[temp_column].values],
+            [train_data[spatial_column].values, train_data[temp_column].values],
+            [val_data[spatial_column].values, val_data[temp_column].values],
+            [test_data[spatial_column].values, test_data[temp_column].values],
+            spatial_fun, temporal_fun
+        )
+    elif use_model == "gnnwr spnn":
+        train_dataset.distances, val_dataset.distances, test_dataset.distances = _init_gnnwr_spnn_distance(
+            reference_data[spatial_column].values, train_data[spatial_column].values, val_data[spatial_column].values,
+            test_data[spatial_column].values
+        )
+        train_dataset.is_need_STNN, val_dataset.is_need_STNN, test_dataset.is_need_STNN = True, True, True
+    elif use_model == "gtnnwr stpnn":
+        assert temp_column is not None, "temp_column must be not None in gtnnwr"
+        train_points, val_points, test_points = _init_gtnnwr_stpnn_distance(
+            reference_data[spatial_column + temp_column].values, train_data[spatial_column + temp_column].values,
+            val_data[spatial_column + temp_column].values, test_data[spatial_column + temp_column].values
+        )
+        train_dataset.distances, train_dataset.temporal = train_points
+        val_dataset.distances, val_dataset.temporal = val_points
+        test_dataset.distances, test_dataset.temporal = test_points
+        train_dataset.is_need_STNN, val_dataset.is_need_STNN, test_dataset.is_need_STNN = True, True, True
+    # Other calculation methods can be added here.
+
+    train_dataset.simple_distance = simple_distance
+    val_dataset.simple_distance = simple_distance
+    test_dataset.simple_distance = simple_distance
+
+
+    if process_fn == "minmax_scale":
+        distance_scale = MinMaxScaler()
+        temporal_scale = MinMaxScaler()
+    else:
+        distance_scale = StandardScaler()
+        temporal_scale = StandardScaler()
+    # scale distance matrix
+    distances = train_dataset.distances
+    distances = distance_scale.fit_transform(distances.reshape(-1, distances.shape[-1])).reshape(distances.shape)
+
+    train_dataset.distances = distance_scale.transform(train_dataset.distances.reshape(-1, train_dataset.distances.shape[-1])).reshape(train_dataset.distances.shape)
+    val_dataset.distances = distance_scale.transform(val_dataset.distances.reshape(-1, val_dataset.distances.shape[-1])).reshape(val_dataset.distances.shape)
+    test_dataset.distances = distance_scale.transform(test_dataset.distances.reshape(-1, test_dataset.distances.shape[-1])).reshape(test_dataset.distances.shape)
+    
+    if process_fn == "minmax_scale":
+        distance_scale_param = {"min": distance_scale.data_min_, "max": distance_scale.data_max_}
+    else:
+        distance_scale_param = {"mean": distance_scale.mean_, "var": distance_scale.var_}    
+    train_dataset.distances_scale_param = val_dataset.distances_scale_param = test_dataset.distances_scale_param = distance_scale_param
+    
+    if train_dataset.temporal is not None and val_dataset.temporal is not None and test_dataset.temporal is not None:
+        temporal = train_dataset.temporal
+        temporal = temporal_scale.fit_transform(temporal.reshape(-1, temporal.shape[-1])).reshape(temporal.shape)
+
+        train_dataset.temporal = temporal_scale.transform(train_dataset.temporal.reshape(-1, train_dataset.temporal.shape[-1])).reshape(train_dataset.temporal.shape)
+        val_dataset.temporal = temporal_scale.transform(val_dataset.temporal.reshape(-1, val_dataset.temporal.shape[-1])).reshape(val_dataset.temporal.shape)
+        test_dataset.temporal = temporal_scale.transform(test_dataset.temporal.reshape(-1, test_dataset.temporal.shape[-1])).reshape(test_dataset.temporal.shape)
+
+        if process_fn == "minmax_scale":
+            temporal_scale_param = {"min": temporal_scale.data_min_, "max": temporal_scale.data_max_}
+        else:
+            temporal_scale_param = {"mean": temporal_scale.mean_, "var": temporal_scale.var_}
+        train_dataset.temporal_scale_param = val_dataset.temporal_scale_param = test_dataset.temporal_scale_param = temporal_scale_param
+    # initialize dataloader for train/val/test dataset
+    # set batch_size for train_dataset as batch_size
+    # set batch_size for val_dataset as max_val_size
+    # set batch_size for test_dataset as max_test_size
+    train_dataset.dataloader = DataLoader(
+        train_dataset, batch_size=batch_size, shuffle=shuffle)
+    if max_val_size < 0:
+        max_val_size = len(val_dataset)
+    if max_test_size < 0:
+        max_test_size = len(test_dataset)
+    val_dataset.dataloader = DataLoader(
+        val_dataset, batch_size=max_val_size, shuffle=shuffle)
+    test_dataset.dataloader = DataLoader(
+        test_dataset, batch_size=max_test_size, shuffle=shuffle)
+    train_dataset.batch_size, train_dataset.shuffle = batch_size, shuffle
+    val_dataset.batch_size, val_dataset.shuffle = max_val_size, shuffle
+    test_dataset.batch_size, test_dataset.shuffle = max_test_size, shuffle
+    return train_dataset, val_dataset, test_dataset
 
 def init_dataset_cv(data, test_ratio, k_fold, x_column, y_column, spatial_column=None, temp_column=None,
                     id_column=None,
@@ -884,10 +1150,13 @@ def _init_gnnwr_distance(refer_data, train_data, val_data, test_data, spatial_fu
 
     Returns
     -------
-    None
-        This function does not return any value, it may perform operations on the provided data subsets.
+    train_distance : numpy.nDarray
+        matrix of distance between points in train_data and Reference points
+    val_distance : numpy.nDarray
+        matrix of distance between points in val_data and Reference points
+    test_distance : numpy.nDarray
+        matrix of distance between points in test_data and Reference points
     """
-
 
     train_distance = spatial_fun(train_data, refer_data)
     val_distance = spatial_fun(val_data, refer_data)

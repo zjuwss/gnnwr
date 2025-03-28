@@ -220,8 +220,38 @@ In the field of mineral forecasting, accurate prediction of mineral resources is
 ## 6 Group
 
 ### Leaders
-- **Zhenhong Du, Professor, Zhejiang University**
-- **Sensen Wu, Associate Professor, Zhejiang University**
+
+<table>
+  <tr>
+    <td width="25%">
+      <img src="https://person.zju.edu.cn/person//attachments/2021-11/1105092927-1665232728.jpg" width="150" alt="Zhenhong Du">
+    </td>
+    <td width="75%">
+
+#### Zhenhong Du
+- Ph.D
+- Professor/ Ph.D Supervisor
+- The National Science Fund for Distinguished Young Scholars
+- Dean of the School of Earth sciences
+- Zhejiang University
+  
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <img src="https://person.zju.edu.cn/person//attachments/2021-10/1009011118-537376350.png" width="150" alt="Sensen Wu">
+    </td>
+    <td>
+
+#### Sensen Wu
+- Ph.D
+- Professor/ Ph.D Supervisor
+- Zhejiang University
+
+    </td>
+  </tr>
+</table>
+
 
 ### Members
 - Jin Qi, Postdoctoral fellow, Zhejiang University

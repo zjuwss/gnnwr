@@ -217,11 +217,13 @@ In the field of mineral forecasting, accurate prediction of mineral resources is
 9. Ding, J., Cen, W., Wu, S., Chen, Y., Qi, J., Huang, B., & Du, Z. (2024). A neural network model to optimize the measure of spatial proximity in geographically weighted regression approach: a case study on house price in Wuhan. *International Journal of Geographical Information Science*, 1–21. 
 
 
-## 6 Contributing
+## 6 Group
 
-### Contributors
-- Sensen Wu, Associate Professor, Zhejiang University
-- Zhenhong Du, Professor, Zhejiang University
+### Leaders
+- **Zhenhong Du, Professor, Zhejiang University**
+- **Sensen Wu, Associate Professor, Zhejiang University**
+
+### Members
 - Jin Qi, Postdoctoral fellow, Zhejiang University
 - Jiale Ding, PhD student, Zhejiang University
 - Yi Liu, Undergraduate student, Zhejiang University

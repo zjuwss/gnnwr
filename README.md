@@ -153,17 +153,17 @@ Transferring dissolved silicate (DSi) from land to coastal environments is vital
 
 👉 [Modeling DSi with GTNNWR on Deep-time.org](https://mydde.deep-time.org/org-portal/MyDDE/project/64f976f12a7491e657f02793)
 
+#### 4.2.3 Surface Seawater pCO2
+
+The North Pacific Ocean is a key carbon sink, but the spatiotemporal dynamics of carbon dioxide (pCO2) remain poorly understood due to its vast scale and complex influences. Existing machine learning models lack interpretability, limiting insights into underlying mechanisms. To address this, we introduce the gridded spatiotemporal neural network weighted regression (GSTNNWR) model, which accurately predicts surface pCO2 while quantifying environmental influences. 
+
+> Liu, Y., Chen, Y., Huang, Z., Liang, H., Qi, J., Wu, S., & Du, Z. (2024). Spatiotemporal weighted neural network reveals surface seawater pCO2 distributions and underlying environmental mechanisms in the North Pacific Ocean. *International Journal of Applied Earth Observation and Geoinformation*, 133, 104120.
+
 ### 4.3 Urban
 
 #### 4.3.1 House price
 
 Housing prices are closely related to the lives of new urban residents, and they also comprise a vital economic index to which the government needs to pay close attention. Compare with traditional regression models, GNNWR and GTNNWR model can improve the accuracy of real estate appraisal with the help of neural networks, which are practical and powerful ways to assess house prices.
-
-<p align="center">
-<img title="HousePrice" src="assets/figure_HousePrice.png" alt="HousePrice" width=75%>
-</p>
-
-> Wang, Z., Wang, Y., Wu, S., & Du, Z. (2022). House Price Valuation Model Based on Geographically Neural Network Weighted Regression: The Case Study of Shenzhen, China. *ISPRS International Journal of Geo-Information*, *11*(8), 450.
 
 An optimized spatial proximity measure was integrated into GNNWR. The optimized spatial proximity fusions multiple distance measures, imporving its ability in modeling spatial-nonstationary process.
 
@@ -173,7 +173,21 @@ An optimized spatial proximity measure was integrated into GNNWR. The optimized 
 
 > Ding, J., Cen, W., Wu, S., Chen, Y., Qi, J., Huang, B., & Du, Z. (2024). A neural network model to optimize the measure of spatial proximity in geographically weighted regression approach: a case study on house price in Wuhan. *International Journal of Geographical Information Science*, 1–21.
 
-#### 4.3.2 Land Surface Temperature
+By using an attention-based architecture to incorporate context similarity into spatial non-stationarity estimation, house prices can be better fitted in complex urban area.
+
+<p align="center">
+<img title="OSP" src="assets/figure_CatGWR.jpg" alt="CatGWR" width=75%>
+</p>
+
+> Wu, S., Ding, J., Wang, R., Wang, Y., Yin, Z., Huang, B., & Du, Z. (2025). Using an attention-based architecture to incorporate context similarity into spatial non-stationarity estimation. *International Journal of Geographical Information Science*, 1–24
+
+<p align="center">
+<img title="HousePrice" src="assets/figure_HousePrice.png" alt="HousePrice" width=75%>
+</p>
+
+> Wang, Z., Wang, Y., Wu, S., & Du, Z. (2022). House Price Valuation Model Based on Geographically Neural Network Weighted Regression: The Case Study of Shenzhen, China. *ISPRS International Journal of Geo-Information*, *11*(8), 450.
+
+#### 4.3.2 Land Surface Temperature & Nighttime Light
 
 Spatial downscaling is an important approach to obtain high-resolution land surface temperature (LST) for thermal environment research. A high-resolution surface temperature downscaling method based on GNNWR was developed to effectively handle the problem of surface temperature downscaling. The results show that the proposed GNNWR model achieved superior downscaling accuracy compared to widely used methods in four test areas with large differences in topography, landforms, and seasons. The findings suggest that GNNWR is a practical method for surface temperature downscaling considering its high accuracy and model performance.
 
@@ -182,6 +196,10 @@ Spatial downscaling is an important approach to obtain high-resolution land surf
 </p>
 
 > Liang, M., Zhang, L., Wu, S., Zhu, Y., Dai, Z., Wang, Y., ... & Du, Z. (2023). A High-Resolution Land Surface Temperature Downscaling Method Based on Geographically Weighted Neural Network Regression. *Remote Sensing*, *15*(7), 1740.
+
+Downscaling nighttime light (NTL) from satellite imagery is crucial for urban expansion and socio-economic studies but faces challenges due to geographical complexity and factor uncertainties. To address this, we propose the multifactor geographically neural network weighted regression (MF-GNNWR) framework, which integrates surface, socio-economic, and human activity factors to enhance NTL accuracy in heterogeneous urban areas.
+
+> Zhang, L., Wu, S., Liang, M., Jing, H., Shi, S., Zhu, Y., ... & Du, Z. (2024). A Downscaling Framework for Urban Nighttime Light Based on Multi-Factor Geographically Neural Network Weighted Regression. IEEE Transactions on Geoscience and Remote Sensing.
 
 ### 4.4 Geology
 
@@ -194,6 +212,16 @@ In the field of mineral forecasting, accurate prediction of mineral resources is
 </p>
 
 > Wang, L., Yang, J., Wu, S., Hu, L., Ge, Y., & Du, Z. (2024). Enhancing mineral prospectivity mapping with geospatial artificial intelligence: A geographically neural network-weighted logistic regression approach. *International Journal of Applied Earth Observation and Geoinformation*, 128, 103746.
+
+### 4.4.2 heat flow
+
+Surface heat flow (SHF) is crucial for understanding Earth's internal geodynamics. The Tibetan Plateau, a key region for global climate and geodynamic studies, lacks comprehensive SHF data due to sparse measurements. To address this, we develop the geographically neural network weighted regression with enhanced interpretability (EI-GNNWR), which integrates spatial heterogeneity and nonlinear geophysical interactions. Our model accurately predicts SHF across the plateau, revealing that high SHF values are concentrated in the south, northeast, and southeast, influenced by Moho depth, ridges, and topography. These findings enhance understanding of geothermal processes and tectonic activity in the region.
+
+<p align="center">
+<img title="DSI" src="assets/figure_SHF.jpg" alt="SHF" width=75%>
+</p>
+
+> Zhang, Z., Wu, S., Zhang, B., Du, Z., & Xia, Q. (2024). The distribution of surface heat flow on the Tibetan Plateau revealed by data‐driven methods. *Journal of Geophysical Research: Solid Earth*, 129(10), e2023JB028491.
 
 **!!Further, these spatiotemporal intelligent regression models can be applied to other spatiotemporal modeling problems and socioeconomic phenomena.**
 

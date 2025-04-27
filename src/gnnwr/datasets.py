@@ -689,22 +689,22 @@ def init_dataset_split(train_data,
     if dropna:
         # train_data
         oriLen_train = train_data.shape[0]
-        train_data.dropna(axis=0, how='any', inplace=True)
         if oriLen_train > train_data.shape[0]:
+            train_data.dropna(axis=0, inplace=True)
             warnings.warn(
                 "Dropping {} {} with missing values. To forbid dropping, you need to set the argument dropna=False".format(
                     oriLen_train - train_data.shape[0], 'row' if oriLen_train - train_data.shape[0] == 1 else 'rows'))
         # val_data
         oriLen_val = val_data.shape[0]
-        val_data.dropna(axis=0, how='any', inplace=True)
         if oriLen_val > val_data.shape[0]:
+            val_data.dropna(axis=0, inplace=True)
             warnings.warn(
                 "Dropping {} {} with missing values. To forbid dropping, you need to set the argument dropna=False".format(
                     oriLen_val - val_data.shape[0], 'row' if oriLen_val - val_data.shape[0] == 1 else 'rows'))  
         # test_data
         oriLen_test = test_data.shape[0]
-        test_data.dropna(axis=0, how='any', inplace=True)
         if oriLen_test > test_data.shape[0]:
+            test_data.dropna(axis=0, inplace=True)
             warnings.warn(
                 "Dropping {} {} with missing values. To forbid dropping, you need to set the argument dropna=False".format(
                     oriLen_test - test_data.shape[0], 'row' if oriLen_test - test_data.shape[0] == 1 else 'rows'))  

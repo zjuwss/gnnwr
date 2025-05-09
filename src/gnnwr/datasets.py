@@ -562,10 +562,10 @@ def init_dataset(data,
     np.random.seed(sample_seed)
     data = data.sample(frac=1)  # shuffle data
     # data split
-    test_data = data[int((1 - test_ratio) * len(data)):].copy()
-    train_data = data[:int((1 - test_ratio) * len(data))].copy()
+    test_data = data[int((1 - test_ratio) * len(data)):]
+    train_data = data[:int((1 - test_ratio) * len(data))]
     val_data = train_data[
-               int(from_for_cv * valid_ratio * len(train_data)):int((1 + from_for_cv) * valid_ratio * len(train_data))].copy()
+               int(from_for_cv * valid_ratio * len(train_data)):int((1 + from_for_cv) * valid_ratio * len(train_data))]
     train_data = pandas.concat([train_data[:int(from_for_cv * valid_ratio * len(train_data))],
                                 train_data[int((1 + from_for_cv) * valid_ratio * len(train_data)):]])
     return init_dataset_split(
@@ -689,22 +689,23 @@ def init_dataset_split(train_data,
     if dropna:
         # train_data
         oriLen_train = train_data.shape[0]
+        train_data = train_data.dropna(axis=0)
+
         if oriLen_train > train_data.shape[0]:
-            train_data.dropna(axis=0, inplace=True)
             warnings.warn(
                 "Dropping {} {} with missing values. To forbid dropping, you need to set the argument dropna=False".format(
                     oriLen_train - train_data.shape[0], 'row' if oriLen_train - train_data.shape[0] == 1 else 'rows'))
         # val_data
         oriLen_val = val_data.shape[0]
+        val_data = val_data.dropna(axis=0)
         if oriLen_val > val_data.shape[0]:
-            val_data.dropna(axis=0, inplace=True)
             warnings.warn(
                 "Dropping {} {} with missing values. To forbid dropping, you need to set the argument dropna=False".format(
                     oriLen_val - val_data.shape[0], 'row' if oriLen_val - val_data.shape[0] == 1 else 'rows'))  
         # test_data
         oriLen_test = test_data.shape[0]
+        test_data = test_data.dropna(axis=0)
         if oriLen_test > test_data.shape[0]:
-            test_data.dropna(axis=0, inplace=True)
             warnings.warn(
                 "Dropping {} {} with missing values. To forbid dropping, you need to set the argument dropna=False".format(
                     oriLen_test - test_data.shape[0], 'row' if oriLen_test - test_data.shape[0] == 1 else 'rows'))  

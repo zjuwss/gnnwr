@@ -8,3 +8,4 @@
 dist/
 *.toml
 *.log
+/src/test/

@@ -1,32 +1,74 @@
+import warnings
 import math
 import statsmodels.api as sm
 import pandas as pd
+import numpy as np
 import torch
-import warnings
 import folium
 from folium.plugins import HeatMap
 import branca
-
+from scipy.spatial import distance
 
 class OLS:
     """
-    `OLS` is the class to calculate the OLR coefficients of data.Get the coefficient by `object.params`.
-
-    :param dataset: Input data
-    :param xName: the independent variables' column
-    :param yName: the dependent variable's column
+    `OLS` is the class to calculate the OLR coefficients of data. 
+    Get the coefficient by `object.params`.
+    
+    Parameters:
+    ----------
+    dataset: pandas.DataFrame
+        The dataset containing the independent and dependent variables.
+    xName: list
+        The independent variables' column
+    yName: list
+        The dependent variable's column
+    
+    Attributes:
+    ----------
+    
     """
 
-    def __init__(self, dataset, xName: list, yName: list):
-        self.__dataset = dataset
-        self.__xName = xName
-        self.__yName = yName
-        self.__formula = yName[0] + '~' + '+'.join(xName)
-        self.__fit = sm.formula.ols(self.__formula, dataset).fit()
-        self.params = list(self.__fit.params.to_dict().values())
-        intercept = self.__fit.params.iloc[0]
-        self.params = self.params[1:]
-        self.params.append(intercept)
+    def __init__(self,
+                dataset: pd.DataFrame,
+                x_names: list, 
+                y_name: list
+                ):
+        self.dataset = dataset
+        self.x_names = x_names
+        self.y_name = y_name
+        self._validate() # Validate the input dataset and variable names
+        self._formula = y_name[0] + '~' + '+'.join(x_names)
+        self._fit = sm.formula.ols(self._formula, dataset).fit()
+        self.intercept = self._fit.params['Intercept'] if 'Intercept' in self._fit.params.index else 0.0
+        self.coefficients = self._fit.params[self.x_names]
+        self.params = self.coefficients.tolist() + [self.intercept]
+
+    def _validate(self):
+        """
+        Validate the OLS model by checking if the dataset is empty or if the independent variables are not in the dataset.
+        """
+        if self.dataset.empty:
+            raise ValueError("The dataset is empty.")
+        
+        if not isinstance(self.x_names, list) or not isinstance(self.y_name, list):
+            raise TypeError("Independent and dependent variable names must be provided as lists.")
+        
+        if len(self.x_names) == 0 or len(self.y_name) == 0:
+            raise ValueError("Independent and dependent variables must be provided.")
+
+        for x in self.x_names:
+            if x not in self.dataset.columns:
+                raise KeyError(f"Independent variable '{x}' not found in dataset.")
+        
+        for y in self.y_name:
+            if y not in self.dataset.columns:
+                raise KeyError(f"Dependent variable '{y}' not found in dataset.")
+            
+    def __repr__(self):
+        coefficients_str = ' '.join([f"{name}: {coef:.4f} \n" for name, coef in zip(self.x_names, self.coefficients)])
+        return f"OLS Model: {self._formula}\nCoefficients:\n {coefficients_str}Intercept: {self.intercept}"
+
+
 
 
 class DIAGNOSIS:
@@ -42,12 +84,11 @@ class DIAGNOSIS:
     """
 
     def __init__(self, weight, x_data, y_data, y_pred):
-        self._device = torch.device('cuda') if weight.is_cuda else torch.device('cpu')
 
-        self.__weight = weight.clone()
-        self.__x_data = x_data.clone()
-        self.__y_data = y_data.clone()
-        self.__y_pred = y_pred.clone()
+        self.__weight = weight.clone().cpu()
+        self.__x_data = x_data.clone().cpu()
+        self.__y_data = y_data.clone().cpu()
+        self.__y_pred = y_pred.clone().cpu()
 
         self.__n = len(self.__y_data)
         self.__k = len(self.__x_data[0])
@@ -73,8 +114,8 @@ class DIAGNOSIS:
         self.f3_dict = None
         self.f3_dict_2 = None
 
-        self._eye_I = torch.eye(self.__n, device=self._device)
-        self._ones_J = torch.ones(self.__n, device=self._device)
+        self._eye_I = torch.eye(self.__n).cpu()
+        self._ones_J = torch.ones(self.__n).cpu()
     def hat(self):
         """
         :return: hat matrix
@@ -93,7 +134,7 @@ class DIAGNOSIS:
             (self.__y_data - torch.mm(self.__ols_hat, self.__y_data)) ** 2)
         F_value = self.__ssr / k1 / (rss_olr / k2)
         # p_value = f.sf(F_value, k1, k2)
-        return F_value
+        return float(F_value)
 
     def F2_Global(self):
         """
@@ -110,7 +151,7 @@ class DIAGNOSIS:
         rss_olr = torch.sum(
             (torch.mean(self.__y_data) - torch.mm(self.__ols_hat, self.__y_data)) ** 2)
 
-        return DSS / v1 / (rss_olr / k2)
+        return float(DSS / v1 / (rss_olr / k2))
 
     def F3_Local(self):
         """
@@ -121,7 +162,7 @@ class DIAGNOSIS:
         self.f3_dict = {}
         self.f3_dict_2 = {}
         for i in range(self.__x_data.size(1)):
-            ek_zeros = torch.zeros([self.__x_data.size(1)],device=self._device)
+            ek_zeros = torch.zeros([self.__x_data.size(1)]).cpu()
             ek_zeros[i] = 1
             ek_dict['ek' + str(i)] = torch.reshape(torch.reshape(torch.tile(ek_zeros.clone().detach(), [self.__n]),
                                                                  [self.__n, -1]),
@@ -134,48 +175,46 @@ class DIAGNOSIS:
             vk2 = 1 / self.__n * torch.matmul(self.__y_data.transpose(-2, -1), torch.matmul(L, self.__y_data))
             trace_L = torch.trace(1 / self.__n * L)
             f3 = torch.squeeze(vk2 / trace_L / (self.__ssr / self.__n))
-            self.f3_dict['f3_param_' + str(i)] = f3
+            self.f3_dict['f3_param_' + str(i)] = float(f3)
 
             bk = torch.matmul(hatB, self.__y_data)
             vk2_2 = 1 / self.__n * torch.sum((bk - torch.mean(bk)) ** 2)
             f3_2 = torch.squeeze(vk2_2 / trace_L / (self.__ssr / self.__n))
-            self.f3_dict_2['f3_param_' + str(i)] = f3_2
+            self.f3_dict_2['f3_param_' + str(i)] = float(f3_2)
         return self.f3_dict, self.f3_dict_2
 
     def AIC(self):
         """
         :return: AIC
         """
-        return self.__n * (math.log(self.__ssr / self.__n * 2 * math.pi, math.e)) + self.__n + self.__S
+        return float(self.__n * (math.log(self.__ssr / self.__n * 2 * math.pi, math.e)) + self.__n + self.__S)
 
     def AICc(self):
         """
 
         :return: AICc
         """
-        return self.__n * (math.log(self.__ssr / self.__n * 2 * math.pi, math.e) + (self.__n + self.__S) / (
-                self.__n - self.__S - 2))
-
+        return float(self.__n * (math.log(self.__ssr / self.__n * 2 * math.pi, math.e) + (self.__n + self.__S) / (self.__n - self.__S - 2)))
     def R2(self):
         """
 
         :return: R2 of the result
         """
-        return 1 - torch.sum(self.__residual ** 2) / torch.sum((self.__y_data - torch.mean(self.__y_data)) ** 2)
+        return float(1 - torch.sum(self.__residual ** 2) / torch.sum((self.__y_data - torch.mean(self.__y_data)) ** 2))
 
     def Adjust_R2(self):
         """
 
         :return: Adjust R2 of the result
         """
-        return 1 - (1 - self.R2()) * (self.__n - 1) / (self.__n - self.__k - 1)
+        return float(1 - (1 - self.R2()) * (self.__n - 1) / (self.__n - self.__k - 1))
 
     def RMSE(self):
         """
 
         :return: RMSE of the result
         """
-        return torch.sqrt(torch.sum(self.__residual ** 2) / self.__n)
+        return float(torch.sqrt(torch.sum(self.__residual ** 2) / self.__n))
 
 
 class Visualize:
@@ -211,7 +250,7 @@ class Visualize:
                 self.__center_lat = self._all_data[self._spatial_column[1]].mean()
                 self.__lon_column = self._spatial_column[0]
                 self.__lat_column = self._spatial_column[1]
-            self._x_column = data._train_dataset.x_column
+            self._x_column = data._train_dataset.x_columns
             self._y_column = data._train_dataset.y_column
             self.__map = folium.Map(location=[self.__center_lat, self.__center_lon], zoom_start=zoom,
                                     tiles=self.__tiles, attr="高德")
@@ -328,3 +367,27 @@ class Visualize:
                                 ).add_to(res)
         colormap.add_to(res)
         return res
+
+def BasicDistance(x, y):
+    r"""
+    Calculate the distance between two points
+
+    :param x: Input point coordinate data
+    :param y: Input target point coordinate data
+    :return: distance matrix
+    """
+    x = np.float32(x)
+    y = np.float32(y)
+    dist = distance.cdist(x, y, 'euclidean')
+    return dist
+
+
+def ManhattanDistance(x, y):
+    r"""
+    Calculate the Manhattan distance between two points
+
+    :param x: Input point coordinate data
+    :param y: Input target point coordinate data
+    :return: distance matrix
+    """
+    return np.float32(np.sum(np.abs(x[:, np.newaxis, :] - y), axis=2))

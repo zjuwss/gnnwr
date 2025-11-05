@@ -1,7 +1,6 @@
 import math
 import torch
-import torch.nn as nn
-
+from torch import nn
 
 def default_dense_layer(insize, outsize):
     """
@@ -56,6 +55,7 @@ class LinearNetwork(nn.Module):
             self.drop_out = nn.Identity()
         else:
             self.drop_out = nn.Dropout(drop_out)
+        self.drop_out_p = drop_out
         if batch_norm:
             self.batch_norm = nn.BatchNorm1d(outsize)
         else:
@@ -73,7 +73,6 @@ class LinearNetwork(nn.Module):
             self.layer.bias.data.fill_(0)
         
     def forward(self, x):
-        x = x.to(torch.float32)
         x = self.layer(x)
         x = self.batch_norm(x)
         x = self.activate_func(x)
@@ -82,7 +81,7 @@ class LinearNetwork(nn.Module):
     
     def __str__(self) -> str:
         return f"LinearNetwork: {self.layer.in_features} -> {self.layer.out_features}\n" + \
-                f"Dropout: {self.drop_out.p}\n" + \
+                f"Dropout: {self.drop_out_p}\n" + \
                 f"BatchNorm: {self.batch_norm}\n" + \
                 f"Activation: {self.activate_func}"
     
@@ -165,36 +164,29 @@ class STPNN(nn.Module):
     batch_norm: bool
         whether use batch normalization(default: ``False``)
     """
-    def __init__(self, dense_layer, insize, outsize, drop_out=0.2, activate_func=nn.ReLU(), batch_norm=False):
-
+    def __init__(self, cfg):
         super(STPNN, self).__init__()
         # default dense layer
-        self.dense_layer = dense_layer
-        self.drop_out = drop_out
-        self.batch_norm = batch_norm
-        self.activate_func = activate_func
-        self.insize = insize
-        self.outsize = outsize
-        count = 0  # used to name layers
+        self.insize = cfg["insize"]
+        self.outsize = cfg["outsize"]
+        self.dense_layer = cfg.get("dense_layer", default_dense_layer(self.insize, self.outsize))
+        self.drop_out = cfg.get("drop_out", 0.2)
+        self.batch_norm = cfg.get("batch_norm", True)
+        self.activate_func = cfg.get("activate_func", nn.ReLU())
         lastsize = self.insize  # used to record the size of last layer
         self.fc = nn.Sequential()
-        for size in self.dense_layer:
-            self.fc.add_module("stpnn_full" + str(count),
-                                 LinearNetwork(lastsize, size, drop_out, activate_func, batch_norm))
+        for idx, size in enumerate(self.dense_layer):
+            self.fc.add_module(f"stpnn_full_{idx}",
+                                 LinearNetwork(lastsize, size, self.drop_out, self.activate_func, self.batch_norm))
             lastsize = size
-            count += 1
-        self.fc.add_module("full" + str(count),
-                            LinearNetwork(lastsize, self.outsize,activate_func=activate_func))
+        self.fc.add_module(f"stpnn_full_{len(self.dense_layer)}",
+                            LinearNetwork(lastsize, self.outsize, activate_func=self.activate_func))
 
     def forward(self, x):
-        # STPNN
-        x = x.to(torch.float32)
         batch = x.shape[0]
         height = x.shape[1]
-        x = torch.reshape(x, shape=(batch * height, x.shape[2]))
-        output = self.fc(x)
-        output = torch.reshape(output, shape=(batch, height * self.outsize))
-        return output
+        output = self.fc(x.view(batch * height, -1))
+        return output.reshape(batch, height * self.outsize)
 
 
 class STNN_SPNN(nn.Module):

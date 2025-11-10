@@ -55,7 +55,7 @@ Usage Examples
     ...     val_ratio=0.1,
     ...     x_columns=['feature1', 'feature2'],
     ...     y_column=['target'],
-    ...     spatial_column=['lon', 'lat'],
+    ...     spatial_columns=['lon', 'lat'],
     ...     id_column=['id']
     ...     model_type='gnnwr'
     ... )
@@ -598,7 +598,7 @@ def init_dataset(data,
                  valid_ratio,
                  x_columns,
                  y_column,
-                 spatial_column=None,
+                 spatial_columns=None,
                  temporal_column=None,
                  id_column=None,
                  **kwargs
@@ -618,7 +618,7 @@ def init_dataset(data,
         The name of the input attribute column.
     y_column : list
         The name of the label column.
-    spatial_column : list
+    spatial_columns : list
         The name of the spatial attribute column.
     temporal_column : list
         The name of the temporal attribute column.
@@ -663,7 +663,7 @@ def init_dataset(data,
     ...     valid_ratio=0.2,
     ...     x_columns=['x1', 'x2'],
     ...     y_column=['y'],
-    ...     spatial_column=['lat', 'lng'],
+    ...     spatial_columns=['lat', 'lng'],
     ...     temporal_column=['time'],
     ...     id_column=['id'],
     ...     sample_seed=42,
@@ -693,7 +693,7 @@ def init_dataset(data,
         raise ValueError(
             "dist_fun must be a function that can process the data")
 
-    if spatial_column is None:
+    if spatial_columns is None:
         # if dist_column is None, raise error
         raise ValueError(
             "dist_column must be a column name in data")
@@ -725,7 +725,7 @@ def init_dataset(data,
         test_data=test_data,
         x_columns=x_columns,
         y_column=y_column,
-        spatial_column=spatial_column,
+        spatial_columns=spatial_columns,
         temporal_column=temporal_column,
         id_column=id_column,
         process_fun=process_fun,
@@ -742,7 +742,7 @@ def init_dataset_split(train_data,
                        test_data,
                        x_columns,
                        y_column,
-                       spatial_column=None,
+                       spatial_columns=None,
                        temporal_column=None,
                        id_column=None,
                        **kwargs
@@ -762,7 +762,7 @@ def init_dataset_split(train_data,
         The name of the input attribute column.
     y_column : list
         The name of the label column.
-    spatial_column : list
+    spatial_columns : list
         The name of the spatial attribute column.
     temporal_column : list
         The name of the temporal attribute column.
@@ -808,10 +808,9 @@ def init_dataset_split(train_data,
         raise ValueError(
             "dist_fun must be a function that can process the data")
 
-    if spatial_column is None:
-        # if dist_column is None, raise error
+    if spatial_columns is None:
         raise ValueError(
-            "dist_column must be a column name in data")
+            "spatial_columns must be  columns' names in data")
     
 
     if dropna:
@@ -871,8 +870,8 @@ def init_dataset_split(train_data,
 
     if not isinstance(reference_data, pd.DataFrame):
         raise ValueError("reference_data must be a pandas.DataFrame")
-    if not all(col in reference_data.columns for col in spatial_column):
-        raise ValueError(f"spatial_column {spatial_column} not in reference_data columns {reference_data.columns}")
+    if not all(col in reference_data.columns for col in spatial_columns):
+        raise ValueError(f"spatial_columns {spatial_columns} not in reference_data columns {reference_data.columns}")
     
     # data pre-process
     scaler_x = None
@@ -900,7 +899,7 @@ def init_dataset_split(train_data,
             x_columns, y_column, id_column,
             process_fun,
             process_var,
-            spatial_column,
+            spatial_columns,
             spatial_fun,
             reference_data,
         )
@@ -911,7 +910,7 @@ def init_dataset_split(train_data,
             x_columns, y_column, id_column,
             process_fun,
             process_var,
-            spatial_column,
+            spatial_columns,
             spatial_fun,
             temporal_column,
             temporal_fun,
@@ -932,7 +931,7 @@ def init_dataset_cv(data,
                     k_fold,
                     x_columns,
                     y_column,
-                    spatial_column=None,
+                    spatial_columns=None,
                     temporal_column=None,
                     id_column=None,
                     **kwargs):
@@ -951,7 +950,7 @@ def init_dataset_cv(data,
         The name of the input attribute column.
     y_column : str
         The name of the label column.
-    spatial_column : list, optional
+    spatial_columns : list, optional
         The name of the spatial attribute column.
     temporal_column : list, optional
         The name of the temporal attribute column.
@@ -977,7 +976,7 @@ def init_dataset_cv(data,
                                                                 valid_ratio, 
                                                                 x_columns, 
                                                                 y_column,
-                                                                spatial_column,
+                                                                spatial_columns,
                                                                 temporal_column,
                                                                 id_column,
                                                                 kwargs=kwargs)
@@ -986,12 +985,12 @@ def init_dataset_cv(data,
 
 
 def init_predict_dataset(data : pd.DataFrame,
+                         reference_data: pd.DataFrame,
                          x_columns: list,
                          spatial_columns: list=None,
                          id_column: list=None,
-                         temporal_columns: list=None,
+                         temporal_column: list=None,
                          scalers: dict=None,
-                         reference_data: pd.DataFrame=None,
                          model_type: str="gnnwr",
                          spatial_fun=BasicDistance,
                          temporal_fun=ManhattanDistance):
@@ -1038,9 +1037,9 @@ def init_predict_dataset(data : pd.DataFrame,
         )
 
     elif model_type == "gtnnwr":
-        assert temporal_columns is not None, "temporal_column must be not None in gtnnwr"
+        assert temporal_column is not None, "temporal_column must be not None in gtnnwr"
         predict_dataset = _init_gtnnwr_predict_dataset(
-            data, x_columns, id_column, spatial_columns, temporal_columns, scalers, reference_data, spatial_fun, temporal_fun
+            data, x_columns, id_column, spatial_columns, temporal_column, scalers, reference_data, spatial_fun, temporal_fun
         )
     else:
         raise ValueError(f"Unknown model type: {model_type}")
@@ -1052,7 +1051,7 @@ def _init_gnnwr_dataset(
     x_columns, y_column, id_column,
     process_fun="minmax_scale",
     process_var=None,
-    spatial_column=None,
+    spatial_columns=None,
     spatial_fun=BasicDistance,
     reference_data=None
 ):
@@ -1077,7 +1076,7 @@ def _init_gnnwr_dataset(
         Data process function, by default "minmax_scale".
     process_var : list
         Variables to process, by default ["x"].
-    spatial_column : list
+    spatial_columns : list
         Spatial distance column name.
     spatial_fun : function
         Spatial distance calculate function, by default BasicDistance.
@@ -1091,18 +1090,18 @@ def _init_gnnwr_dataset(
         process_var = ["x"]
         
     train_dataset.network_input = _init_gnnwr_distance(
-        reference_data[spatial_column].values,
-        train_dataset.dataframe[spatial_column].values,
+        reference_data[spatial_columns].values,
+        train_dataset.dataframe[spatial_columns].values,
         spatial_fun
     )
     val_dataset.network_input = _init_gnnwr_distance(
-        reference_data[spatial_column].values,
-        val_dataset.dataframe[spatial_column].values,
+        reference_data[spatial_columns].values,
+        val_dataset.dataframe[spatial_columns].values,
         spatial_fun
     )
     test_dataset.network_input = _init_gnnwr_distance(
-        reference_data[spatial_column].values,
-        test_dataset.dataframe[spatial_column].values,
+        reference_data[spatial_columns].values,
+        test_dataset.dataframe[spatial_columns].values,
         spatial_fun
     )
 
@@ -1209,7 +1208,7 @@ def _init_gtnnwr_dataset(
             x_columns, y_column, id_column,
             process_fun,
             process_var,
-            spatial_column,
+            spatial_columns,
             spatial_fun,
             temporal_column,
             temporal_fun,
@@ -1236,7 +1235,7 @@ def _init_gtnnwr_dataset(
         The function used for preprocessing.
     process_var : list of str
         The variables to be processed.
-    spatial_column : str
+    spatial_columns : str
         The name of the spatial attribute column.
     spatial_fun : function
         The function used for calculating the spatial distance.
@@ -1260,20 +1259,20 @@ def _init_gtnnwr_dataset(
     val_dataset = GTNNWRDataset(val_data, x_columns, y_column, id_column)
     test_dataset = GTNNWRDataset(test_data, x_columns, y_column, id_column)
     train_dataset.network_input = _init_gtnnwr_distance(
-        [reference_data[spatial_column].values,reference_data[temporal_column].values],
-        [train_dataset.dataframe[spatial_column].values,train_dataset.dataframe[temporal_column].values],
+        [reference_data[spatial_columns].values,reference_data[temporal_column].values],
+        [train_dataset.dataframe[spatial_columns].values,train_dataset.dataframe[temporal_column].values],
         spatial_fun,
         temporal_fun,
     )
     val_dataset.network_input = _init_gtnnwr_distance(
-        [reference_data[spatial_column].values,reference_data[temporal_column].values],
-        [val_dataset.dataframe[spatial_column].values,val_dataset.dataframe[temporal_column].values],
+        [reference_data[spatial_columns].values,reference_data[temporal_column].values],
+        [val_dataset.dataframe[spatial_columns].values,val_dataset.dataframe[temporal_column].values],
         spatial_fun,
         temporal_fun,
     )
     test_dataset.network_input = _init_gtnnwr_distance(
-        [reference_data[spatial_column].values,reference_data[temporal_column].values],
-        [test_dataset.dataframe[spatial_column].values,test_dataset.dataframe[temporal_column].values],
+        [reference_data[spatial_columns].values,reference_data[temporal_column].values],
+        [test_dataset.dataframe[spatial_columns].values,test_dataset.dataframe[temporal_column].values],
         spatial_fun,
         temporal_fun,
     )
@@ -1314,7 +1313,7 @@ def _init_gtnnwr_predict_dataset(
             data,
             x_columns,
             id_column,
-            spatial_column,
+            spatial_columns,
             temporal_column,
             scalers,
             reference_data,
@@ -1331,7 +1330,7 @@ def _init_gtnnwr_predict_dataset(
         The name of the input attribute column.
     id_column : str
         The name of the ID column.
-    spatial_column : str
+    spatial_columns : str
         The name of the spatial attribute column.
     temporal_column : str
         The name of the temporal attribute column.
@@ -1346,8 +1345,8 @@ def _init_gtnnwr_predict_dataset(
     """
     predict_dataset = create_predict_dataset(GTNNWRDataset, data=data, x_columns=x_columns, id_column=id_column)
     predict_dataset.network_input = _init_gtnnwr_distance(
-        [reference_data[spatial_column].values,reference_data[temporal_column].values],
-        [predict_dataset.dataframe[spatial_column].values,predict_dataset.dataframe[temporal_column].values],
+        [reference_data[spatial_columns].values,reference_data[temporal_column].values],
+        [predict_dataset.dataframe[spatial_columns].values,predict_dataset.dataframe[temporal_column].values],
         spatial_fun,
         temporal_fun,
     )

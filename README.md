@@ -159,7 +159,7 @@ The North Pacific Ocean is a key carbon sink, but the spatiotemporal dynamics of
 
 > Liu, Y., Chen, Y., Huang, Z., Liang, H., Qi, J., Wu, S., & Du, Z. (2024). Spatiotemporal weighted neural network reveals surface seawater pCO2 distributions and underlying environmental mechanisms in the North Pacific Ocean. *International Journal of Applied Earth Observation and Geoinformation*, 133, 104120.
 
-### 4.3 Urban
+### 4.3 Social Science
 
 #### 4.3.1 House price
 
@@ -201,6 +201,16 @@ Downscaling nighttime light (NTL) from satellite imagery is crucial for urban ex
 
 > Zhang, L., Wu, S., Liang, M., Jing, H., Shi, S., Zhu, Y., ... & Du, Z. (2024). A Downscaling Framework for Urban Nighttime Light Based on Multi-Factor Geographically Neural Network Weighted Regression. IEEE Transactions on Geoscience and Remote Sensing.
 
+#### 4.3.3 Public health
+
+Accurate prediction of epidemic trends is central to COVID-19 research and mitigation. To address this, GTNNWR model is employed to predict deaths and assess preventive scenarios. Leveraging its ability to capture complex spatiotemporal variations, the GTNNWR model demonstrates superior predictive capacity, outperforming the conventional SEIR model by approximately 9%. Simulation results reveal that while masks are the most effective single measure, combined interventions are significantly more potent, reducing deaths by 27.2% overall and up to 45% during winter. These findings provide critical quantitative insights for optimizing epidemic control strategies in the United States.
+
+<p align="center">
+<img title="LST" src="assets/figure_covid_19.png" alt="covid_19" width=75%>
+</p>
+
+> Sun, J., Qi, J., Yan, Z., Li, Y., Liang, J., & Wu, S. (2024). Quantitative Study on American COVID-19 Epidemic Predictions and Scenario Simulations. ISPRS International Journal of Geo-Information, 13(1), 31.
+
 ### 4.4 Geology
 
 #### 4.4.1 mineral prospectivity
@@ -223,6 +233,19 @@ Surface heat flow (SHF) is crucial for understanding Earth's internal geodynamic
 
 > Zhang, Z., Wu, S., Zhang, B., Du, Z., & Xia, Q. (2024). The distribution of surface heat flow on the Tibetan Plateau revealed by data‐driven methods. *Journal of Geophysical Research: Solid Earth*, 129(10), e2023JB028491.
 
+### 4.5 Planetary Science
+
+#### 4.5.1 Brightness temperature
+
+Brightness temperature (TB) derived from Chang’e microwave radiometers is crucial for understanding lunar subsurface thermal evolution. However, generating high-resolution maps is challenging due to sparse sampling and the neglect of surface factors in conventional methods. To address this, we utilized GNNWR framework effectively captures spatial nonstationarity and heterogeneity. It accurately generates TB maps at $0.0625^\circ$ resolution, achieving superior performance with the highest $R^2$ and lowest error metrics. These findings reveal fine-scale thermal features obscured by traditional interpolation, enhancing microwave emission analysis and geological understanding.
+
+<p align="center">
+<img title="mineral prospectivity" src="assets/figure_planetary.png" alt="planetary" width=75%>
+</p>
+
+> Zhu, M., Cai, Z., Wu, S., Zhang, Y., & Li, J. (2025). High-resolution lunar brightness temperature model based on Chang’e-2 MRM data and spatially weighted neural network. IEEE Transactions on Geoscience and Remote Sensing, 63, 1-13.
+
+
 **!!Further, these spatiotemporal intelligent regression models can be applied to other spatiotemporal modeling problems and socioeconomic phenomena.**
 
 ## 5 Related Research Papers
@@ -243,6 +266,8 @@ Surface heat flow (SHF) is crucial for understanding Earth's internal geodynamic
 7. Wu, S., Du, Z., Wang, Y., Lin, T., Zhang, F., & Liu, R. (2020). Modeling spatially anisotropic nonstationary processes in coastal environments based on a directional geographically neural network weighted regression. *Science of the Total Environment*, *709*, 136097.
 8. Wang, L., Yang, J., Wu, S., Hu, L., Ge, Y., & Du, Z. (2024). Enhancing mineral prospectivity mapping with geospatial artificial intelligence: A geographically neural network-weighted logistic regression approach. *International Journal of Applied Earth Observation and Geoinformation*, 128, 103746.
 9. Ding, J., Cen, W., Wu, S., Chen, Y., Qi, J., Huang, B., & Du, Z. (2024). A neural network model to optimize the measure of spatial proximity in geographically weighted regression approach: a case study on house price in Wuhan. *International Journal of Geographical Information Science*, 1–21. 
+10. Zhu, M., Cai, Z., Wu, S., Zhang, Y., & Li, J. (2025). High-resolution lunar brightness temperature model based on Chang’e-2 MRM data and spatially weighted neural network. IEEE Transactions on Geoscience and Remote Sensing, 63, 1-13.
+11. Sun, J., Qi, J., Yan, Z., Li, Y., Liang, J., & Wu, S. (2024). Quantitative Study on American COVID-19 Epidemic Predictions and Scenario Simulations. ISPRS International Journal of Geo-Information, 13(1), 31.
 
 
 ## 6 Group
@@ -283,14 +308,17 @@ Surface heat flow (SHF) is crucial for understanding Earth's internal geodynamic
 
 ### Members
 - Jin Qi, Postdoctoral fellow, Zhejiang University
+- Yijun Chen, Postdoctoral fellow, Zhejiang University
 - Jiale Ding, PhD student, Zhejiang University
 - Yi Liu, Undergraduate student, Zhejiang University
 - Ziyu Yin, Undergraduate student, Zhejiang University
+- Yancheng Wu, PhD student, Zhejiang University
+- Jingwen Zhong, Graduate student, Zhejiang University
+- Yige Wang, Graduate student, Zhejiang University
+- Bei Feng, Undergraduate student, Zhejiang University
 
 <a href="https://github.com/zjuwss/gnnwr/graphs/contributors"><img src="https://contrib.rocks/image?repo=zjuwss/gnnwr" /></a>
 
 
 ## 7 License
 [GPLv3 license](https://github.com/zjuwss/gnnwr/blob/main/LICENSE)
-
-

@@ -116,8 +116,6 @@ Air pollution, especially the measurement of PM2.5, has recently been a popular 
 
 > Chen, Y., Wu, S., Wang, Y., Zhang, F., Liu, R., & Du, Z. (2021). Satellite-based mapping of high-resolution ground-level pm2. 5 with VIIRS IP AOD in China through spatially neural network weighted regression. *Remote Sensing*, *13*(10), 1979.
 
-👉 [Modeling PM2.5 with GNNWR on Deep-time.org](https://mydde.deep-time.org/org-portal/MyDDE/project/65519461afe0567cf0d50519)
-
 #### 4.1.2 Air pollution of NO2
 
 This study utilized TROPOMI remote sensing data, ground observation data, and other ancillary data to construct a high-resolution spatiotemporal distribution and evaluation of ground-level NO2 concentrations in the Beijing–Tianjin–Hebei region using the GTNNWR model. The results demonstrated that the GTNNWR model outperformed the Random Forest (RF), and Convolutional Neural Network (CNN) models in performance metrics, showcasing greater reliability when considering spatiotemporal non-stationarity. This study provides crucial data support and reference for atmospheric environmental management and pollution prevention and control in the Beijing–Tianjin– Hebei region.
@@ -150,8 +148,6 @@ Transferring dissolved silicate (DSi) from land to coastal environments is vital
 
 > Qi, J., Du, Z., Wu, S., Chen, Y., & Wang, Y. (2023). A spatiotemporally weighted intelligent method for exploring fine-scale distributions of surface dissolved silicate in coastal seas. _Science of The Total Environment_ , 886, 163981.
 
-
-👉 [Modeling DSi with GTNNWR on Deep-time.org](https://mydde.deep-time.org/org-portal/MyDDE/project/64f976f12a7491e657f02793)
 
 #### 4.2.3 Surface Seawater pCO2
 
@@ -316,9 +312,6 @@ Brightness temperature (TB) derived from Chang’e microwave radiometers is cruc
 - Jingwen Zhong, Graduate student, Zhejiang University
 - Yige Wang, Graduate student, Zhejiang University
 - Bei Feng, Undergraduate student, Zhejiang University
-
-<a href="https://github.com/zjuwss/gnnwr/graphs/contributors"><img src="https://contrib.rocks/image?repo=zjuwss/gnnwr" /></a>
-
 
 ## 7 License
 [GPLv3 license](https://github.com/zjuwss/gnnwr/blob/main/LICENSE)

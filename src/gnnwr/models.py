@@ -475,7 +475,7 @@ class GNNWR:
                 self.__valid()
                 # out put the information
                 pbar.set_postfix({'Train Loss': "{:5f}".format(self._trainLossList[-1]), 'Train R2': "{:5f}".format(self._train_diagnosis.R2().data.cpu().numpy()),
-                                  'Train AIC': self._train_diagnosis.AIC(),'Valid Loss': self._validLossList[-1],
+                                  'Train AIC': self._train_diagnosis.AIC().data.cpu().numpy(),'Valid Loss': self._validLossList[-1],
                                   'Valid R2': self._valid_r2.item(), 'Best Valid R2': self._bestr2.item(),
                                   'Learning Rate': self._optimizer.param_groups[0]['lr']})
 
@@ -485,10 +485,10 @@ class GNNWR:
                 self._writer.add_scalar('Training/Loss', self._trainLossList[-1], self._epoch)
                 self._writer.add_scalar('Training/R2', self._train_diagnosis.R2().data, self._epoch)
                 self._writer.add_scalar('Training/RMSE', self._train_diagnosis.RMSE().data, self._epoch)
-                self._writer.add_scalar('Training/AIC', self._train_diagnosis.AIC(), self._epoch)
-                self._writer.add_scalar('Training/AICc', self._train_diagnosis.AICc(), self._epoch)
+                self._writer.add_scalar('Training/AIC', self._train_diagnosis.AIC().data, self._epoch)
+                self._writer.add_scalar('Training/AICc', self._train_diagnosis.AICc().data, self._epoch)
                 self._writer.add_scalar('Validation/Loss', self._validLossList[-1], self._epoch)
-                self._writer.add_scalar('Validation/R2', self._valid_r2, self._epoch)
+                self._writer.add_scalar('Validation/R2', self._valid_r2.item(), self._epoch)
                 self._writer.add_scalar('Validation/Best R2', self._bestr2, self._epoch)
 
                 # log output
@@ -496,10 +496,10 @@ class GNNWR:
                           "; Train Loss: " + str(self._trainLossList[-1]) + \
                           "; Train R2: {:5f}".format(self._train_diagnosis.R2().data) + \
                           "; Train RMSE: {:5f}".format(self._train_diagnosis.RMSE().data) + \
-                          "; Train AIC: {:5f}".format(self._train_diagnosis.AIC()) + \
-                          "; Train AICc: {:5f}".format(self._train_diagnosis.AICc()) + \
+                          "; Train AIC: {:5f}".format(self._train_diagnosis.AIC().data) + \
+                          "; Train AICc: {:5f}".format(self._train_diagnosis.AICc().data) + \
                           "; Valid Loss: " + str(self._validLossList[-1]) + \
-                          "; Valid R2: " + str(self._valid_r2) + \
+                          "; Valid R2: " + str(self._valid_r2.item()) + \
                           "; Learning Rate: " + str(self._optimizer.param_groups[0]['lr'])
                 logging.info(log_str)
                 if 0 < early_stop < self._noUpdateEpoch:  # stop when the model has not been updated for long time

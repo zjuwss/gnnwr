@@ -1,5 +1,5 @@
 import math
-import statsmodels.api as sm
+from sklearn.linear_model import LinearRegression
 import pandas as pd
 import torch
 import warnings
@@ -21,11 +21,12 @@ class OLS:
         self.__dataset = dataset
         self.__xName = xName
         self.__yName = yName
-        self.__formula = yName[0] + '~' + '+'.join(xName)
-        self.__fit = sm.formula.ols(self.__formula, dataset).fit()
-        self.params = list(self.__fit.params.to_dict().values())
-        intercept = self.__fit.params.iloc[0]
-        self.params = self.params[1:]
+        self.__fit = LinearRegression(fit_intercept=True)
+        y = self.__dataset[self.__yName[0]] if len(
+            self.__yName) == 1 else self.__dataset[self.__yName]
+        self.__fit = self.__fit.fit(self.__dataset[self.__xName], y)
+        self.params = list(self.__fit.coef_)
+        intercept = float(self.__fit.intercept_)
         self.params.append(intercept)
 
 

@@ -113,10 +113,10 @@ class GNNWR:
             activate_func=nn.PReLU(init=0.4),
             model_name="GNNWR_" + datetime.datetime.today().strftime("%Y%m%d-%H%M%S"),
             model_save_path="../gnnwr_models",
-            write_path="../gnnwr_runs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),
+            write_path=os.path.join("../gnnwr_runs",datetime.datetime.now().strftime("%Y%m%d-%H%M%S")),
             use_gpu: bool = True,
             use_ols: bool = True,
-            log_path="../gnnwr_logs/",
+            log_path="../gnnwr_logs",
             log_file_name="gnnwr" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".log",
             log_level=logging.INFO,
             optimizer_params=None
@@ -184,6 +184,15 @@ class GNNWR:
         self._optimizer_name = None
         self.init_optimizer(optimizer, optimizer_params)  # initialize the optimizer
         self._device = torch.device('cuda') if self._use_gpu else torch.device('cpu')
+        # If the data directory not exists, create it
+        if not os.path.exists(self._log_path):
+            os.makedirs(self._log_path)
+        if not os.path.exists(self._modelSavePath):
+            os.makedirs(self._modelSavePath)
+        if not os.path.exists(self._log_path):
+            os.makedirs(self._log_path)
+        if not os.path.exists(self._log_path):
+            os.makedirs(self._log_path)
 
     def init_optimizer(self, optimizer, optimizer_params=None):
         r"""
@@ -389,7 +398,7 @@ class GNNWR:
                 self._noUpdateEpoch = 0
                 if not os.path.exists(self._modelSavePath):
                     os.mkdir(self._modelSavePath)
-                torch.save(self._model, self._modelSavePath + '/' + self._modelName + ".pkl")
+                torch.save(self._model, os.path.join(self._modelSavePath,self._modelName + ".pkl"))
             else:
                 self._noUpdateEpoch += 1
 
@@ -459,9 +468,7 @@ class GNNWR:
             self._model = self._model.cuda()
             self._out = self._out.cuda()
         # create file
-        if not os.path.exists(self._log_path):
-            os.mkdir(self._log_path)
-        file_str = self._log_path + self._log_file_name
+        file_str = os.path.join(self._log_path , self._log_file_name)
         logging.basicConfig(format='%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s',
                             filename=file_str, level=logging.INFO)
         with tqdm(range(max_epoch)) as pbar:
@@ -505,11 +512,11 @@ class GNNWR:
                 if 0 < early_stop < self._noUpdateEpoch:  # stop when the model has not been updated for long time
                     print("Training stop! Model has not been improved for over {} epochs.".format(early_stop))
                     break
-        torch.save(self._model, self._modelSavePath + '/' + self._modelName + "_last.pkl")
+        torch.save(self._model, os.path.join(self._modelSavePath , self._modelName + "_last.pkl"))
         if model_selection == "val":
-            self.load_model(self._modelSavePath + '/' + self._modelName + ".pkl")
+            self.load_model(os.path.join(self._modelSavePath,self._modelName + ".pkl"))
         elif model_selection == "last":
-            self.load_model(self._modelSavePath + '/' + self._modelName + "_last.pkl")
+            self.load_model(os.path.join(self._modelSavePath, self._modelName + "_last.pkl"))
         self.result_data = self.getCoefs()
 
     def predict(self, dataset):
@@ -612,7 +619,7 @@ class GNNWR:
             self._model = self._model.cpu()
             self._out = self._out.cpu()
         self._modelSavePath = os.path.dirname(path)
-        self._modelName = os.path.basename(path).split('/')[-1].split('.')[0]
+        self._modelName = os.path.basename(path).split('/')[-1].replace('.pkl','').replace('.pth','')
         self.__istrained = True
         self.result_data = self.getCoefs()
 
@@ -681,11 +688,12 @@ class GNNWR:
             the location of the model (default: ``None``)
             the location can be ``"cpu"`` or ``"cuda"``
         """
+        model_result_str=""
         # load model
         if not self.__istrained:
             raise Exception("The model hasn't been trained or loaded!")
         if path is None:
-            path = self._modelSavePath + "/" + self._modelName + ".pkl"
+            path = os.path.join(self._modelSavePath,self._modelName + ".pkl")
         if use_dict:
             data = torch.load(path, map_location=map_location, weights_only=False)
             self._model.load_state_dict(data)
@@ -710,31 +718,32 @@ class GNNWR:
         logging.info("Test Loss: " + str(self.__testLoss) + "; Test R2: " + str(self.__testr2))
         # print result
         # basic information
-        print("--------------------Model Information-----------------")
-        print("Model Name:           |", self._modelName)
-        print("independent variable: |", self._train_dataset.x)
-        print("dependent variable:   |", self._train_dataset.y)
+        model_result_str+="--------------------Model Information-----------------\n"
+        model_result_str+="Model Name:           |"+str(self._modelName)+"\n"
+        model_result_str+="independent variable: |"+str(self._train_dataset.x)+"\n"
+        model_result_str+="dependent variable:   |"+str(self._train_dataset.y)+"\n"
         # OLS
-        print("\nOLS coefficients: ")
+        model_result_str+="\nOLS coefficients: \n"
         for i in range(len(self._coefficient)):
             if i == len(self._coefficient) - 1:
-                print("Intercept: {:.5f}".format(self._coefficient[i]))
+                model_result_str+="Intercept: {:.5f}\n".format(self._coefficient[i])
             else:
-                print("x{}: {:.5f}".format(i, self._coefficient[i]))
-        print("\n--------------------Result Information----------------")
-        print("Test Loss: | {:>25.5f}".format(self.__testLoss))
-        print("Test R2  : | {:>25.5f}".format(self.__testr2))
-        print("Train R2 : | {:>25.5f}".format(self._trainr2))
-        print("Valid R2 : | {:>25.5f}".format(self._validr2))
-        print("RMSE: | {:>30.5f}".format(self._test_diagnosis.RMSE().data))
-        print("AIC:  | {:>30.5f}".format(self._test_diagnosis.AIC()))
-        print("AICc: | {:>30.5f}".format(self._test_diagnosis.AICc()))
-        print("F1:   | {:>30.5f}".format(self._test_diagnosis.F1_Global().data))
-        print("F2:   | {:>30.5f}".format(self._test_diagnosis.F2_Global().flatten()[0].data))
+                model_result_str+="x{}: {:.5f}\n".format(i, self._coefficient[i])
+        model_result_str+="\n--------------------Result Information----------------\n"
+        model_result_str+="Test Loss: | {:>25.5f}\n".format(self.__testLoss)
+        model_result_str+="Test R2  : | {:>25.5f}\n".format(self.__testr2)
+        model_result_str+="Train R2 : | {:>25.5f}\n".format(self._trainr2)
+        model_result_str+="Valid R2 : | {:>25.5f}\n".format(self._validr2)
+        model_result_str+="RMSE: | {:>30.5f}\n".format(self._test_diagnosis.RMSE().data)
+        model_result_str+="AIC:  | {:>30.5f}\n".format(self._test_diagnosis.AIC())
+        model_result_str+="AICc: | {:>30.5f}\n".format(self._test_diagnosis.AICc())
+        model_result_str+="F1:   | {:>30.5f}\n".format(self._test_diagnosis.F1_Global().data)
+        model_result_str+="F2:   | {:>30.5f}\n".format(self._test_diagnosis.F2_Global().flatten()[0].data)
         F3_Local_dict = self._test_diagnosis.F3_Local()[0]
         for key in F3_Local_dict:
             width = 30 - (len(key) - 4)
-            print("{}: | {:>{width}.5f}".format(key, F3_Local_dict[key].data, width=width))
+            model_result_str+="{}: | {:>{width}.5f}\n".format(key, F3_Local_dict[key].data, width=width)
+        return model_result_str
 
     def reg_result(self, filename=None, model_path=None, use_dict=False, only_return=False, map_location=None):
         """
@@ -764,7 +773,7 @@ class GNNWR:
             the Pandas dataframe of the result
         """
         if model_path is None:
-            model_path = self._modelSavePath + "/" + self._modelName + ".pkl"
+            model_path = os.path.join(self._modelSavePath,self._modelName + ".pkl")
             
         if use_dict:
             data = torch.load(model_path, map_location=map_location, weights_only=False)
@@ -971,10 +980,10 @@ class GTNNWR(GNNWR):
                  activate_func=nn.PReLU(init=0.4),
                  model_name="GTNNWR_" + datetime.datetime.today().strftime("%Y%m%d-%H%M%S"),
                  model_save_path="../gtnnwr_models",
-                 write_path="../gtnnwr_runs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),
+                 write_path=os.path.join("../gtnnwr_runs",datetime.datetime.now().strftime("%Y%m%d-%H%M%S")),
                  use_gpu: bool = True,
                  use_ols: bool = True,
-                 log_path: str = "../gtnnwr_logs/",
+                 log_path: str = "../gtnnwr_logs",
                  log_file_name: str = "gtnnwr" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".log",
                  log_level: int = logging.INFO,
                  optimizer_params=None,
@@ -1011,3 +1020,12 @@ class GTNNWR(GNNWR):
                                         SWNN(dense_layers[1], self._STPNN_out * self._insize, self._outsize, drop_out,
                                              activate_func, batch_norm))
         self.init_optimizer(optimizer, optimizer_params)
+        # If the data directory not exists, create it
+        if not os.path.exists(self._log_path):
+            os.makedirs(self._log_path)
+        if not os.path.exists(self._modelSavePath):
+            os.makedirs(self._modelSavePath)
+        if not os.path.exists(self._log_path):
+            os.makedirs(self._log_path)
+        if not os.path.exists(self._log_path):
+            os.makedirs(self._log_path)

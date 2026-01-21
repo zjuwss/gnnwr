@@ -121,6 +121,7 @@ class GNNWR:
             log_level=logging.INFO,
             optimizer_params=None
     ):
+        warnings.warn("This version of GNNWR (0.1.17) will be deprecated in the forthcoming new version (1.x.x).")
         self._train_dataset = train_dataset  # train dataset
         self._valid_dataset = valid_dataset  # valid dataset
         self._test_dataset = test_dataset  # test dataset

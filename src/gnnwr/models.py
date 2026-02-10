@@ -385,17 +385,17 @@ class GNNWR:
             val_loss /= len(self._valid_dataset)  # calculate the average loss
             self._validLossList.append(val_loss)  # record the loss
             try:
-                r2 =1 - torch.sum((out_list - label_list) ** 2) / torch.sum((label_list - torch.mean(label_list)) ** 2)
-            except:
-                if np.isnan(out_list).sum() > 0:
-                    raise ValueError("The output contains nan value")
+                r2 = 1 - torch.sum((out_list - label_list) ** 2) / torch.sum((label_list - torch.mean(label_list)) ** 2)
+            except (ZeroDivisionError, RuntimeError, FloatingPointError) as e:
+                if torch.isnan(out_list).any():
+                    raise ValueError("The output contains nan value") from e
                 else:
-                    raise ValueError("The Unexpected Error")
+                    raise ValueError(f"Error calculating R2: {e}") from e
             self._valid_r2 = r2
             if r2 > self._bestr2:
                 # if the R square is better than the best R square,record the R square and save the model
                 self._bestr2 = r2
-                self._besttrainr2 = self._train_diagnosis.R2().data
+                self._besttrainr2 = self._train_diagnosis.R2().detach()
                 self._noUpdateEpoch = 0
                 if not os.path.exists(self._modelSavePath):
                     os.mkdir(self._modelSavePath)
@@ -482,8 +482,8 @@ class GNNWR:
                 # record the information of the validation process
                 self.__valid()
                 # out put the information
-                pbar.set_postfix({'Train Loss': "{:5f}".format(self._trainLossList[-1]), 'Train R2': "{:5f}".format(self._train_diagnosis.R2().data.cpu().numpy()),
-                                  'Train AIC': self._train_diagnosis.AIC().data.cpu().numpy(),'Valid Loss': self._validLossList[-1],
+                pbar.set_postfix({'Train Loss': "{:5f}".format(self._trainLossList[-1]), 'Train R2': "{:5f}".format(self._train_diagnosis.R2().detach().cpu().numpy()),
+                                  'Train AIC': self._train_diagnosis.AIC().detach().cpu().numpy(),'Valid Loss': self._validLossList[-1],
                                   'Valid R2': self._valid_r2.item(), 'Best Valid R2': self._bestr2.item(),
                                   'Learning Rate': self._optimizer.param_groups[0]['lr']})
 
@@ -491,10 +491,10 @@ class GNNWR:
                 # tensorboard
                 self._writer.add_scalar('Training/Learning Rate', self._optimizer.param_groups[0]['lr'], self._epoch)
                 self._writer.add_scalar('Training/Loss', self._trainLossList[-1], self._epoch)
-                self._writer.add_scalar('Training/R2', self._train_diagnosis.R2().data, self._epoch)
-                self._writer.add_scalar('Training/RMSE', self._train_diagnosis.RMSE().data, self._epoch)
-                self._writer.add_scalar('Training/AIC', self._train_diagnosis.AIC().data, self._epoch)
-                self._writer.add_scalar('Training/AICc', self._train_diagnosis.AICc().data, self._epoch)
+                self._writer.add_scalar('Training/R2', self._train_diagnosis.R2().detach(), self._epoch)
+                self._writer.add_scalar('Training/RMSE', self._train_diagnosis.RMSE().detach(), self._epoch)
+                self._writer.add_scalar('Training/AIC', self._train_diagnosis.AIC().detach(), self._epoch)
+                self._writer.add_scalar('Training/AICc', self._train_diagnosis.AICc().detach(), self._epoch)
                 self._writer.add_scalar('Validation/Loss', self._validLossList[-1], self._epoch)
                 self._writer.add_scalar('Validation/R2', self._valid_r2.item(), self._epoch)
                 self._writer.add_scalar('Validation/Best R2', self._bestr2, self._epoch)
@@ -502,10 +502,10 @@ class GNNWR:
                 # log output
                 log_str = "Epoch: " + str(epoch + 1) + \
                           "; Train Loss: " + str(self._trainLossList[-1]) + \
-                          "; Train R2: {:5f}".format(self._train_diagnosis.R2().data) + \
-                          "; Train RMSE: {:5f}".format(self._train_diagnosis.RMSE().data) + \
-                          "; Train AIC: {:5f}".format(self._train_diagnosis.AIC().data) + \
-                          "; Train AICc: {:5f}".format(self._train_diagnosis.AICc().data) + \
+                          "; Train R2: {:5f}".format(self._train_diagnosis.R2().detach()) + \
+                          "; Train RMSE: {:5f}".format(self._train_diagnosis.RMSE().detach()) + \
+                          "; Train AIC: {:5f}".format(self._train_diagnosis.AIC().detach()) + \
+                          "; Train AICc: {:5f}".format(self._train_diagnosis.AICc().detach()) + \
                           "; Valid Loss: " + str(self._validLossList[-1]) + \
                           "; Valid R2: " + str(self._valid_r2.item()) + \
                           "; Learning Rate: " + str(self._optimizer.param_groups[0]['lr'])
@@ -709,11 +709,11 @@ class GNNWR:
             self._out = self._out.cpu()
         with torch.no_grad():
             _ , self._train_diagnosis = self.__evaluate(self._train_dataset)
-            self._trainr2 = self._train_diagnosis.R2().data
+            self._trainr2 = self._train_diagnosis.R2().detach()
             _ , self._valid_diagnosis = self.__evaluate(self._valid_dataset)
-            self._validr2 = self._valid_diagnosis.R2().data
+            self._validr2 = self._valid_diagnosis.R2().detach()
             self.__testLoss, self._test_diagnosis = self.__evaluate(self._test_dataset)
-            self.__testr2 = self._test_diagnosis.R2().data
+            self.__testr2 = self._test_diagnosis.R2().detach()
 
 
         logging.info("Test Loss: " + str(self.__testLoss) + "; Test R2: " + str(self.__testr2))
@@ -735,15 +735,15 @@ class GNNWR:
         model_result_str+="Test R2  : | {:>25.5f}\n".format(self.__testr2)
         model_result_str+="Train R2 : | {:>25.5f}\n".format(self._trainr2)
         model_result_str+="Valid R2 : | {:>25.5f}\n".format(self._validr2)
-        model_result_str+="RMSE: | {:>30.5f}\n".format(self._test_diagnosis.RMSE().data)
+        model_result_str+="RMSE: | {:>30.5f}\n".format(self._test_diagnosis.RMSE().detach())
         model_result_str+="AIC:  | {:>30.5f}\n".format(self._test_diagnosis.AIC())
         model_result_str+="AICc: | {:>30.5f}\n".format(self._test_diagnosis.AICc())
-        model_result_str+="F1:   | {:>30.5f}\n".format(self._test_diagnosis.F1_Global().data)
-        model_result_str+="F2:   | {:>30.5f}\n".format(self._test_diagnosis.F2_Global().flatten()[0].data)
+        model_result_str+="F1:   | {:>30.5f}\n".format(self._test_diagnosis.F1_Global().detach())
+        model_result_str+="F2:   | {:>30.5f}\n".format(self._test_diagnosis.F2_Global().flatten()[0].detach())
         F3_Local_dict = self._test_diagnosis.F3_Local()[0]
         for key in F3_Local_dict:
             width = 30 - (len(key) - 4)
-            model_result_str+="{}: | {:>{width}.5f}\n".format(key, F3_Local_dict[key].data, width=width)
+            model_result_str+="{}: | {:>{width}.5f}\n".format(key, F3_Local_dict[key].detach(), width=width)
         return model_result_str
 
     def reg_result(self, filename=None, model_path=None, use_dict=False, only_return=False, map_location=None):
@@ -872,14 +872,10 @@ class GNNWR:
         return result_data
 
     def __str__(self) -> str:
-        print("Model Name: ", self._modelName)
-        print("Model Structure: ", self._model)
-        return ""
+        return f"Model Name: {self._modelName}\nModel Structure: {self._model}"
 
     def __repr__(self) -> str:
-        print("Model Name: ", self._modelName)
-        print("Model Structure: ", self._model)
-        return ""
+        return self.__str__()
 
 
 class GTNNWR(GNNWR):

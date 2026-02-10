@@ -81,8 +81,9 @@ class LinearNetwork(nn.Module):
         return x
     
     def __str__(self) -> str:
+        dropout_str = self.drop_out.p if hasattr(self.drop_out, 'p') else 0
         return f"LinearNetwork: {self.layer.in_features} -> {self.layer.out_features}\n" + \
-                f"Dropout: {self.drop_out.p}\n" + \
+                f"Dropout: {dropout_str}\n" + \
                 f"BatchNorm: {self.batch_norm}\n" + \
                 f"Activation: {self.activate_func}"
     

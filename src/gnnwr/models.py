@@ -186,14 +186,8 @@ class GNNWR:
         self.init_optimizer(optimizer, optimizer_params)  # initialize the optimizer
         self._device = torch.device('cuda') if self._use_gpu else torch.device('cpu')
         # If the data directory not exists, create it
-        if not os.path.exists(self._log_path):
-            os.makedirs(self._log_path)
-        if not os.path.exists(self._modelSavePath):
-            os.makedirs(self._modelSavePath)
-        if not os.path.exists(self._log_path):
-            os.makedirs(self._log_path)
-        if not os.path.exists(self._log_path):
-            os.makedirs(self._log_path)
+        os.makedirs(self._log_path, exist_ok=True)
+        os.makedirs(self._modelSavePath, exist_ok=True)
 
     def init_optimizer(self, optimizer, optimizer_params=None):
         r"""
@@ -253,26 +247,26 @@ class GNNWR:
         # initialize the optimizer
         if optimizer_params is None:
             optimizer_params = {}
-        weigth_decay = optimizer_params.get("weight_decay", 1e-3)
+        weight_decay = optimizer_params.get("weight_decay", 1e-3)
         
         if optimizer == "SGD":
             self._optimizer = optim.SGD(
-                self._model.parameters(), lr=self._start_lr, weight_decay=weigth_decay)
+                self._model.parameters(), lr=self._start_lr, weight_decay=weight_decay)
         elif optimizer == "Adam":
             self._optimizer = optim.Adam(
-                self._model.parameters(), lr=self._start_lr, weight_decay=weigth_decay)
+                self._model.parameters(), lr=self._start_lr, weight_decay=weight_decay)
         elif optimizer == "AdamW":
             self._optimizer = optim.AdamW(
-                self._model.parameters(), lr=self._start_lr, weight_decay=weigth_decay)
+                self._model.parameters(), lr=self._start_lr, weight_decay=weight_decay)
         elif optimizer == "RMSprop":
             self._optimizer = optim.RMSprop(
-                self._model.parameters(), lr=self._start_lr, weight_decay=weigth_decay)
+                self._model.parameters(), lr=self._start_lr, weight_decay=weight_decay)
         elif optimizer == "Adagrad":
             self._optimizer = optim.Adagrad(
-                self._model.parameters(), lr=self._start_lr, weight_decay=weigth_decay)
+                self._model.parameters(), lr=self._start_lr, weight_decay=weight_decay)
         elif optimizer == "Adadelta":
             self._optimizer = optim.Adadelta(
-                self._model.parameters(), lr=self._start_lr, weight_decay=weigth_decay)
+                self._model.parameters(), lr=self._start_lr, weight_decay=weight_decay)
         else:
             raise ValueError("Invalid Optimizer")
         self._optimizer_name = optimizer  # optimizer name
@@ -465,7 +459,8 @@ class GNNWR:
         model_selection = kwargs.get("model_selection", "val")
         self.__istrained = True
         if self._use_gpu:
-            self._model = nn.DataParallel(module=self._model)  # parallel computing
+            if not isinstance(self._model, nn.DataParallel):
+                self._model = nn.DataParallel(module=self._model)  # parallel computing
             self._model = self._model.cuda()
             self._out = self._out.cuda()
         # create file
@@ -701,7 +696,8 @@ class GNNWR:
         else:
             self._model = torch.load(path, map_location=map_location, weights_only=False)
         if self._use_gpu:
-            self._model = nn.DataParallel(module=self._model)  # parallel computing
+            if not isinstance(self._model, nn.DataParallel):
+                self._model = nn.DataParallel(module=self._model)
             self._model = self._model.cuda()
             self._out = self._out.cuda()
         else:
@@ -783,7 +779,8 @@ class GNNWR:
             self._model = torch.load(model_path, map_location=map_location, weights_only=False)
 
         if self._use_gpu:
-            self._model = nn.DataParallel(module=self._model)
+            if not isinstance(self._model, nn.DataParallel):
+                self._model = nn.DataParallel(module=self._model)
             self._model,self._out = self._model.cuda(),self._out.cuda()
         else:
             self._model, self._out = self._model.cpu(), self._out.cpu()
@@ -1022,11 +1019,5 @@ class GTNNWR(GNNWR):
                                              activate_func, batch_norm))
         self.init_optimizer(optimizer, optimizer_params)
         # If the data directory not exists, create it
-        if not os.path.exists(self._log_path):
-            os.makedirs(self._log_path)
-        if not os.path.exists(self._modelSavePath):
-            os.makedirs(self._modelSavePath)
-        if not os.path.exists(self._log_path):
-            os.makedirs(self._log_path)
-        if not os.path.exists(self._log_path):
-            os.makedirs(self._log_path)
+        os.makedirs(self._log_path, exist_ok=True)
+        os.makedirs(self._modelSavePath, exist_ok=True)

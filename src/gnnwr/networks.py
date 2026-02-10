@@ -110,7 +110,7 @@ class SWNN(nn.Module):
     batch_norm: bool
         whether use batch normalization(default: ``True``)
     """
-    def __init__(self, dense_layer=None, insize=-1, outsize=-1, drop_out=0.2, activate_func=nn.PReLU(init=0.1),
+    def __init__(self, dense_layer=None, insize=-1, outsize=-1, drop_out=0.2, activate_func=None,
                  batch_norm=True):
 
         super(SWNN, self).__init__()
@@ -122,6 +122,8 @@ class SWNN(nn.Module):
             raise ValueError("insize and outsize must be positive")
         self.drop_out = drop_out
         self.batch_norm = batch_norm
+        if activate_func is None:
+            activate_func = nn.PReLU(init=0.1)
         self.activate_func = activate_func
         self.insize = insize
         self.outsize = outsize
@@ -165,13 +167,15 @@ class STPNN(nn.Module):
     batch_norm: bool
         whether use batch normalization(default: ``False``)
     """
-    def __init__(self, dense_layer, insize, outsize, drop_out=0.2, activate_func=nn.ReLU(), batch_norm=False):
+    def __init__(self, dense_layer, insize, outsize, drop_out=0.2, activate_func=None, batch_norm=False):
 
         super(STPNN, self).__init__()
         # default dense layer
         self.dense_layer = dense_layer
         self.drop_out = drop_out
         self.batch_norm = batch_norm
+        if activate_func is None:
+            activate_func = nn.ReLU()
         self.activate_func = activate_func
         self.insize = insize
         self.outsize = outsize
@@ -218,13 +222,15 @@ class STNN_SPNN(nn.Module):
         activate function(default: ``nn.ReLU()``)
 
     """
-    def __init__(self, STNN_insize:int, STNN_outsize, SPNN_insize:int, SPNN_outsize, activate_func=nn.ReLU()):
+    def __init__(self, STNN_insize:int, STNN_outsize, SPNN_insize:int, SPNN_outsize, activate_func=None):
 
         super(STNN_SPNN, self).__init__()
         self.STNN_insize = STNN_insize
         self.STNN_outsize = STNN_outsize
         self.SPNN_insize = SPNN_insize
         self.SPNN_outsize = SPNN_outsize
+        if activate_func is None:
+            activate_func = nn.ReLU()
         self.activate_func = activate_func
         self.STNN = nn.Sequential(nn.Linear(self.STNN_insize, self.STNN_outsize), self.activate_func)
         self.SPNN = nn.Sequential(nn.Linear(self.SPNN_insize, self.SPNN_outsize), self.activate_func)

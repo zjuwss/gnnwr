@@ -175,23 +175,27 @@ class baseDataset(Dataset):
             rescaled dependent variable data
         """
         if self.scale_fn == "minmax_scale":
-            if x is not None and self.x_scale_info is not None:
-                x = np.multiply(x, self.x_scale_info["max"] - self.x_scale_info["min"]) + self.x_scale_info["min"]
-            elif self.x_scale_info is None:
-                raise ValueError("Invalid x scale info")
-            if y is not None and self.y_scale_info is not None:
-                y = np.multiply(y, self.y_scale_info["max"] - self.y_scale_info["min"]) + self.y_scale_info["min"]
-            elif self.y_scale_info is None:
-                raise ValueError("Invalid y scale info")
+            if x is not None:
+                if self.x_scale_info is not None:
+                    x = np.multiply(x, self.x_scale_info["max"] - self.x_scale_info["min"]) + self.x_scale_info["min"]
+                else:
+                    raise ValueError("Invalid x scale info: trying to rescale x but x_scale_info is None")
+            if y is not None:
+                if self.y_scale_info is not None:
+                    y = np.multiply(y, self.y_scale_info["max"] - self.y_scale_info["min"]) + self.y_scale_info["min"]
+                else:
+                    raise ValueError("Invalid y scale info: trying to rescale y but y_scale_info is None")
         elif self.scale_fn == "standard_scale":
-            if x is not None and self.x_scale_info is not None:
-                x = np.multiply(x, np.sqrt(self.x_scale_info["var"])) + self.x_scale_info["mean"]
-            elif self.x_scale_info is None:
-                raise ValueError("Invalid x scale info")
-            if y is not None and self.y_scale_info is not None:
-                y = np.multiply(y, np.sqrt(self.y_scale_info["var"])) + self.y_scale_info["mean"]
-            elif self.y_scale_info is None:
-                raise ValueError("Invalid y scale info")
+            if x is not None:
+                if self.x_scale_info is not None:
+                    x = np.multiply(x, np.sqrt(self.x_scale_info["var"])) + self.x_scale_info["mean"]
+                else:
+                    raise ValueError("Invalid x scale info: trying to rescale x but x_scale_info is None")
+            if y is not None:
+                if self.y_scale_info is not None:
+                    y = np.multiply(y, np.sqrt(self.y_scale_info["var"])) + self.y_scale_info["mean"]
+                else:
+                    raise ValueError("Invalid y scale info: trying to rescale y but y_scale_info is None")
         else:
             raise ValueError("invalid process_fn")
         return x, y
@@ -366,24 +370,28 @@ class predictDataset(Dataset):
         :return: rescaled attribute data
         """
         if self.scale_fn == "minmax_scale":
-            if x is not None and self.x_scale_info is not None:
-                x = x * (self.x_scale_info["max"] - self.x_scale_info["min"]) + self.x_scale_info["min"]
-            elif self.x_scale_info is None:
-                raise ValueError("Invalid x scale info")
-            if y is not None and  self.y_scale_info is not None:
-                y = y * (self.y_scale_info["max"] - self.y_scale_info["min"]) + self.y_scale_info["min"]
-            elif self.y_scale_info is None:
-                raise ValueError("Invalid y scale info")
-    
+            if x is not None:
+                if self.x_scale_info is not None:
+                    x = x * (self.x_scale_info["max"] - self.x_scale_info["min"]) + self.x_scale_info["min"]
+                else:
+                    raise ValueError("Invalid x scale info")
+            if y is not None:
+                if self.y_scale_info is not None:
+                    y = y * (self.y_scale_info["max"] - self.y_scale_info["min"]) + self.y_scale_info["min"]
+                else:
+                    raise ValueError("Invalid y scale info")
+
         elif self.scale_fn == "standard_scale":
-            if x is not None and self.x_scale_info is not None:
-                x = x * np.sqrt(self.x_scale_info["var"]) + self.x_scale_info["mean"]
-            elif self.x_scale_info is None:
-                raise ValueError("Invalid x scale info")
-            if y is not None and self.y_scale_info is not None:
-                y = y * np.sqrt(self.y_scale_info["var"]) + self.y_scale_info["mean"]
-            elif self.y_scale_info is None:
-                raise ValueError("Invalid y scale info")
+            if x is not None:
+                if self.x_scale_info is not None:
+                    x = x * np.sqrt(self.x_scale_info["var"]) + self.x_scale_info["mean"]
+                else:
+                    raise ValueError("Invalid x scale info")
+            if y is not None:
+                if self.y_scale_info is not None:
+                    y = y * np.sqrt(self.y_scale_info["var"]) + self.y_scale_info["mean"]
+                else:
+                    raise ValueError("Invalid y scale info")
         else:
             raise ValueError("invalid process_fn")
 
@@ -403,9 +411,15 @@ class predictDataset(Dataset):
         if min is None:
             min = []
         if len(min) == 0:
-            x = (x - x.min(axis=0)) / (x.max(axis=0) - x.min(axis=0))
+            x_min = x.min(axis=0)
+            x_max = x.max(axis=0)
         else:
-            x = (x - min) / (max - min)
+            x_min = min
+            x_max = max
+        denominator = x_max - x_min
+        denominator = np.where(denominator == 0, 1, denominator)
+        x = (x - x_min) / denominator
+        x = np.where(np.broadcast_to(x_max == x_min, x.shape), 0, x)
         return x
 
     def standard_scaler(self, x, mean=None, std=None):
@@ -422,9 +436,14 @@ class predictDataset(Dataset):
         if mean is None:
             mean = []
         if len(mean) == 0:
-            x = (x - x.mean(axis=0)) / x.std(axis=0)
+            x_mean = x.mean(axis=0)
+            x_std = x.std(axis=0)
         else:
-            x = (x - mean) / std
+            x_mean = mean
+            x_std = std
+        safe_std = np.where(x_std == 0, 1, x_std)
+        x = (x - x_mean) / safe_std
+        x = np.where(np.broadcast_to(x_std == 0, x.shape), 0, x)
         return x
 
 

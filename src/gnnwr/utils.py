@@ -56,8 +56,15 @@ class DIAGNOSIS:
         self.__residual = self.__y_data - self.__y_pred
         self.__ssr = torch.sum((self.__y_pred - self.__y_data) ** 2) # sum of squared residuals
 
-        self.__hat_com = torch.mm(torch.linalg.inv(
-            torch.mm(self.__x_data.transpose(-2, -1), self.__x_data)), self.__x_data.transpose(-2, -1))
+        XtX = torch.mm(self.__x_data.transpose(-2, -1), self.__x_data)
+        try:
+            cond = torch.linalg.cond(XtX)
+            if cond > 1e10:
+                warnings.warn(f"Matrix is ill-conditioned (condition number: {cond:.2e}). "
+                              "Using pseudo-inverse. Consider checking for multicollinearity.")
+        except Exception:
+            pass
+        self.__hat_com = torch.mm(torch.linalg.pinv(XtX), self.__x_data.transpose(-2, -1))
         self.__ols_hat = torch.mm(self.__x_data, self.__hat_com)
         x_data_tile = self.__x_data.repeat(self.__n, 1)
         x_data_tile = x_data_tile.view(self.__n, self.__n, -1)
@@ -65,7 +72,7 @@ class DIAGNOSIS:
         gtweight_3d = torch.diag_embed(self.__weight)
 
         hatS_temp = torch.matmul(gtweight_3d,
-                                 torch.matmul(torch.inverse(torch.matmul(x_data_tile_t, x_data_tile)), x_data_tile_t))
+                                 torch.matmul(torch.linalg.pinv(torch.matmul(x_data_tile_t, x_data_tile)), x_data_tile_t))
         self.__hat_temp = hatS_temp
         hatS = torch.matmul(self.__x_data.view(-1, 1, self.__x_data.size(1)), hatS_temp)
         hatS = hatS.view(-1, self.__n)

@@ -82,6 +82,40 @@ class baseDataset(Dataset):
         self.shuffle = None
         self.distances_scale_param = None
 
+        # Lazy-loaded tensor cache for optimized __getitem__
+        self._distances_tensor = None
+        self._temporal_tensor = None
+        self._x_data_tensor = None
+        self._y_data_tensor = None
+        self._id_data_tensor = None
+
+    def _invalidate_tensor_cache(self):
+        """Reset cached tensors so they are rebuilt on next __getitem__ call."""
+        self._distances_tensor = None
+        self._temporal_tensor = None
+        self._x_data_tensor = None
+        self._y_data_tensor = None
+        self._id_data_tensor = None
+
+    def _ensure_tensors(self):
+        """Lazily convert numpy arrays to tensors for faster __getitem__ access.
+
+        Tensors are created via torch.from_numpy().float(), which copies data
+        into a float32 tensor. The tensors are cached so subsequent calls are
+        essentially free. Call _invalidate_tensor_cache() when underlying numpy
+        arrays are reassigned.
+        """
+        if self._distances_tensor is None and self.distances is not None:
+            self._distances_tensor = torch.from_numpy(self.distances).float()
+        if self._temporal_tensor is None and self.temporal is not None:
+            self._temporal_tensor = torch.from_numpy(self.temporal).float()
+        if self._x_data_tensor is None and self.x_data is not None:
+            self._x_data_tensor = torch.from_numpy(self.x_data).float()
+        if self._y_data_tensor is None and self.y_data is not None:
+            self._y_data_tensor = torch.from_numpy(self.y_data).float()
+        if self._id_data_tensor is None and self.id_data is not None:
+            self._id_data_tensor = torch.from_numpy(self.id_data.astype(np.float32)).float()
+
     def __len__(self):
         """
         :return: the number of samples
@@ -93,16 +127,18 @@ class baseDataset(Dataset):
         :param index: the index of sample
         :return: the index-th distance matrix and the index-th sample
         """
+        self._ensure_tensors()
+
         if self.is_need_STNN:
-            return torch.cat((torch.tensor(self.distances[index], dtype=torch.float),
-                              torch.tensor(self.temporal[index], dtype=torch.float)), dim=-1), \
-                torch.tensor(self.x_data[index], dtype=torch.float), \
-                torch.tensor(self.y_data[index], dtype=torch.float), \
-                torch.tensor(self.id_data[index], dtype=torch.float)
-        return torch.tensor(self.distances[index], dtype=torch.float), \
-                torch.tensor(self.x_data[index],dtype=torch.float), \
-                torch.tensor(self.y_data[index], dtype=torch.float), \
-                torch.tensor(self.id_data[index], dtype=torch.float)
+            return torch.cat((self._distances_tensor[index],
+                              self._temporal_tensor[index]), dim=-1), \
+                self._x_data_tensor[index], \
+                self._y_data_tensor[index], \
+                self._id_data_tensor[index]
+        return self._distances_tensor[index], \
+                self._x_data_tensor[index], \
+                self._y_data_tensor[index], \
+                self._id_data_tensor[index]
 
 
     def scale(self, scale_fn, scale_params):
@@ -147,6 +183,7 @@ class baseDataset(Dataset):
 
         self.x_data = np.concatenate((self.x_data, np.ones(
             (self.datasize, 1))), axis=1)
+        self._invalidate_tensor_cache()
 
     def getScaledDataframe(self):
         """
@@ -340,6 +377,30 @@ class predictDataset(Dataset):
         self.distances = None
         self.temporal = None
 
+        # Lazy-loaded tensor cache for optimized __getitem__
+        self._distances_tensor = None
+        self._temporal_tensor = None
+        self._x_data_tensor = None
+
+    def _invalidate_tensor_cache(self):
+        """Reset cached tensors so they are rebuilt on next __getitem__ call."""
+        self._distances_tensor = None
+        self._temporal_tensor = None
+        self._x_data_tensor = None
+
+    def _ensure_tensors(self):
+        """Lazily convert numpy arrays to tensors for faster __getitem__ access.
+
+        Tensors are created via torch.from_numpy().float(), which copies into
+        float32. Call _invalidate_tensor_cache() when underlying arrays change.
+        """
+        if self._distances_tensor is None and self.distances is not None:
+            self._distances_tensor = torch.from_numpy(self.distances).float()
+        if self._temporal_tensor is None and self.temporal is not None:
+            self._temporal_tensor = torch.from_numpy(self.temporal).float()
+        if self._x_data_tensor is None and self.x_data is not None:
+            self._x_data_tensor = torch.from_numpy(self.x_data).float()
+
     def __len__(self):
         """
         :return: the number of samples
@@ -349,14 +410,16 @@ class predictDataset(Dataset):
     def __getitem__(self, index):
         """
         :param index: sample index
-        :return: distance matrix and independent variable data and dependent variable data
+        :return: distance matrix and independent variable data
         """
+        self._ensure_tensors()
+
         if self.is_need_STNN:
-            return torch.cat((torch.tensor(self.distances[index], dtype=torch.float),
-                              torch.tensor(self.temporal[index], dtype=torch.float)), dim=-1), \
-                    torch.tensor(self.x_data[index], dtype=torch.float)
-        return torch.tensor(self.distances[index], dtype=torch.float), \
-                torch.tensor(self.x_data[index], dtype=torch.float)
+            return torch.cat((self._distances_tensor[index],
+                              self._temporal_tensor[index]), dim=-1), \
+                    self._x_data_tensor[index]
+        return self._distances_tensor[index], \
+                self._x_data_tensor[index]
 
     def rescale(self, x, y):
         """

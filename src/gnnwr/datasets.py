@@ -82,6 +82,10 @@ class baseDataset(Dataset):
         self.shuffle = None
         self.distances_scale_param = None
 
+        # KNN sparse distance support
+        self.knn_k = None  # Number of nearest neighbors (None = full distance matrix)
+        self.knn_indices = None  # Indices of k nearest neighbors
+
     def __len__(self):
         """
         :return: the number of samples
@@ -453,7 +457,74 @@ def ManhattanDistance(x, y):
     return np.float32(np.sum(np.abs(x[:, np.newaxis, :] - y), axis=2))
 
 
-def init_dataset(data, 
+def KNNDistance(x, y, k=200, metric='euclidean'):
+    """
+    Compute KNN sparse distance matrix — only store distances to k nearest neighbors.
+
+    This reduces memory from O(n*m) to O(n*k), enabling large-scale datasets
+    where full distance matrices would exceed available memory.
+
+    Parameters
+    ----------
+    x : numpy.ndarray
+        Query points, shape (n, d)
+    y : numpy.ndarray
+        Reference points, shape (m, d)
+    k : int
+        Number of nearest neighbors (default: 200)
+    metric : str
+        Distance metric (default: 'euclidean')
+
+    Returns
+    -------
+    distances : numpy.ndarray
+        KNN distance matrix, shape (n, k)
+    indices : numpy.ndarray
+        Indices of k nearest neighbors, shape (n, k)
+    """
+    from sklearn.neighbors import NearestNeighbors
+
+    x = np.float32(x)
+    y = np.float32(y)
+    k = min(k, len(y))
+
+    nn = NearestNeighbors(n_neighbors=k, metric=metric, algorithm='auto')
+    nn.fit(y)
+    distances, indices = nn.kneighbors(x)
+    return np.float32(distances), indices
+
+
+def _init_gnnwr_distance_knn(refer_data, train_data, val_data, test_data, k=200):
+    """
+    Calculate KNN sparse distance matrices for GNNWR.
+
+    Parameters
+    ----------
+    refer_data : numpy.ndarray
+        Reference points for calculating the distance.
+    train_data : numpy.ndarray
+        Training spatial coordinates.
+    val_data : numpy.ndarray
+        Validation spatial coordinates.
+    test_data : numpy.ndarray
+        Test spatial coordinates.
+    k : int
+        Number of nearest neighbors (default: 200).
+
+    Returns
+    -------
+    train_distance, val_distance, test_distance : numpy.ndarray
+        KNN distance matrices, shape (n, k)
+    train_indices, val_indices, test_indices : numpy.ndarray
+        KNN neighbor indices, shape (n, k)
+    """
+    train_distance, train_indices = KNNDistance(train_data, refer_data, k=k, metric='euclidean')
+    val_distance, val_indices = KNNDistance(val_data, refer_data, k=k, metric='euclidean')
+    test_distance, test_indices = KNNDistance(test_data, refer_data, k=k, metric='euclidean')
+    return train_distance, val_distance, test_distance, train_indices, val_indices, test_indices
+
+
+def init_dataset(data,
                  test_ratio,
                  valid_ratio,
                  x_column,
@@ -475,7 +546,10 @@ def init_dataset(data,
                  is_need_STNN=False,
                  Reference=None,
                  simple_distance=True,
-                 dropna=True
+                 dropna=True,
+                 reference_size=None,
+                 reference_sample_seed=42,
+                 knn_k=None
                  ):
     r"""
     Initialize the dataset and return the training set, validation set, and test set for the model.
@@ -589,7 +663,10 @@ def init_dataset(data,
         is_need_STNN=is_need_STNN,
         Reference=Reference,
         simple_distance=simple_distance,
-        dropna=dropna
+        dropna=dropna,
+        reference_size=reference_size,
+        reference_sample_seed=reference_sample_seed,
+        knn_k=knn_k
     )
 
     
@@ -614,7 +691,10 @@ def init_dataset_split(train_data,
                     is_need_STNN=False,
                     Reference=None,
                     simple_distance=True,
-                    dropna=True
+                    dropna=True,
+                    reference_size=None,
+                    reference_sample_seed=42,
+                    knn_k=None
                     ):
     r"""
     Initialize the dataset and return the training set, validation set, and test set for the model.
@@ -784,16 +864,30 @@ def init_dataset_split(train_data,
         reference_data = Reference
     if not isinstance(reference_data, pandas.DataFrame):
         raise ValueError("reference_data must be a pandas.DataFrame")
+    if reference_size is not None and reference_data.shape[0] > reference_size:
+        reference_data = reference_data.sample(n=reference_size, random_state=reference_sample_seed)
 
     train_dataset.reference, val_dataset.reference, test_dataset.reference = reference_data, reference_data, reference_data
     train_dataset.spatial_column = val_dataset.spatial_column = test_dataset.spatial_column = spatial_column
     train_dataset.x_column = val_dataset.x_column = test_dataset.x_column = x_column
     train_dataset.y_column = val_dataset.y_column = test_dataset.y_column = y_column
+
+    # Store KNN config in datasets
+    train_dataset.knn_k = val_dataset.knn_k = test_dataset.knn_k = knn_k
+    train_dataset.knn_indices = val_dataset.knn_indices = test_dataset.knn_indices = None
+
     if use_model == "gnnwr":
-        train_dataset.distances, val_dataset.distances, test_dataset.distances = _init_gnnwr_distance(
-            reference_data[spatial_column].values, train_data[spatial_column].values, val_data[spatial_column].values,
-            test_data[spatial_column].values, spatial_fun
-        )
+        if knn_k is not None:
+            train_dataset.distances, val_dataset.distances, test_dataset.distances, \
+            train_dataset.knn_indices, val_dataset.knn_indices, test_dataset.knn_indices = _init_gnnwr_distance_knn(
+                reference_data[spatial_column].values, train_data[spatial_column].values,
+                val_data[spatial_column].values, test_data[spatial_column].values, knn_k
+            )
+        else:
+            train_dataset.distances, val_dataset.distances, test_dataset.distances = _init_gnnwr_distance(
+                reference_data[spatial_column].values, train_data[spatial_column].values, val_data[spatial_column].values,
+                test_data[spatial_column].values, spatial_fun
+            )
     elif use_model == "gtnnwr":
         assert temp_column is not None, "temp_column must be not None in gtnnwr"
         train_dataset.distances, val_dataset.distances, test_dataset.distances = _init_gtnnwr_distance(

@@ -131,7 +131,11 @@ class GNNWR:
 
         self._dense_layers = dense_layers  # structure of layers
         self._start_lr = start_lr  # initial learning rate
-        self._insize = train_dataset.datasize  # size of input layer
+        # Prefer distance vector length as input size (supports KNN sparse distance)
+        if getattr(train_dataset, "distances", None) is not None:
+            self._insize = train_dataset.distances.shape[-1]
+        else:
+            self._insize = train_dataset.datasize  # fallback
         self._outsize = train_dataset.coefsize  # size of output layer
         self._writer = SummaryWriter(write_path)  # summary writer
         self._drop_out = drop_out  # drop_out ratio

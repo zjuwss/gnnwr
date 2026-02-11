@@ -1,0 +1,33 @@
+{
+  "data_size": 10000,
+  "knn_k": 200,
+  "n_reference": 200,
+  "dist_init_time_s": 0.325,
+  "dist_memory_mb": 7.63,
+  "train_time_s": 23.66,
+  "time_per_epoch_s": 0.473,
+  "train_r2": 0.693165,
+  "valid_r2": 0.721779,
+  "test_r2": 0.685139,
+  "test_rmse": 49.7322,
+  "peak_gpu_mb": 8130.3,
+  "n_params": 37288,
+  "hidden_layers": null,
+  "batch_size": 256,
+  "epochs": 50,
+  "ols_train_r2": 0.663286,
+  "ols_valid_r2": 0.693102,
+  "ols_test_r2": 0.652428,
+  "ols_test_rmse": 52.2517,
+  "n_train": 7200,
+  "n_valid": 800,
+  "n_test": 2000,
+  "swnn_hidden_layers": [
+    128,
+    64,
+    32,
+    16,
+    8
+  ],
+  "swnn_input_dim": 200
+}

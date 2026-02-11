@@ -354,7 +354,7 @@ class GNNWR:
             else:
                 train_loss += loss.item() * data.size(0)  # accumulate the loss
 
-        self._train_diagnosis = DIAGNOSIS(weight_all, x_true, y_true, y_pred)
+        self._train_diagnosis = DIAGNOSIS(weight_all, x_true, y_true, y_pred, lite=None)
         train_loss /= self._train_dataset.datasize  # calculate the average loss
         self._trainLossList.append(train_loss)  # record the loss
 
@@ -437,7 +437,7 @@ class GNNWR:
             
             test_loss /= len(dataset)
 
-            return test_loss, DIAGNOSIS(weight_all, x_data, y_data, y_pred)
+            return test_loss, DIAGNOSIS(weight_all, x_data, y_data, y_pred, lite=None)
 
     def run(self, max_epoch=1, early_stop=-1,**kwargs):
         """
@@ -482,10 +482,17 @@ class GNNWR:
                 # record the information of the validation process
                 self.__valid()
                 # out put the information
-                pbar.set_postfix({'Train Loss': "{:5f}".format(self._trainLossList[-1]), 'Train R2': "{:5f}".format(self._train_diagnosis.R2().data.cpu().numpy()),
-                                  'Train AIC': self._train_diagnosis.AIC().data.cpu().numpy(),'Valid Loss': self._validLossList[-1],
-                                  'Valid R2': self._valid_r2.item(), 'Best Valid R2': self._bestr2.item(),
-                                  'Learning Rate': self._optimizer.param_groups[0]['lr']})
+                postfix_dict = {
+                    'Train Loss': "{:5f}".format(self._trainLossList[-1]),
+                    'Train R2': "{:5f}".format(self._train_diagnosis.R2().data.cpu().numpy()),
+                    'Valid Loss': self._validLossList[-1],
+                    'Valid R2': self._valid_r2.item(),
+                    'Best Valid R2': self._bestr2.item(),
+                    'Learning Rate': self._optimizer.param_groups[0]['lr']
+                }
+                if not self._train_diagnosis._lite:
+                    postfix_dict['Train AIC'] = self._train_diagnosis.AIC().data.cpu().numpy()
+                pbar.set_postfix(postfix_dict)
 
                 self._scheduler.step()  # update the learning rate
                 # tensorboard
@@ -493,8 +500,9 @@ class GNNWR:
                 self._writer.add_scalar('Training/Loss', self._trainLossList[-1], self._epoch)
                 self._writer.add_scalar('Training/R2', self._train_diagnosis.R2().data, self._epoch)
                 self._writer.add_scalar('Training/RMSE', self._train_diagnosis.RMSE().data, self._epoch)
-                self._writer.add_scalar('Training/AIC', self._train_diagnosis.AIC().data, self._epoch)
-                self._writer.add_scalar('Training/AICc', self._train_diagnosis.AICc().data, self._epoch)
+                if not self._train_diagnosis._lite:
+                    self._writer.add_scalar('Training/AIC', self._train_diagnosis.AIC().data, self._epoch)
+                    self._writer.add_scalar('Training/AICc', self._train_diagnosis.AICc().data, self._epoch)
                 self._writer.add_scalar('Validation/Loss', self._validLossList[-1], self._epoch)
                 self._writer.add_scalar('Validation/R2', self._valid_r2.item(), self._epoch)
                 self._writer.add_scalar('Validation/Best R2', self._bestr2, self._epoch)
@@ -503,12 +511,13 @@ class GNNWR:
                 log_str = "Epoch: " + str(epoch + 1) + \
                           "; Train Loss: " + str(self._trainLossList[-1]) + \
                           "; Train R2: {:5f}".format(self._train_diagnosis.R2().data) + \
-                          "; Train RMSE: {:5f}".format(self._train_diagnosis.RMSE().data) + \
-                          "; Train AIC: {:5f}".format(self._train_diagnosis.AIC().data) + \
-                          "; Train AICc: {:5f}".format(self._train_diagnosis.AICc().data) + \
-                          "; Valid Loss: " + str(self._validLossList[-1]) + \
-                          "; Valid R2: " + str(self._valid_r2.item()) + \
-                          "; Learning Rate: " + str(self._optimizer.param_groups[0]['lr'])
+                          "; Train RMSE: {:5f}".format(self._train_diagnosis.RMSE().data)
+                if not self._train_diagnosis._lite:
+                    log_str += "; Train AIC: {:5f}".format(self._train_diagnosis.AIC().data) + \
+                               "; Train AICc: {:5f}".format(self._train_diagnosis.AICc().data)
+                log_str += "; Valid Loss: " + str(self._validLossList[-1]) + \
+                           "; Valid R2: " + str(self._valid_r2.item()) + \
+                           "; Learning Rate: " + str(self._optimizer.param_groups[0]['lr'])
                 logging.info(log_str)
                 if 0 < early_stop < self._noUpdateEpoch:  # stop when the model has not been updated for long time
                     print("Training stop! Model has not been improved for over {} epochs.".format(early_stop))
@@ -736,14 +745,17 @@ class GNNWR:
         model_result_str+="Train R2 : | {:>25.5f}\n".format(self._trainr2)
         model_result_str+="Valid R2 : | {:>25.5f}\n".format(self._validr2)
         model_result_str+="RMSE: | {:>30.5f}\n".format(self._test_diagnosis.RMSE().data)
-        model_result_str+="AIC:  | {:>30.5f}\n".format(self._test_diagnosis.AIC())
-        model_result_str+="AICc: | {:>30.5f}\n".format(self._test_diagnosis.AICc())
-        model_result_str+="F1:   | {:>30.5f}\n".format(self._test_diagnosis.F1_Global().data)
-        model_result_str+="F2:   | {:>30.5f}\n".format(self._test_diagnosis.F2_Global().flatten()[0].data)
-        F3_Local_dict = self._test_diagnosis.F3_Local()[0]
-        for key in F3_Local_dict:
-            width = 30 - (len(key) - 4)
-            model_result_str+="{}: | {:>{width}.5f}\n".format(key, F3_Local_dict[key].data, width=width)
+        if not self._test_diagnosis._lite:
+            model_result_str+="AIC:  | {:>30.5f}\n".format(self._test_diagnosis.AIC())
+            model_result_str+="AICc: | {:>30.5f}\n".format(self._test_diagnosis.AICc())
+            model_result_str+="F1:   | {:>30.5f}\n".format(self._test_diagnosis.F1_Global().data)
+            model_result_str+="F2:   | {:>30.5f}\n".format(self._test_diagnosis.F2_Global().flatten()[0].data)
+            F3_Local_dict = self._test_diagnosis.F3_Local()[0]
+            for key in F3_Local_dict:
+                width = 30 - (len(key) - 4)
+                model_result_str+="{}: | {:>{width}.5f}\n".format(key, F3_Local_dict[key].data, width=width)
+        else:
+            model_result_str+="(AIC, AICc, F-tests skipped in lite mode)\n"
         return model_result_str
 
     def reg_result(self, filename=None, model_path=None, use_dict=False, only_return=False, map_location=None):

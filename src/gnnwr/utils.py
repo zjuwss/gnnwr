@@ -34,15 +34,18 @@ class DIAGNOSIS:
     """
     `DIAGNOSIS` is the class to calculate the diagnoses of the result of GNNWR/GTNNWR.
     These diagnoses include F1-test, F2-test, F3-test, AIC, AICc, R2, Adjust_R2, RMSE (Root Mean Square Error).
-    The explanation of these diagnoses can be found in the paper 
+    The explanation of these diagnoses can be found in the paper
     `Geographically neural network weighted regression for the accurate estimation of spatial non-stationarity <https://doi.org/10.1080/13658816.2019.1707834>`.
     :param weight: output of the neural network
     :param x_data: the independent variables
     :param y_data: the dependent variables
     :param y_pred: output of the GNNWR/GTNNWR
+    :param lite: If True, skip all Hat-dependent diagnostics (only R²/RMSE).
+           If False or None (default), compute all diagnostics efficiently
+           in O(n·k²) without forming the n×n Hat matrix.
     """
 
-    def __init__(self, weight, x_data, y_data, y_pred):
+    def __init__(self, weight, x_data, y_data, y_pred, lite=None):
         self._device = torch.device('cuda') if weight.is_cuda else torch.device('cpu')
 
         self.__weight = weight.clone()
@@ -54,62 +57,107 @@ class DIAGNOSIS:
         self.__k = len(self.__x_data[0])
 
         self.__residual = self.__y_data - self.__y_pred
-        self.__ssr = torch.sum((self.__y_pred - self.__y_data) ** 2) # sum of squared residuals
+        self.__ssr = torch.sum((self.__y_pred - self.__y_data) ** 2)
 
-        self.__hat_com = torch.mm(torch.linalg.inv(
-            torch.mm(self.__x_data.transpose(-2, -1), self.__x_data)), self.__x_data.transpose(-2, -1))
-        self.__ols_hat = torch.mm(self.__x_data, self.__hat_com)
-        x_data_tile = self.__x_data.repeat(self.__n, 1)
-        x_data_tile = x_data_tile.view(self.__n, self.__n, -1)
-        x_data_tile_t = x_data_tile.transpose(1, 2)
-        gtweight_3d = torch.diag_embed(self.__weight)
-
-        hatS_temp = torch.matmul(gtweight_3d,
-                                 torch.matmul(torch.inverse(torch.matmul(x_data_tile_t, x_data_tile)), x_data_tile_t))
-        self.__hat_temp = hatS_temp
-        hatS = torch.matmul(self.__x_data.view(-1, 1, self.__x_data.size(1)), hatS_temp)
-        hatS = hatS.view(-1, self.__n)
-        self.__hat = hatS
-        self.__S = torch.trace(self.__hat)
+        self._lite = (lite is True)
+        self._mode = 'skip' if self._lite else 'full'
         self.f3_dict = None
         self.f3_dict_2 = None
 
-        self._eye_I = torch.eye(self.__n, device=self._device)
-        self._ones_J = torch.ones(self.__n, device=self._device)
+        if not self._lite:
+            self._compute_efficient()
+
+    def _compute_efficient(self):
+        """Compute all diagnostic quantities in O(n·k²) without n×n matrices.
+
+        Key insight: the Hat matrix S[i,j] = (x_i ⊙ w_i)^T A x_j where
+        A = (X^T X)^{-1}.  All diagnostics (tr(S), tr(S^T S), Sy, S^T y, etc.)
+        can be derived from the k×k matrix A and O(n·k) vector operations,
+        avoiding the O(n²) memory cost of forming S explicitly.
+        """
+        X = self.__x_data    # (n, k)
+        W = self.__weight     # (n, k)
+        y = self.__y_data     # (n, 1)
+
+        # A = (X^T X)^{-1}, shape (k, k)
+        XtX = torch.mm(X.t(), X)
+        A = torch.linalg.inv(XtX)
+
+        # hat_com = A @ X^T, shape (k, n) — stored for F3 and hat()
+        self.__hat_com = torch.mm(A, X.t())
+
+        # XW = X ⊙ W, shape (n, k)
+        XW = X * W
+
+        # tr(S) = Σ_i (XW[i] · hat_com[:, i])
+        self.__S = torch.sum(XW * self.__hat_com.t())
+
+        # tr(S^T S) = sum(B ⊙ (XtX @ B)) where B = A @ XW^T
+        B = torch.mm(A, XW.t())  # (k, n)
+        self.__trStS = torch.sum(B * torch.mm(XtX, B))
+
+        # Precompute v = X^T y, Av = A v
+        v = torch.mm(X.t(), y)   # (k, 1)
+        Av = torch.mm(A, v)      # (k, 1)
+
+        # H_ols @ y = X @ Av
+        self.__Hy = torch.mm(X, Av)       # (n, 1)
+
+        # S @ y = XW @ Av
+        self.__Sy = torch.mm(XW, Av)      # (n, 1)
+
+        # S^T @ y = X @ A @ (XW^T @ y)
+        u = torch.mm(XW.t(), y)           # (k, 1)
+        self.__Sty = torch.mm(X, torch.mm(A, u))  # (n, 1)
+
+    def _require_diagnostics(self, method_name):
+        """Ensure diagnostics have been computed (not in lite mode)."""
+        if self._lite:
+            raise RuntimeError(
+                f"{method_name}() is disabled in lite=True mode. "
+                f"Use lite=False or lite=None to enable all diagnostics."
+            )
+
     def hat(self):
         """
-        :return: hat matrix
+        :return: hat matrix (n×n, computed on demand — use with caution for large n)
         """
-        return self.__hat
+        self._require_diagnostics("hat")
+        if self.__n > 10000:
+            warnings.warn(
+                f"Computing full n×n Hat matrix for n={self.__n} "
+                f"requires ~{self.__n**2 * 4 / 1e9:.1f}GB memory.")
+        XW = self.__x_data * self.__weight
+        return torch.mm(XW, self.__hat_com)
 
     def F1_Global(self):
         """
         :return: F1-test
         """
-        k1 = self.__n - 2 * torch.trace(self.__hat) + \
-             torch.trace(torch.mm(self.__hat.transpose(-2, -1), self.__hat))
-
+        self._require_diagnostics("F1_Global")
+        k1 = self.__n - 2 * self.__S + self.__trStS
         k2 = self.__n - self.__k - 1
-        rss_olr = torch.sum(
-            (self.__y_data - torch.mm(self.__ols_hat, self.__y_data)) ** 2)
+        rss_olr = torch.sum((self.__y_data - self.__Hy) ** 2)
         F_value = self.__ssr / k1 / (rss_olr / k2)
-        # p_value = f.sf(F_value, k1, k2)
         return F_value
 
     def F2_Global(self):
         """
         :return: F2-test
         """
-        # A = (I - H) - (I - S)^T*(I - S)
-        A = (self._eye_I - self.__ols_hat) - torch.mm(
-            (self._eye_I  - self.__hat).transpose(-2, -1),
-            (self._eye_I  - self.__hat))
-        v1 = torch.trace(A)
-        # DSS = y^T*A*y
-        DSS = torch.mm(self.__y_data.transpose(-2, -1), torch.mm(A, self.__y_data))
+        self._require_diagnostics("F2_Global")
+        # tr(A_mat) = -k + 2*tr(S) - tr(S^T S)
+        v1 = -self.__k + 2 * self.__S - self.__trStS
+        # y^T A_mat y = -y^T Hy + y^T Sy + y^T S^T y - ||Sy||²
+        yHy = torch.mm(self.__y_data.t(), self.__Hy)
+        ySy = torch.mm(self.__y_data.t(), self.__Sy)
+        ySty = torch.mm(self.__y_data.t(), self.__Sty)
+        SySy = torch.mm(self.__Sy.t(), self.__Sy)
+        DSS = -yHy + ySy + ySty - SySy
+
         k2 = self.__n - self.__k - 1
         rss_olr = torch.sum(
-            (torch.mean(self.__y_data) - torch.mm(self.__ols_hat, self.__y_data)) ** 2)
+            (torch.mean(self.__y_data) - self.__Hy) ** 2)
 
         return DSS / v1 / (rss_olr / k2)
 
@@ -117,36 +165,44 @@ class DIAGNOSIS:
         """
         :return: F3-test of each variable
         """
-
-        ek_dict = {}
+        self._require_diagnostics("F3_Local")
         self.f3_dict = {}
         self.f3_dict_2 = {}
-        for i in range(self.__x_data.size(1)):
-            ek_zeros = torch.zeros([self.__x_data.size(1)],device=self._device)
-            ek_zeros[i] = 1
-            ek_dict['ek' + str(i)] = torch.reshape(torch.reshape(torch.tile(ek_zeros.clone().detach(), [self.__n]),
-                                                                 [self.__n, -1]),
-                                                   [-1, 1, self.__x_data.size(1)])
-            hatB = torch.matmul(ek_dict['ek' + str(i)], self.__hat_temp)
-            hatB = torch.reshape(hatB, [-1, self.__n])
+        y_flat = self.__y_data.squeeze()  # (n,)
+        n = self.__n
 
-            L = torch.matmul(hatB.transpose(-2, -1), torch.matmul(self._eye_I - self._ones_J, hatB))
+        for l in range(self.__k):
+            w_l = self.__weight[:, l]      # (n,)
+            h_l = self.__hat_com[l, :]     # (n,)
 
-            vk2 = 1 / self.__n * torch.matmul(self.__y_data.transpose(-2, -1), torch.matmul(L, self.__y_data))
-            trace_L = torch.trace(1 / self.__n * L)
-            f3 = torch.squeeze(vk2 / trace_L / (self.__ssr / self.__n))
-            self.f3_dict['f3_param_' + str(i)] = f3
+            # hatB is rank-1: hatB[a,b] = w_l[a] * h_l[b]
+            # L = hatB^T @ M @ hatB where M = I - J (all-ones matrix)
+            # L = c * (h_l ⊗ h_l) where c = ||w_l||² - sum(w_l)²
+            sum_wl = w_l.sum()
+            c = torch.dot(w_l, w_l) - sum_wl * sum_wl
 
-            bk = torch.matmul(hatB, self.__y_data)
-            vk2_2 = 1 / self.__n * torch.sum((bk - torch.mean(bk)) ** 2)
-            f3_2 = torch.squeeze(vk2_2 / trace_L / (self.__ssr / self.__n))
-            self.f3_dict_2['f3_param_' + str(i)] = f3_2
+            h_dot_y = torch.dot(h_l, y_flat)
+            h_norm_sq = torch.dot(h_l, h_l)
+
+            # vk2 = (c/n) * (h·y)²,  trace_L/n = (c/n) * ||h||²
+            trace_L_n = c / n * h_norm_sq
+            vk2 = c / n * h_dot_y ** 2
+            f3 = torch.squeeze(vk2 / trace_L_n / (self.__ssr / n))
+            self.f3_dict['f3_param_' + str(l)] = f3
+
+            # Second variant: bk = w_l * (h·y), centered
+            mean_wl = sum_wl / n
+            vk2_2 = h_dot_y ** 2 / n * torch.sum((w_l - mean_wl) ** 2)
+            f3_2 = torch.squeeze(vk2_2 / trace_L_n / (self.__ssr / n))
+            self.f3_dict_2['f3_param_' + str(l)] = f3_2
+
         return self.f3_dict, self.f3_dict_2
 
     def AIC(self):
         """
         :return: AIC
         """
+        self._require_diagnostics("AIC")
         return self.__n * (math.log(self.__ssr / self.__n * 2 * math.pi, math.e)) + self.__n + self.__S
 
     def AICc(self):
@@ -154,6 +210,7 @@ class DIAGNOSIS:
 
         :return: AICc
         """
+        self._require_diagnostics("AICc")
         return self.__n * (math.log(self.__ssr / self.__n * 2 * math.pi, math.e) + (self.__n + self.__S) / (
                 self.__n - self.__S - 2))
 

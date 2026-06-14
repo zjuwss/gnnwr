@@ -65,7 +65,7 @@ class GNNWR:
     optimizer_params : dict, optional
         - **scheduler** \: *str*
             
-            The type of learning rate scheduler to use. Valid options include ``Special``,
+            The type of learning rate scheduler to use. Valid opQtions include ``Special``,
             ``Constant``, and ``MultiStepLR``.
         - **maxlr** \: *float*
             
@@ -316,46 +316,68 @@ class GNNWR:
         else:
             raise ValueError("Invalid Scheduler")
 
+    def _materialize(self, dataset):
+        """
+        Convert a dataset's arrays into GPU-resident float32 tensors **once** and cache
+        them on the dataset object. This avoids the per-sample tensor construction and the
+        per-batch host->device copies that the ``DataLoader`` path incurs on every epoch.
+
+        The layout mirrors ``baseDataset.__getitem__``: when ``is_need_STNN`` is set, the
+        spatial (``distances``) and temporal tensors are concatenated along the last axis.
+
+        Returns
+        -------
+        tuple(torch.Tensor, torch.Tensor, torch.Tensor)
+            ``(data, coef, label)`` all on ``self._device``.
+        """
+        cache = getattr(dataset, "_gpu_cache", None)
+        if cache is not None and cache[0].device.type == self._device.type:
+            return cache
+        data = torch.as_tensor(dataset.distances, dtype=torch.float32, device=self._device)
+        if dataset.is_need_STNN:
+            temporal = torch.as_tensor(dataset.temporal, dtype=torch.float32, device=self._device)
+            data = torch.cat((data, temporal), dim=-1)
+        coef = torch.as_tensor(dataset.x_data, dtype=torch.float32, device=self._device)
+        label = torch.as_tensor(dataset.y_data, dtype=torch.float32, device=self._device)
+        dataset._gpu_cache = (data, coef, label)
+        return dataset._gpu_cache
+
     def __train(self):
         """
         train the network
         """
         self._model.train()  # set the model to train mode
-        train_loss = 0  # initialize the loss
-        data_loader = self._train_dataset.dataloader  # get the data loader
-        weight_all = torch.tensor([],dtype=torch.float32,device=self._device)
-        x_true = torch.tensor([],dtype=torch.float32,device=self._device)
-        y_true = torch.tensor([],dtype=torch.float32,device=self._device)
-        y_pred = torch.tensor([],dtype=torch.float32,device=self._device)
-        for index, (data, coef, label, data_index) in enumerate(data_loader):
-            # move the data to gpu
-            data, coef, label = data.to(self._device), coef.to(self._device), label.to(self._device)
+        data, coef, label = self._materialize(self._train_dataset)
+        n = data.size(0)
+        batch_size = self._train_dataset.batch_size or n
+        # preallocate diagnosis buffers instead of growing them with torch.cat every batch
+        weight_all = torch.empty((n, self._outsize), dtype=torch.float32, device=self._device)
+        y_pred = torch.empty((n, label.size(1)), dtype=torch.float32, device=self._device)
+        loss_sum = torch.zeros((), dtype=torch.float32, device=self._device)
+
+        if self._train_dataset.shuffle:
+            perm = torch.randperm(n, device=self._device)
+        else:
+            perm = torch.arange(n, device=self._device)
+
+        for start in range(0, n, batch_size):
+            idx = perm[start:start + batch_size]
+            data_b, coef_b, label_b = data[idx], coef[idx], label[idx]
 
             self._optimizer.zero_grad()  # zero the gradient
-            if self._optimizer_name == "Adagrad":
-                # move optimizer state to gpu
-                for state in self._optimizer.state.values():
-                    for k, v in state.items():
-                        if isinstance(v, torch.Tensor):
-                            state[k] = v.to(self._device)
-
-            x_true = torch.cat((x_true, coef), 0)
-            y_true = torch.cat((y_true, label), 0)
-            weight = self._model(data)
-
-            weight_all = torch.cat((weight_all, weight.to(torch.float32)), 0)
-            output = self._out(weight.mul(coef))
-            y_pred = torch.cat((y_pred, output), 0)
-            loss = self._criterion(output, label) # calculate the loss
+            weight = self._model(data_b)
+            output = self._out(weight.mul(coef_b))
+            loss = self._criterion(output, label_b)  # calculate the loss
             loss.backward()  # back propagation
             self._optimizer.step()  # update the parameters
-            if isinstance(data, list):
-                train_loss += loss.item() * data[0].size(0)
-            else:
-                train_loss += loss.item() * data.size(0)  # accumulate the loss
 
-        self._train_diagnosis = DIAGNOSIS(weight_all, x_true, y_true, y_pred)
-        train_loss /= self._train_dataset.datasize  # calculate the average loss
+            # record outputs for the per-epoch diagnosis (detached, no autograd graph kept)
+            weight_all[idx] = weight.detach().to(torch.float32)
+            y_pred[idx] = output.detach()
+            loss_sum += loss.detach() * idx.size(0)  # accumulate without a host sync
+
+        self._train_diagnosis = DIAGNOSIS(weight_all, coef, label, y_pred)
+        train_loss = (loss_sum / n).item()  # single host sync per epoch
         self._trainLossList.append(train_loss)  # record the loss
 
     def __valid(self):
@@ -363,29 +385,19 @@ class GNNWR:
         validate the network
         """
         self._model.eval()  # set the model to validation mode
-        val_loss = 0  # initialize the loss
-        label_list = torch.tensor([],dtype=torch.float32,device=self._device)
-        out_list = torch.tensor([],dtype=torch.float32,device=self._device)
-
-        data_loader = self._valid_dataset.dataloader  # get the data loader
+        data, coef, label = self._materialize(self._valid_dataset)
 
         with torch.no_grad():  # disable gradient calculation
-            for data, coef, label, data_index in data_loader:
-                data, coef, label = data.to(self._device), coef.to(self._device), label.to(self._device)
-                # weight = self._model(data)
-                output = self._out(self._model(
-                    data).mul(coef.to(torch.float32)))
-                loss = self._criterion(output, label)  # calculate the loss
-                out_list = torch.cat((out_list, output.view(-1)))
-                label_list = torch.cat((label_list, label.view(-1)))
-                if isinstance(data, list):
-                    val_loss += loss.item() * data[0].size(0)
-                else:
-                    val_loss += loss.item() * data.size(0)  # accumulate the loss
-            val_loss /= len(self._valid_dataset)  # calculate the average loss
+            # batch-norm uses running statistics in eval mode, so a single full-set
+            # forward is equivalent to the previous batched pass but avoids the
+            # per-sample DataLoader overhead on every epoch.
+            output = self._out(self._model(data).mul(coef))
+            val_loss = self._criterion(output, label).item()  # MSELoss is a mean -> matches old average
             self._validLossList.append(val_loss)  # record the loss
+            out_list = output.view(-1)
+            label_list = label.view(-1)
             try:
-                r2 =1 - torch.sum((out_list - label_list) ** 2) / torch.sum((label_list - torch.mean(label_list)) ** 2)
+                r2 = 1 - torch.sum((out_list - label_list) ** 2) / torch.sum((label_list - torch.mean(label_list)) ** 2)
             except:
                 if np.isnan(out_list).sum() > 0:
                     raise ValueError("The output contains nan value")
@@ -465,7 +477,8 @@ class GNNWR:
         model_selection = kwargs.get("model_selection", "val")
         self.__istrained = True
         if self._use_gpu:
-            self._model = nn.DataParallel(module=self._model)  # parallel computing
+            if torch.cuda.device_count() > 1:
+                self._model = nn.DataParallel(module=self._model)  # parallel computing across multiple GPUs
             self._model = self._model.cuda()
             self._out = self._out.cuda()
         # create file
@@ -643,7 +656,7 @@ class GNNWR:
             data = torch.load(path, map_location='cpu', weights_only=False)
         new_state_dict = OrderedDict()
         for k, v in data.items():
-            name = k[7:]  # remove module.
+            name = k[7:] if k.startswith("module.") else k  # remove DataParallel "module." prefix if present
             new_state_dict[name] = v
         torch.save(new_state_dict, save_path)
 
@@ -701,7 +714,8 @@ class GNNWR:
         else:
             self._model = torch.load(path, map_location=map_location, weights_only=False)
         if self._use_gpu:
-            self._model = nn.DataParallel(module=self._model)  # parallel computing
+            if torch.cuda.device_count() > 1:
+                self._model = nn.DataParallel(module=self._model)  # parallel computing across multiple GPUs
             self._model = self._model.cuda()
             self._out = self._out.cuda()
         else:
@@ -783,7 +797,8 @@ class GNNWR:
             self._model = torch.load(model_path, map_location=map_location, weights_only=False)
 
         if self._use_gpu:
-            self._model = nn.DataParallel(module=self._model)
+            if torch.cuda.device_count() > 1:
+                self._model = nn.DataParallel(module=self._model)  # parallel computing across multiple GPUs
             self._model,self._out = self._model.cuda(),self._out.cuda()
         else:
             self._model, self._out = self._model.cpu(), self._out.cpu()
